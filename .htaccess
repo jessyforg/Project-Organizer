@@ -1,0 +1,3 @@
+# This repository lives under XAMPP htdocs during development.
+# Deny all HTTP access so source, build output, and test data are never served by Apache.
+Require all denied

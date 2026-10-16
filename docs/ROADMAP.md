@@ -6,16 +6,18 @@ Approved 2026-10-17. Each phase ends at a checkpoint; work stops until the produ
 
 Requirements inventory, conflicts, stack comparison, storage design, recovery strategy, threat model, phase plan.
 
-## Phase 1b — Planning documents (current)
+## Phase 1b — Planning documents ✔ approved
 
 **Deliverables:** [REQUIREMENTS.md](REQUIREMENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DATA_MODEL.md](DATA_MODEL.md), [SECURITY.md](SECURITY.md), [TESTING.md](TESTING.md), this roadmap, [STATUS.md](STATUS.md), ADRs 0001–0007.
 
 **Acceptance:** every source requirement traceable in the register; product owner approves the documents.
 
-## Phase 2 — Foundation
+## Phase 2 — Foundation (implemented; awaiting checkpoint approval)
+
+Results are recorded in [STATUS.md](STATUS.md).
 
 **Deliverables**
-1. Native module spike: install `better-sqlite3-multiple-ciphers` for the chosen Electron version; confirm load in Electron and under `ELECTRON_RUN_AS_NODE` for tests; confirm FTS5; confirm SQLCipher v4 encrypt/rekey/reopen flow. Stop and report if any fail.
+1. Native module spike: install `better-sqlite3-multiple-ciphers` for the chosen Electron version; confirm it loads in Electron and in the test runtime; confirm FTS5; confirm SQLCipher v4 encrypt/rekey/reopen flow. Stop and report if any fail.
 2. `.htaccess` deny-all, `.gitignore`, `.editorconfig`.
 3. electron-vite scaffold with strict TypeScript, ESLint, Prettier, Vitest, Playwright.
 4. Hardened window and custom protocol; CSP; navigation and window-open blocking; fuses.

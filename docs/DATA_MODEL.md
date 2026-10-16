@@ -1,6 +1,6 @@
 # Data Model
 
-Status: **Approved design for the MVP schema, not yet implemented** (2026-10-17). Exact SQL is written in Phase 2/3 migrations; this document is updated to match.
+Status: **`app.db` and the profile `settings` table implemented in Phase 2; domain tables planned** (2026-10-17). Exact SQL is written in Phase 2/3 migrations; this document is updated to match.
 
 ## 1. Conventions
 
@@ -13,7 +13,8 @@ Status: **Approved design for the MVP schema, not yet implemented** (2026-10-17)
 | Enumerations | `TEXT` with `CHECK (col IN (...))`. |
 | Soft delete | `deleted_at` (null = live) and `deletion_batch_id` (shared by all rows deleted in one user action). |
 | Ordering | `sort_key INTEGER` with gaps of 1024; renumbered inside a transaction when a gap is exhausted. |
-| Text comparison | Names compared case-insensitively with `COLLATE NOCASE` where uniqueness applies. |
+| Text comparison | SQLite `NOCASE` folds only ASCII letters, so case-insensitive uniqueness uses a stored key column (`name_key` = trimmed, NFC-normalised, lower-cased) with a unique index. Applies to profiles now and to tags/folders/statuses in Phase 3. |
+| Table mode | All tables are `STRICT`, so SQLite rejects values of the wrong type. |
 | Foreign keys | Always declared; `ON DELETE` rules listed per table. Enforcement verified on every open. |
 
 ## 2. `app.db` (application registry)
@@ -21,8 +22,8 @@ Status: **Approved design for the MVP schema, not yet implemented** (2026-10-17)
 | Table | Columns | Notes |
 |---|---|---|
 | `schema_migrations` | `version` PK, `name`, `checksum`, `applied_at` | |
-| `profiles` | `id` PK, `display_name`, `created_at`, `updated_at`, `last_opened_at`, `trashed_at` | Unique `display_name COLLATE NOCASE` among rows where `trashed_at IS NULL` (partial unique index) |
-| `app_settings` | `key` PK, `value_json`, `updated_at` | Last-used profile, window bounds |
+| `profiles` | `id` PK, `display_name`, `name_key`, `created_at`, `updated_at`, `last_opened_at`, `trashed_at` | Partial unique index on `name_key` where `trashed_at IS NULL`. The last-used profile is the one with the latest `last_opened_at`. |
+| `app_settings` | `key` PK, `value_json`, `updated_at` | Reserved for app-level preferences (e.g. window bounds); unused in Phase 2 |
 
 ## 3. `profile.db` (one per profile)
 

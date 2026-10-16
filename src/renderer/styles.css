@@ -1,0 +1,156 @@
+/* Foundation styles only. The full design system (tokens, components) arrives in Phase 4. */
+:root {
+  color-scheme: light dark;
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --text: #1c1c1a;
+  --muted: #5d5d58;
+  --border: #d9d9d4;
+  --accent: #2f5bd3;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  --focus: #2f5bd3;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #181817;
+    --surface: #222220;
+    --text: #ececea;
+    --muted: #a6a6a0;
+    --border: #3a3a37;
+    --accent: #7d9cf0;
+    --accent-text: #10131c;
+    --danger: #f2a39d;
+    --focus: #7d9cf0;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+button {
+  font: inherit;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+input {
+  font: inherit;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  min-width: 260px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+  margin: 6px 0 0;
+}
+
+.centered,
+.setup {
+  max-width: 520px;
+  margin: 12vh auto 0;
+  padding: 0 24px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.brand {
+  font-weight: 600;
+}
+
+.content {
+  max-width: 760px;
+  padding: 24px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-top: 20px;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.inline-form {
+  margin: 16px 0;
+}
+
+.inline-form label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+
+.profile-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}

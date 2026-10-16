@@ -1,0 +1,33 @@
+# appId and productName (package.json) determine the user data folder.
+# They may change freely until the first release; see docs/DECISIONS/0002-build-and-packaging.md.
+appId: com.projectforge.desktop
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  # Ship only the Windows x64 SQLite binary and no driver build sources.
+  - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux,linuxmusl,win32-arm64}*'
+  - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src,docs,benchmark,test}/**'
+# The SQLite driver ships Node-API prebuilt binaries; no rebuild against Electron is needed.
+npmRebuild: false
+asarUnpack:
+  - node_modules/better-sqlite3-multiple-ciphers/prebuilds/*.node
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+electronFuses:
+  runAsNode: false
+  enableCookieEncryption: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false

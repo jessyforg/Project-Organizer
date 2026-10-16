@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Approved design, not yet implemented** (2026-10-17). Update this document when the implementation diverges.
+Status: **Foundation implemented (Phase 2, 2026-10-17); domain layers planned.** Update this document when the implementation diverges.
 
 ## 1. Overview
 
@@ -36,14 +36,19 @@ src/
     ipc/                one handler module per domain; registry of channels
     services/           projects, tasks, tags, trash, backup, profiles …
     domain/             pure, framework-free business rules
+    security.ts         trusted origins, external-link allowlist, CSP
+    protocol.ts         app:// handler serving the renderer build
+    errors.ts           AppError (expected, user-safe failures)
     db/
       connection.ts     open, pragmas, integrity checks
-      migrations/       0001_initial.sql, 0002_… (forward-only)
-      repositories/     SQL per aggregate
-    profiles/
-    platform/
+      migrator.ts       forward-only migration runner with snapshot
+      migrations/       app.ts and profile.ts (ordered SQL lists)
+      repositories/     SQL per aggregate (Phase 3)
+    profiles/           registry (app.db) and profile lifecycle service
+    platform/           paths, logger
   preload/
-    index.ts
+    api.ts              typed API factory (type-only imports)
+    index.ts            contextBridge exposure
   renderer/
     app/                shell, routing, providers
     features/           dashboard/, projects/, tasks/, search/, settings/, backup/
@@ -54,6 +59,7 @@ src/
     schemas/            Zod schemas shared by IPC and forms
     result.ts           Result<T> and AppError types
 tests/
+  unit/                 Vitest (plain Node; the SQLite driver is Node-API)
   e2e/                  Playwright Electron tests
   fixtures/             databases from each released schema version
 docs/
@@ -65,7 +71,8 @@ Rule: `domain/` and `services/` must not import Electron. Services receive repos
 
 - Request/response only, via `ipcMain.handle` / `ipcRenderer.invoke`. Main-to-renderer events are limited to a small allowlist (e.g. `profile:changed`).
 - Channel names: `<domain>:<action>` (e.g. `tasks:create`, `backup:export`).
-- Every channel has a Zod request schema and a response type in `src/shared/ipc-contract.ts`.
+- Every channel has a Zod request schema and a response type in `src/shared/ipc-contract.ts`. The preload imports only types from it, so zod never enters the sandboxed preload.
+- `registerIpcHandlers` takes a mapped object with one implementation per channel, so a missing handler is a compile error.
 - Each handler first verifies that the sender frame is the application's own origin, then validates the payload. Unknown fields are rejected.
 - Response shape:
 
@@ -75,7 +82,7 @@ type Result<T> =
   | { ok: false; error: { code: AppErrorCode; message: string; details?: unknown } };
 ```
 
-- Error codes are a closed set (e.g. `VALIDATION_FAILED`, `NOT_FOUND`, `CONFLICT`, `DEPENDENCY_CYCLE`, `DB_INTEGRITY`, `BACKUP_INVALID`, `BACKUP_WRONG_PASSWORD_OR_DAMAGED`, `IO_ERROR`, `UNEXPECTED`). Unexpected errors are logged locally and returned with a generic message.
+- Error codes are a closed set in `src/shared/result.ts` (currently `VALIDATION_FAILED`, `NOT_FOUND`, `CONFLICT`, `FORBIDDEN_SENDER`, `DB_INTEGRITY`, `DB_NEWER_VERSION`, `MIGRATION_FAILED`, `IO_ERROR`, `UNEXPECTED`; later phases add codes such as `DEPENDENCY_CYCLE` and `BACKUP_INVALID`). Unexpected errors are logged locally and returned with a generic message.
 - File paths chosen by the user arrive only from main-process dialogs; the renderer never sends arbitrary paths to read or write.
 
 ## 4. Persistence
@@ -86,22 +93,26 @@ type Result<T> =
 - Writes involving more than one row run in `db.transaction(...)`.
 - Plain SQL in repository modules; no ORM.
 - Migrations: forward-only, numbered, transactional, preceded by a verified snapshot ([ADR-0005](DECISIONS/0005-forward-only-migrations.md)).
-- A single-instance lock prevents two app processes from opening the same database.
+- A single-instance lock (scoped to the data folder) prevents two app processes from opening the same database.
+- Snapshots and backups are converted to rollback-journal mode so each is a single self-contained file.
+- Profile lifecycle operations (create, switch, rename) are serialised so overlapping IPC calls cannot interleave. Switching opens and migrates the target before closing the current profile, so a failed switch keeps the current one open.
 - Synchronous queries block the main process while they run. This is acceptable at the expected data size; the performance gate measures it, and moving the database to a worker thread is the documented fallback.
 
 ## 5. Data locations
 
 ```
 %APPDATA%\ProjectForge\
-├─ app.db
+├─ app.db             profile registry
+├─ snapshots\         pre-migration snapshots of app.db
 ├─ profiles\<profile-uuid>\
 │   ├─ profile.db
 │   ├─ snapshots\
-│   └─ tmp\            staging for backup/restore operations
-└─ logs\
+│   └─ tmp\            staging for backup/restore operations (Phase 5)
+├─ logs\              main.log, rotated at 1 MB, 3 older files kept
+└─ electron\          Chromium's own storage (Electron userData)
 ```
 
-`%APPDATA%` resolves to `C:\Users\<user>\AppData\Roaming`. The folder name comes from the application name and must be frozen before the first release ([ADR-0002](DECISIONS/0002-build-and-packaging.md)). Development builds use a separate folder (`ProjectForge-dev`) so development never touches real data.
+`%APPDATA%` resolves to `C:\Users\<user>\AppData\Roaming`. The folder name comes from the application name and must be frozen before the first release ([ADR-0002](DECISIONS/0002-build-and-packaging.md)). Development builds use a separate folder (`ProjectForge-dev`) so development never touches real data. Unpackaged builds also honour `PROJECTFORGE_DATA_DIR`, which tests use for isolated temporary folders; packaged builds ignore it.
 
 ## 6. Renderer
 

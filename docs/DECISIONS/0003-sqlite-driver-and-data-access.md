@@ -24,6 +24,14 @@ Same proven API as better-sqlite3, plus a maintained encryption implementation, 
 
 ## Trade-offs and risks
 
-- Native module must be built for Electron's ABI; prebuilt binary availability for the chosen Electron version is unverified. Phase 2 begins with a spike; fallback is compiling with Visual Studio Build Tools (C++ workload), then plain better-sqlite3 plus a revised backup-encryption decision.
+- Native module compatibility: resolved in Phase 2 (Node-API prebuilt binaries; see below). If a future version drops prebuilt binaries, the fallback is compiling with Visual Studio Build Tools (installed), then plain better-sqlite3 plus a revised backup-encryption decision.
 - Fork maintenance risk: if it stops tracking upstream, switching back to better-sqlite3 requires only an import change for unencrypted features.
 - Synchronous calls block the main process; measured in Phase 6, worker thread is the fallback.
+
+## Phase 2 verification (2026-10-17)
+
+- `better-sqlite3-multiple-ciphers` 13.0.3 ships **Node-API prebuilt binaries** (`prebuilds/win32-x64.node`). Node-API is ABI-stable, so the same binary loads in Node 24 (unit tests) and Electron 44 (app). No compilation against Electron is needed.
+- Its `node-gyp rebuild` install script is denied through npm's `allowScripts` in `package.json`; the prebuilt binary is used instead. electron-builder runs with `npmRebuild: false` and unpacks only `win32-x64.node` from the asar archive.
+- Bundled SQLite: 3.53.4. FTS5 available. Foreign keys enforced.
+- Visual Studio 2022 Build Tools (C++ workload, Windows SDK 10.0.26100) were installed on the development machine as a fallback for native modules without prebuilt binaries. They are not required to build this project today.
+- TypeScript: the package's `exports` field hides its type file under `moduleResolution: bundler`; `tsconfig.base.json` maps the types explicitly.

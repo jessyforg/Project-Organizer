@@ -1,0 +1,17 @@
+node_modules/
+out/
+release/
+coverage/
+test-results/
+playwright-report/
+.tmp/
+*.db
+*.db-wal
+*.db-shm
+*.pfbackup
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.tsbuildinfo

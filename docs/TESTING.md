@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Status: **Approved design, not yet implemented** (2026-10-17).
+Status: **Unit, persistence, end-to-end, and security layers running since Phase 2** (2026-10-17). Component tests (React Testing Library) start in Phase 4.
 
 ## 1. Layers
 
@@ -16,7 +16,19 @@ Playwright's Electron API is marked experimental, so critical rules are covered 
 
 ## 2. Native module and test runtime
 
-The SQLite driver is compiled for Electron's ABI, which differs from the system Node.js ABI. Persistence tests will therefore run Vitest under Electron's bundled Node (`ELECTRON_RUN_AS_NODE=1`). This approach is verified in Phase 2; the alternative is a separate Node-ABI build for tests.
+The SQLite driver ships a Node-API prebuilt binary, which is ABI-stable, so the same binary loads in plain Node 24 and in Electron 44 (verified in Phase 2). Unit and persistence tests therefore run in plain Node with `npm test`.
+
+End-to-end tests remove `ELECTRON_RUN_AS_NODE` from the launch environment. Some editors (including VS Code) set it for child processes, and it would make Electron start as plain Node.
+
+The packaged app cannot be driven by Playwright, because its fuses disable the debugging flags Playwright needs. Packaged builds are smoke-tested by launching the executable and checking `logs\main.log` for `app.started` and `window.loaded`.
+
+## Commands
+
+| Command | What it runs |
+|---|---|
+| `npm test` | Unit and persistence tests (Vitest) |
+| `npm run test:e2e` | Builds the app, then runs Playwright against `out/` |
+| `npm run check` | Typecheck, lint, format check, unit tests |
 
 ## 3. Test data rules
 
