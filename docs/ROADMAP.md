@@ -12,7 +12,7 @@ Requirements inventory, conflicts, stack comparison, storage design, recovery st
 
 **Acceptance:** every source requirement traceable in the register; product owner approves the documents.
 
-## Phase 2 — Foundation (implemented; awaiting checkpoint approval)
+## Phase 2 — Foundation ✔ approved
 
 Results are recorded in [STATUS.md](STATUS.md).
 
@@ -35,7 +35,7 @@ Results are recorded in [STATUS.md](STATUS.md).
 - Profiles are isolated (separate files) and survive restart.
 - `npm run lint`, `typecheck`, `test`, `build`, `package` all succeed from a clean clone.
 
-## Phase 3 — Core domain (services and persistence)
+## Phase 3 — Core domain (services and persistence) (implemented; awaiting checkpoint approval)
 
 Projects, folders, tags, statuses, Inbox, tasks and subtasks, priorities, dates, dependencies, progress, trash/restore/purge.
 

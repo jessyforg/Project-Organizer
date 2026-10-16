@@ -1,5 +1,6 @@
 import type { ProfileSummary } from '@shared/types';
 import type { Db } from '../db/connection';
+import { nameKey as profileNameKey } from '../domain/text';
 import { AppError, sqliteErrorCode } from '../errors';
 
 interface ProfileRow {
@@ -18,14 +19,6 @@ function toSummary(row: ProfileRow): ProfileSummary {
     createdAt: row.created_at,
     lastOpenedAt: row.last_opened_at,
   };
-}
-
-/**
- * Case-insensitive uniqueness key. SQLite's NOCASE only folds ASCII, so the key is
- * computed here to treat names such as "Ñora" and "ñora" as duplicates too.
- */
-export function profileNameKey(displayName: string): string {
-  return displayName.trim().normalize('NFC').toLowerCase();
 }
 
 function conflict(cause: unknown): AppError {

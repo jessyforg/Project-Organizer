@@ -12,11 +12,13 @@ import { createAppPaths, resolveDataRoot } from './platform/paths';
 import { ProfileRegistry } from './profiles/profile-registry';
 import { ProfileService } from './profiles/profile-service';
 import { createAppProtocolHandler } from './protocol';
+import { runProfileMaintenance } from './services';
 import { APP_ORIGIN, APP_SCHEME, contentSecurityPolicy, isTrustedOrigin } from './security';
 import { createMainWindow, hardenAllWebContents, hardenSession } from './window';
 
 const devServerUrl = app.isPackaged ? undefined : process.env['ELECTRON_RENDERER_URL'];
 const clock = () => new Date();
+const MAINTENANCE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 const paths = createAppPaths(
   resolveDataRoot({
@@ -71,9 +73,24 @@ async function start(): Promise<void> {
   }
 
   const registry = new ProfileRegistry(appDb);
-  const service = new ProfileService({ registry, paths, clock, newId: randomUUID, logger });
+  const service = new ProfileService({
+    registry,
+    paths,
+    clock,
+    newId: randomUUID,
+    logger,
+    onOpened: (db) => runProfileMaintenance({ db, clock, newId: randomUUID }, logger),
+  });
   profiles = service;
   await service.openLastUsed();
+  setInterval(() => {
+    if (service.getActive() === null) return;
+    try {
+      runProfileMaintenance({ db: service.activeDb(), clock, newId: randomUUID }, logger);
+    } catch (error) {
+      logger.error('maintenance.failed', error);
+    }
+  }, MAINTENANCE_INTERVAL_MS);
 
   const csp = contentSecurityPolicy(devServerUrl);
   hardenSession(session.defaultSession, csp, devServerUrl);

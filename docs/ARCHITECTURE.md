@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Foundation implemented (Phase 2, 2026-10-17); domain layers planned.** Update this document when the implementation diverges.
+Status: **Foundation (Phase 2) and core domain services (Phase 3) implemented, 2026-10-17. Domain operations are not yet exposed over IPC (Phase 4).** Update this document when the implementation diverges.
 
 ## 1. Overview
 
@@ -33,9 +33,7 @@ src/
   main/
     index.ts            app lifecycle, single-instance lock
     window.ts           BrowserWindow creation and hardening
-    ipc/                one handler module per domain; registry of channels
-    services/           projects, tasks, tags, trash, backup, profiles …
-    domain/             pure, framework-free business rules
+    ipc/                trusted boundary: sender check, validation, Result conversion
     security.ts         trusted origins, external-link allowlist, CSP
     protocol.ts         app:// handler serving the renderer build
     errors.ts           AppError (expected, user-safe failures)
@@ -43,7 +41,10 @@ src/
       connection.ts     open, pragmas, integrity checks
       migrator.ts       forward-only migration runner with snapshot
       migrations/       app.ts and profile.ts (ordered SQL lists)
-      repositories/     SQL per aggregate (Phase 3)
+    domain/             pure rules: progress, dates, sort keys, search terms, name keys
+    services/           one class per aggregate (folders, tags, projects, statuses, tasks,
+                        dependencies, trash, search); each owns its SQL; rows.ts holds
+                        shared column lists and row mappers
     profiles/           registry (app.db) and profile lifecycle service
     platform/           paths, logger
   preload/
@@ -56,7 +57,8 @@ src/
     styles/tokens.css   design tokens (light/dark)
   shared/
     ipc-contract.ts     channel names + request/response schemas
-    schemas/            Zod schemas shared by IPC and forms
+    domain.ts           domain types and constants (statuses, priorities, colours)
+    schemas.ts          Zod input schemas shared by IPC and forms
     result.ts           Result<T> and AppError types
 tests/
   unit/                 Vitest (plain Node; the SQLite driver is Node-API)
@@ -91,7 +93,9 @@ type Result<T> =
 - One database file per profile plus `app.db` for the profile registry ([ADR-0004](DECISIONS/0004-one-database-per-profile.md)).
 - Pragmas on open: `foreign_keys = ON` (verified by reading it back), `journal_mode = WAL`, `synchronous = FULL`, `busy_timeout`.
 - Writes involving more than one row run in `db.transaction(...)`.
-- Plain SQL in repository modules; no ORM.
+- Plain SQL, no ORM. Services own their SQL; column lists and row mappers shared between services live in `services/rows.ts`. A separate repository layer was planned but would only have forwarded calls; it will be extracted if a query needs sharing beyond the mappers.
+- Services take a `ServiceContext` (`db`, `clock`, `newId`) so tests run against real SQLite files with a controllable clock.
+- When a profile opens, and every 24 hours while it stays open, maintenance ensures the Inbox exists and purges expired trash.
 - Migrations: forward-only, numbered, transactional, preceded by a verified snapshot ([ADR-0005](DECISIONS/0005-forward-only-migrations.md)).
 - A single-instance lock (scoped to the data folder) prevents two app processes from opening the same database.
 - Snapshots and backups are converted to rollback-journal mode so each is a single self-contained file.

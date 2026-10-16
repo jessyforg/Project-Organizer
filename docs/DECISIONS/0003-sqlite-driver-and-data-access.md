@@ -35,3 +35,7 @@ Same proven API as better-sqlite3, plus a maintained encryption implementation, 
 - Bundled SQLite: 3.53.4. FTS5 available. Foreign keys enforced.
 - Visual Studio 2022 Build Tools (C++ workload, Windows SDK 10.0.26100) were installed on the development machine as a fallback for native modules without prebuilt binaries. They are not required to build this project today.
 - TypeScript: the package's `exports` field hides its type file under `moduleResolution: bundler`; `tsconfig.base.json` maps the types explicitly.
+
+## Phase 3 refinement (2026-10-17)
+
+Services own their SQL instead of delegating to a separate repository layer; shared column lists and row mappers live in `src/main/services/rows.ts`. Each repository would only have forwarded calls, and services are already tested against real SQLite files. A repository module will be extracted when a query needs sharing beyond the mappers. Business rules that need no database (progress, sort keys, date arithmetic, search-term sanitising) live in `src/main/domain/` as pure functions.

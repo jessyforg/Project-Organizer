@@ -14,6 +14,8 @@ export interface ProfileServiceDeps {
   clock: () => Date;
   newId: () => string;
   logger: Logger;
+  /** Runs after a profile database is opened and migrated; a failure aborts the open. */
+  onOpened?: (db: Db) => void;
 }
 
 interface ActiveProfile {
@@ -133,6 +135,7 @@ export class ProfileService {
         clock,
         logger,
       });
+      this.deps.onOpened?.(db);
     } catch (error) {
       db.close();
       throw error;

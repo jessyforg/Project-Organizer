@@ -52,6 +52,26 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 - Restore: into temporary profile; replacement keeps a pre-restore backup; interruption leaves the original usable.
 - JSON export validates against its schema.
 
+### Invariant coverage (as of Phase 3)
+
+| Invariant ([DATA_MODEL.md §4](DATA_MODEL.md#4-invariants)) | Tests |
+|---|---|
+| 1 Task belongs to an existing project | `services/guards.test.ts`; Inbox default in `services/tasks.test.ts` |
+| 2 Status belongs to the task's project | `guards.test.ts`, `tasks.test.ts` |
+| 3 Subtask parent same project, depth 1 | `guards.test.ts`, `tasks.test.ts` |
+| 4 No hierarchy cycles | `guards.test.ts` |
+| 5 Dependencies same project, acyclic | `guards.test.ts`, `services/dependencies-trash.test.ts` |
+| 6 Stable IDs on rename | `services/projects.test.ts`, `profiles/profile-service.test.ts` |
+| 7 One default status per project; one Inbox | `guards.test.ts`, `projects.test.ts` |
+| 8 `completed_at` iff done | `tasks.test.ts`, `projects.test.ts` (status removal), move tests |
+| 9 Trash/restore hierarchy together | `dependencies-trash.test.ts` |
+| 10 No recreation of permanently deleted records | `dependencies-trash.test.ts` |
+| 11 No double-counted progress | `domain.test.ts` |
+| 12 Archive independent of status | `projects.test.ts` |
+| 13 Unique profile names | `profiles/profile-service.test.ts` |
+| 14 Imports and restores all-or-nothing | Trash restore is transactional; backup restore and import arrive in Phase 5 |
+| 15 Backups state their contents | Phase 5 |
+
 ## 5. End-to-end workflows
 
 1. First launch → create profile → dashboard empty state.

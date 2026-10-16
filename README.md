@@ -27,24 +27,24 @@ npm ci
 
 ## Commands
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Run the app with hot reload |
-| `npm run build` | Build main, preload, and renderer into `out/` |
-| `npm start` | Run the built app |
-| `npm test` | Unit and persistence tests |
+| Command            | Purpose                                          |
+| ------------------ | ------------------------------------------------ |
+| `npm run dev`      | Run the app with hot reload                      |
+| `npm run build`    | Build main, preload, and renderer into `out/`    |
+| `npm start`        | Run the built app                                |
+| `npm test`         | Unit and persistence tests                       |
 | `npm run test:e2e` | Build, then run end-to-end tests with Playwright |
-| `npm run check` | Typecheck, lint, format check, and unit tests |
-| `npm run package` | Build the Windows installer into `release/` |
+| `npm run check`    | Typecheck, lint, format check, and unit tests    |
+| `npm run package`  | Build the Windows installer into `release/`      |
 
 If you run commands from inside an editor's extension or task runner and Electron starts as plain Node (errors such as `bad option: --remote-debugging-port`), unset `ELECTRON_RUN_AS_NODE`.
 
 ## Where your data lives
 
-| Build | Folder |
-|---|---|
-| Installed app | `%APPDATA%\ProjectForge` (`C:\Users\<you>\AppData\Roaming\ProjectForge`) |
-| Development (`npm run dev`, `npm start`) | `%APPDATA%\ProjectForge-dev` |
+| Build                                    | Folder                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| Installed app                            | `%APPDATA%\ProjectForge` (`C:\Users\<you>\AppData\Roaming\ProjectForge`) |
+| Development (`npm run dev`, `npm start`) | `%APPDATA%\ProjectForge-dev`                                             |
 
 Each profile is a separate database in `profiles\<id>\profile.db`. Before any database upgrade, the app saves a verified copy in a `snapshots` folder. Logs are in `logs\` and contain no task, note, or profile content. Uninstalling the app does not delete this folder.
 
