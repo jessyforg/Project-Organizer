@@ -20,7 +20,7 @@ export function ProfileSettings({ active, profiles, onChanged }: Props) {
   };
 
   return (
-    <section className="panel" aria-labelledby="profiles-heading">
+    <section className="section" aria-labelledby="profiles-heading">
       <h2 id="profiles-heading">Profiles</h2>
 
       <ProfileNameForm
@@ -35,11 +35,11 @@ export function ProfileSettings({ active, profiles, onChanged }: Props) {
       {others.length > 0 && (
         <>
           <h3>Switch profile</h3>
-          <ul className="profile-list">
+          <ul className="mini-list">
             {others.map((profile) => (
               <li key={profile.id}>
                 <span>{profile.displayName}</span>
-                <button type="button" onClick={() => void switchTo(profile.id)}>
+                <button type="button" className="btn" onClick={() => void switchTo(profile.id)}>
                   Switch
                 </button>
               </li>
@@ -48,7 +48,7 @@ export function ProfileSettings({ active, profiles, onChanged }: Props) {
         </>
       )}
       {error && (
-        <p className="error" role="alert">
+        <p className="field__error" role="alert">
           {error}
         </p>
       )}

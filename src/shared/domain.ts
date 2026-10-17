@@ -148,3 +148,38 @@ export interface SearchResults {
   projects: Project[];
   tasks: Task[];
 }
+
+export const THEMES = ['system', 'light', 'dark'] as const;
+export type Theme = (typeof THEMES)[number];
+
+export interface ProfileSettings {
+  theme: Theme;
+}
+
+export interface ProjectListItem extends Project {
+  progress: Progress;
+}
+
+export interface ProjectDetails {
+  project: Project;
+  progress: Progress;
+  statuses: WorkflowStatus[];
+  suggestCompletion: boolean;
+}
+
+export interface TaskRelations {
+  prerequisites: TaskReference[];
+  dependents: TaskReference[];
+}
+
+export interface Dashboard {
+  today: string;
+  overdue: Task[];
+  dueToday: Task[];
+  upcoming: Task[];
+  recentlyUpdated: Task[];
+  recentlyCompleted: Task[];
+  activeProjects: ProjectListItem[];
+  openTaskCount: number;
+  completedThisWeek: number;
+}

@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Status: **Unit, persistence, end-to-end, and security layers running since Phase 2** (2026-10-17). Component tests (React Testing Library) start in Phase 4.
+Status: **All layers running** (Phase 4, 2026-10-17): unit and persistence (Node), component (jsdom), end-to-end and security (Electron).
 
 ## 1. Layers
 
@@ -26,7 +26,7 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 
 | Command | What it runs |
 |---|---|
-| `npm test` | Unit and persistence tests (Vitest) |
+| `npm test` | Unit, persistence, and component tests (Vitest projects `unit` and `renderer`) |
 | `npm run test:e2e` | Builds the app, then runs Playwright against `out/` |
 | `npm run check` | Typecheck, lint, format check, unit tests |
 
@@ -81,6 +81,28 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 5. Trash and restore a task hierarchy.
 6. Export encrypted backup → restore into new profile → contents match.
 7. Archive and unarchive a project.
+
+### Status of the end-to-end workflows
+
+Workflows 1–5 and 7 are automated in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts` and were run five times in a row without failure. Workflow 6 (backup and restore) arrives in Phase 5.
+
+Component tests use the real preload `createApi` over a scripted fake backend (`tests/renderer/harness.tsx`), so they exercise the exact API shape the app uses.
+
+### Keyboard-only walkthrough
+
+Partly automated (the core workflow uses Ctrl+K, Ctrl+N, Ctrl+1, Ctrl+4, Ctrl+, , Escape, and Enter-to-submit). Checked by design and code review:
+
+- Every interactive element is a native `button`, `input`, `select`, `textarea`, or `dialog`, so Tab order follows the page and Enter/Space activate controls.
+- Task rows expose two stops: the completion checkbox (name "Done: <title>", stable while toggling) and the title button that opens details.
+- Dialogs trap focus and close on Escape (native `<dialog>`); the confirm button is focused first.
+- After navigation, focus moves to the main area so screen readers start at the new page.
+- Visible focus outline on every control (`:focus-visible`).
+
+A full manual pass with a screen reader is part of the Phase 6 release gate.
+
+### Window sizes
+
+Screens were captured and reviewed at 1280×800 and 1024×700 in light and dark themes during Phase 4. The minimum window size is 900×600.
 
 ## 6. Reporting
 

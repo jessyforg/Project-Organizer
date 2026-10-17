@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ProfileSummary } from '@shared/types';
+import { ErrorNotice, Loading } from '../components/ui';
 import { ProfileSetup } from '../features/profiles/ProfileSetup';
-import { Workspace } from './Workspace';
+import { DataProvider } from './data';
+import { NavigationProvider } from './navigation';
+import { QuickAddProvider } from './quick-add';
+import { applyTheme, Shell } from './Shell';
+import { ToastProvider } from './toasts';
 
 type State =
   | { status: 'loading' }
@@ -20,7 +25,6 @@ async function loadState(): Promise<State> {
 
 export function App() {
   const [state, setState] = useState<State>({ status: 'loading' });
-
   const refresh = useCallback(() => loadState().then(setState), []);
 
   useEffect(() => {
@@ -35,23 +39,41 @@ export function App() {
 
   if (state.status === 'loading') {
     return (
-      <p className="centered" aria-live="polite">
-        Loading…
-      </p>
+      <div className="setup">
+        <Loading />
+      </div>
     );
   }
   if (state.status === 'error') {
     return (
-      <div className="centered" role="alert">
-        <p>{state.message}</p>
-        <button type="button" onClick={() => void refresh()}>
-          Try again
-        </button>
+      <div className="setup">
+        <ErrorNotice
+          error={{ code: 'UNEXPECTED', message: state.message }}
+          onRetry={() => void refresh()}
+        />
       </div>
     );
   }
-  if (state.active === null) {
-    return <ProfileSetup profiles={state.profiles} onChanged={refresh} />;
-  }
-  return <Workspace active={state.active} profiles={state.profiles} onChanged={refresh} />;
+
+  return (
+    <ToastProvider>
+      {state.active === null ? (
+        <ProfileGate profiles={state.profiles} onChanged={refresh} />
+      ) : (
+        // Remount everything when the profile changes so no data from another profile lingers.
+        <DataProvider key={state.active.id}>
+          <NavigationProvider>
+            <QuickAddProvider>
+              <Shell active={state.active} profiles={state.profiles} onProfilesChanged={refresh} />
+            </QuickAddProvider>
+          </NavigationProvider>
+        </DataProvider>
+      )}
+    </ToastProvider>
+  );
+}
+
+function ProfileGate(props: { profiles: ProfileSummary[]; onChanged: () => Promise<void> }) {
+  useEffect(() => applyTheme('system'), []);
+  return <ProfileSetup {...props} />;
 }

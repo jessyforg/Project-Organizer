@@ -12,7 +12,8 @@ import { createAppPaths, resolveDataRoot } from './platform/paths';
 import { ProfileRegistry } from './profiles/profile-registry';
 import { ProfileService } from './profiles/profile-service';
 import { createAppProtocolHandler } from './protocol';
-import { runProfileMaintenance } from './services';
+import { createProfileServices, runProfileMaintenance } from './services';
+import { createChannelImpls } from './ipc/channels';
 import { APP_ORIGIN, APP_SCHEME, contentSecurityPolicy, isTrustedOrigin } from './security';
 import { createMainWindow, hardenAllWebContents, hardenSession } from './window';
 
@@ -102,19 +103,16 @@ async function start(): Promise<void> {
 
   registerIpcHandlers(
     ipcMain,
-    {
-      'app:getInfo': () => ({
+    createChannelImpls({
+      appInfo: () => ({
         name: app.getName(),
         version: app.getVersion(),
         electronVersion: process.versions.electron,
         dataDirectory: paths.root,
       }),
-      'profiles:list': () => service.list(),
-      'profiles:getActive': () => service.getActive(),
-      'profiles:create': ({ displayName }) => service.create(displayName),
-      'profiles:rename': ({ id, displayName }) => service.rename(id, displayName),
-      'profiles:switch': ({ id }) => service.switchTo(id),
-    },
+      profiles: service,
+      services: () => createProfileServices({ db: service.activeDb(), clock, newId: randomUUID }),
+    }),
     { isTrustedSender: (url) => isTrustedOrigin(url, devServerUrl), logger },
   );
 

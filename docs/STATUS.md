@@ -2,6 +2,38 @@
 
 Newest entries first.
 
+## 2026-10-17 — Phase 4: Core UI implemented
+
+**Approval:** the product owner delegated approval for Phase 4 onward ("start the next phase automatically… do what you recommend… tell me after"), and later extended it to the remaining phases. Decisions made under that delegation are listed below for review.
+
+**Scope completed:** all 51 IPC channels (domain operations exposed, validated, and typed); design tokens and shared components; sidebar navigation with search, quick add, and project list; Today dashboard; My tasks; projects list with folders; project overview with progress, actions, workflow editor, and task list grouped by the project's statuses; task details panel (title, status, priority, dates, project move, tags, description, subtasks, dependencies, move to trash with preview); global search; trash with restore, permanent delete, and empty; settings with theme, profiles, shortcuts, and about; light, dark, and system themes; fixed keyboard shortcuts; empty, loading, and error states; toasts with undo and suggested actions (complete parent, mark project completed or active). Requirements covered with UI: R04–R14, R16–R18, R22, R23, R28 (R05 suggestions, R09 status editing).
+
+**Not included (by plan):** Kanban, calendar, notes (later release); backup and restore (Phase 5).
+
+**Decisions made under delegation:**
+- Plain CSS with design tokens instead of Tailwind; invalidate-and-reload data layer instead of a caching library; no router library ([ADR-0008](DECISIONS/0008-ui-styling-and-state.md)).
+- Visual identity: Atkinson Hyperlegible Next typeface; steel neutrals with temper-blue accent; priority "heat" pip always paired with a text label.
+- The "My tasks" view shows open tasks by default; completed and cancelled groups start collapsed.
+- Switching profiles returns to the Today screen and remounts the app so no previous-profile data stays in memory.
+- Completion checkbox accessible name is "Done: <title>" and stays stable while toggling.
+- New dependencies: lucide-react (ISC), Atkinson Hyperlegible Next font (OFL), Testing Library and jsdom (MIT, dev only).
+
+**Verification (2026-10-17):**
+
+| Check | Result |
+|---|---|
+| `npm run check` (typecheck, lint, format, tests) | Passed — 180 tests (163 unit/persistence, 17 component) |
+| `npm run test:e2e` | Passed — 5 of 5 |
+| End-to-end stability (`--repeat-each=5`) | Passed — 25 of 25 |
+| Visual review (screenshots at 1280×800 and 1024×700, light and dark) | Reviewed; issues found and fixed (below) |
+| Text contrast (WCAG AA 4.5:1) | Checked numerically for every text colour on every background; two colours adjusted |
+
+**Defects found and fixed during the phase:** dashboard columns did not adapt when the details panel narrowed the main area (now container queries); task metadata wrapped mid-phrase; long titles were clipped in the details panel (now a self-sizing field); the theme radio and the completion checkbox briefly flipped back to the old value after a click (now optimistic until the reload catches up); the completion checkbox changed its accessible name while toggling; "faint" text failed AA contrast in light mode and on the selected row in dark mode.
+
+**Known limitations:** no manual screen-reader pass yet (Phase 6); keyboard reordering of tasks is available only through the API, not yet in the UI; project tags are edited in the project dialog only.
+
+**Next step:** Phase 5 — Data safety.
+
 ## 2026-10-17 — Phase 3: Core domain implemented (awaiting approval)
 
 **Scope completed:** profile schema v2 (folders, projects, workflow statuses, tasks and subtasks, tags, dependencies, full-text search) with database guards; services for folders, tags, projects (archive, completion suggestion, progress), statuses (add, rename, reorder, default, remove with reassignment), tasks (create, update with notices, move between projects, manual reorder, filtered and sorted listing), dependencies (cycle prevention), trash (task and project batches, restore rules, permanent delete, empty, 30-day purge), and global search; the Inbox; profile maintenance on open and daily. Requirements covered at the service level: R04–R14, R18 (query layer), R28.

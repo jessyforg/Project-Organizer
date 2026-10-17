@@ -1,6 +1,6 @@
 # Security and Privacy
 
-Status: **Electron boundary implemented and verified in Phase 2** (2026-10-17); backup encryption mechanism verified, feature planned for Phase 5.
+Status: **Electron boundary implemented and verified** (Phases 2 and 4, 2026-10-17); backup encryption mechanism verified, feature planned for Phase 5.
 
 ## 1. What this application does and does not protect (MVP)
 
@@ -43,8 +43,10 @@ Each item is verified by an automated or documented manual check before release.
 - [x] `<webview>` attachment blocked — inspected
 - [x] Permission request and check handlers deny everything — inspected
 - [x] IPC handlers verify `senderFrame` origin and validate payloads with Zod; unknown fields rejected — unit + E2E
-- [x] Preload exposes named functions only; no raw `ipcRenderer`, no generic invoke — E2E (exact API key list)
-- [x] No arbitrary filesystem path from the renderer — inspected (no channel accepts a path; profile IDs must be UUIDs)
+- [x] Preload exposes named functions only, built from a fixed channel list and frozen; no raw `ipcRenderer`, no generic invoke — E2E (exact function list equals `IPC_CHANNELS`; objects frozen)
+- [x] No arbitrary filesystem path from the renderer — inspected (none of the 51 channels accepts a path; IDs must be UUIDs)
+- [x] Data channels refuse to run with no profile open (clear `NOT_FOUND` error) — E2E
+- [x] Fonts and icons are bundled; the renderer loads nothing from the network — inspected (CSP `font-src 'self'`)
 - [x] No shell command execution anywhere — inspected
 - [x] Electron fuses: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments`, `GrantFileProtocolExtraPrivileges` disabled; ASAR integrity validation, `OnlyLoadAppFromAsar`, cookie encryption enabled — fuses
 - [x] DevTools disabled and application menu removed in packaged builds — inspected

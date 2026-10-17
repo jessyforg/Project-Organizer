@@ -4,7 +4,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 
 ## Status
 
-**Foundation (Phase 2).** The app launches, creates and switches local profiles, and has its security boundary, database migrations, and tests in place. Projects and tasks are not implemented yet. See the [roadmap](docs/ROADMAP.md) and [status log](docs/STATUS.md).
+**Core features usable (Phase 4).** Local profiles; projects with folders, tags, custom workflows, archive, and progress; tasks with subtasks, priorities, dates, tags, and dependencies; Today dashboard, task lists with filters and sorting, global search, trash with 30-day recovery, light and dark themes, and keyboard shortcuts. Backups arrive in Phase 5. See the [roadmap](docs/ROADMAP.md) and [status log](docs/STATUS.md).
 
 ## Platform
 
@@ -32,7 +32,7 @@ npm ci
 | `npm run dev`      | Run the app with hot reload                      |
 | `npm run build`    | Build main, preload, and renderer into `out/`    |
 | `npm start`        | Run the built app                                |
-| `npm test`         | Unit and persistence tests                       |
+| `npm test`         | Unit, persistence, and component tests           |
 | `npm run test:e2e` | Build, then run end-to-end tests with Playwright |
 | `npm run check`    | Typecheck, lint, format check, and unit tests    |
 | `npm run package`  | Build the Windows installer into `release/`      |
@@ -53,7 +53,8 @@ Each profile is a separate database in `profiles\<id>\profile.db`. Before any da
 ## Known limitations
 
 - The installer is not code-signed, so Windows SmartScreen shows a warning on first run.
-- Only profile management is available so far.
+- No backup or export yet (Phase 5). Until then, copy the data folder while the app is closed if you want a manual copy.
+- Kanban, calendar, notes, and reminders are planned for later releases.
 
 ## Documentation
 

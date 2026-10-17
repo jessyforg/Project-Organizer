@@ -29,11 +29,11 @@ export function ProfileSetup({ profiles, onChanged }: Props) {
       </p>
 
       {!firstRun && (
-        <ul className="profile-list" aria-label="Profiles">
+        <ul className="mini-list" aria-label="Profiles">
           {profiles.map((profile) => (
             <li key={profile.id}>
               <span>{profile.displayName}</span>
-              <button type="button" onClick={() => void open(profile.id)}>
+              <button type="button" className="btn" onClick={() => void open(profile.id)}>
                 Open
               </button>
             </li>
@@ -41,7 +41,7 @@ export function ProfileSetup({ profiles, onChanged }: Props) {
         </ul>
       )}
       {error && (
-        <p className="error" role="alert">
+        <p className="field__error" role="alert">
           {error}
         </p>
       )}

@@ -1,11 +1,18 @@
-import type { Progress, Project, ProjectState, StatusCategory } from '@shared/domain';
+import type {
+  Progress,
+  Project,
+  ProjectDetails,
+  ProjectListItem,
+  ProjectState,
+  StatusCategory,
+} from '@shared/domain';
 import type { CreateProjectInput, UpdateProjectInput } from '@shared/schemas';
 import type { Db } from '../db/connection';
 import { computeProgress } from '../domain/progress';
 import { AppError } from '../errors';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
 import { PROJECT_SELECT, toProject, type ProjectRow } from './rows';
-import { insertDefaultStatuses } from './statuses';
+import { insertDefaultStatuses, StatusService } from './statuses';
 
 export const INBOX_NAME = 'Inbox';
 
@@ -54,7 +61,7 @@ export class ProjectService {
   constructor(private readonly ctx: ServiceContext) {}
 
   /** Projects not in the trash. The Inbox comes first, then by name. */
-  list(options: { includeArchived?: boolean } = {}): Project[] {
+  list(options: { includeArchived?: boolean | undefined } = {}): Project[] {
     const archived = options.includeArchived ? '' : 'AND p.archived_at IS NULL';
     const rows = this.ctx.db
       .prepare(
@@ -179,6 +186,22 @@ export class ProjectService {
       .prepare('UPDATE projects SET archived_at = NULL, updated_at = ? WHERE id = ?')
       .run(nowIso(this.ctx), id);
     return this.get(id);
+  }
+
+  listWithProgress(options: { includeArchived?: boolean | undefined } = {}): ProjectListItem[] {
+    const projects = this.list(options);
+    const progress = this.progressFor(projects.map((p) => p.id));
+    return projects.map((p) => ({ ...p, progress: progress.get(p.id) ?? computeProgress([]) }));
+  }
+
+  details(id: string): ProjectDetails {
+    const project = this.get(id);
+    return {
+      project,
+      progress: this.progress(id),
+      statuses: new StatusService(this.ctx).listForProject(id),
+      suggestCompletion: this.shouldSuggestCompletion(id),
+    };
   }
 
   progress(id: string): Progress {

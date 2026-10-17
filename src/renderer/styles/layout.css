@@ -1,0 +1,168 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) auto;
+  height: 100%;
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+  padding: var(--space-4) var(--space-3);
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.wordmark {
+  padding: 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.nav {
+  display: grid;
+  gap: 2px;
+}
+
+.nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 34px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  text-align: left;
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.nav__item:hover {
+  background: var(--surface-sunken);
+}
+
+.nav__item[aria-current='page'] {
+  background: var(--accent-soft);
+  font-weight: 700;
+}
+
+.nav__item svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ink-muted);
+}
+
+.nav__count {
+  margin-left: auto;
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.sidebar__projects {
+  display: grid;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sidebar__group {
+  margin: var(--space-3) var(--space-2) var(--space-1);
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  padding: var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* Main area */
+.main {
+  min-width: 0;
+  overflow-y: auto;
+  container: main / inline-size;
+}
+
+.page {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 980px;
+  padding: var(--space-6) var(--space-6) var(--space-7);
+}
+
+.page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Details panel */
+.details {
+  width: var(--details-width);
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+
+@media (max-width: 1180px) {
+  .details {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    box-shadow: var(--shadow-overlay);
+  }
+}
+
+/* Dashboard columns */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* Respond to the main area's width, which shrinks when the details panel is open. */
+@container main (max-width: 860px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Setup screen (no profile open) */
+.setup {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 520px;
+  margin: 12vh auto 0;
+  padding: 0 var(--space-5);
+}

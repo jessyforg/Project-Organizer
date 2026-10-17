@@ -8,6 +8,7 @@ import {
   type ElectronApplication,
   type Page,
 } from '@playwright/test';
+import { IPC_CHANNELS } from '../../src/shared/ipc-channels';
 
 /** Launches the built app (out/) against an isolated data directory. */
 async function launch(dataDir: string): Promise<{ app: ElectronApplication; page: Page }> {
@@ -18,17 +19,20 @@ async function launch(dataDir: string): Promise<{ app: ElectronApplication; page
   // Editors such as VS Code set this for their child processes; it would start Electron as plain Node.
   delete env['ELECTRON_RUN_AS_NODE'];
   const app = await electron.launch({ args: ['.'], env });
+  running.push(app);
   const page = await app.firstWindow();
   return { app, page };
 }
 
 let dataDir: string;
+const running: ElectronApplication[] = [];
 
 test.beforeEach(() => {
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'projectforge-e2e-'));
 });
 
-test.afterEach(() => {
+test.afterEach(async () => {
+  await Promise.all(running.splice(0).map((app) => app.close().catch(() => undefined)));
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
@@ -54,6 +58,7 @@ test('profiles: duplicate names are rejected; rename and switch work', async () 
   await page.getByLabel('Profile name').fill('Home');
   await page.getByRole('button', { name: 'Create profile' }).click();
   await expect(page.getByTestId('active-profile')).toHaveText('Profile: Home');
+  await page.getByRole('button', { name: 'Settings' }).click();
 
   await page.getByLabel('New profile').fill('home');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -62,9 +67,13 @@ test('profiles: duplicate names are rejected; rename and switch work', async () 
   await page.getByLabel('New profile').fill('Study');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
   await expect(page.getByTestId('active-profile')).toHaveText('Profile: Study');
+  // Opening another profile resets the app to Today, so no data from the previous profile lingers.
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Switch' }).click();
   await expect(page.getByTestId('active-profile')).toHaveText('Profile: Home');
+  await page.getByRole('button', { name: 'Settings' }).click();
 
   await page.getByLabel('Rename current profile').fill('Household');
   await page.getByRole('button', { name: 'Rename' }).click();
@@ -80,16 +89,26 @@ test('security: renderer is isolated and the bridge is narrow', async () => {
     require: typeof (window as unknown as { require?: unknown }).require,
     process: typeof (window as unknown as { process?: unknown }).process,
     module: typeof (window as unknown as { module?: unknown }).module,
-    apiKeys: Object.keys(window.api).sort(),
-    profileKeys: Object.keys(window.api.profiles).sort(),
+    functions: Object.entries(window.api)
+      .flatMap(([domain, actions]) =>
+        Object.entries(actions as Record<string, unknown>).map(([action, fn]) =>
+          typeof fn === 'function' ? `${domain}:${action}` : `${domain}:${action}(not a function)`,
+        ),
+      )
+      .sort(),
+    frozen: Object.isFrozen(window.api) && Object.values(window.api).every(Object.isFrozen),
   }));
   expect(globals).toEqual({
     require: 'undefined',
     process: 'undefined',
     module: 'undefined',
-    apiKeys: ['app', 'profiles'],
-    profileKeys: ['create', 'getActive', 'list', 'rename', 'switch'],
+    functions: [...IPC_CHANNELS].sort(),
+    frozen: true,
   });
+
+  // Data calls before any profile is open fail with a clear error instead of crashing.
+  const noProfile = await page.evaluate(() => window.api.tasks.list());
+  expect(noProfile).toMatchObject({ ok: false, error: { code: 'NOT_FOUND' } });
 
   const invalid = await page.evaluate(() =>
     Promise.all([

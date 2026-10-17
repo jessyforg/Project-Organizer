@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Foundation (Phase 2) and core domain services (Phase 3) implemented, 2026-10-17. Domain operations are not yet exposed over IPC (Phase 4).** Update this document when the implementation diverges.
+Status: **Implemented through Phase 4 (core UI), 2026-10-17.** Update this document when the implementation diverges.
 
 ## 1. Overview
 
@@ -71,6 +71,7 @@ Rule: `domain/` and `services/` must not import Electron. Services receive repos
 
 ## 3. IPC contract
 
+- Channel names are listed in `src/shared/ipc-channels.ts` (no runtime imports, so the sandboxed preload can use it). The preload builds `window.api` from this fixed list: one named, frozen function per channel (`api.tasks.create(...)` → `tasks:create`). A test checks the list matches the schemas, and an end-to-end test checks the renderer sees exactly these functions.
 - Request/response only, via `ipcMain.handle` / `ipcRenderer.invoke`. Main-to-renderer events are limited to a small allowlist (e.g. `profile:changed`).
 - Channel names: `<domain>:<action>` (e.g. `tasks:create`, `backup:export`).
 - Every channel has a Zod request schema and a response type in `src/shared/ipc-contract.ts`. The preload imports only types from it, so zod never enters the sandboxed preload.
@@ -120,10 +121,15 @@ type Result<T> =
 
 ## 6. Renderer
 
-- React 19 with feature folders; shared components in `components/ui`.
-- Design tokens as CSS variables in `tokens.css`, with light and dark sets; Tailwind configured to use them.
-- Server state (data from the main process) is fetched through `window.api` and cached per screen; mutations refresh affected queries. Choice of caching library is decided in Phase 4 and recorded.
-- Markdown rendered without raw HTML.
+See [ADR-0008](DECISIONS/0008-ui-styling-and-state.md) for the reasoning.
+
+- React 19. `app/` holds the shell (sidebar, routing state, data layer, toasts, quick add, shortcuts); `features/` holds screens (dashboard, tasks, projects, search, trash, settings, profiles); `components/ui.tsx` holds shared pieces (dialog, confirm dialog, progress meter, priority label, error notice).
+- Plain CSS with design tokens in `styles/tokens.css` (light and dark sets); container queries adapt layout to the main area's width.
+- Data: `useQuery` loads through `window.api`; successful changes call `invalidate()` so visible queries reload. Toggle controls are optimistic until the reload arrives.
+- Navigation is a typed route union in React state; the task details panel is a separate piece of state so it can stay open across screens.
+- Switching profiles remounts the whole shell, so nothing from the previous profile stays in memory.
+- Dialogs use the native `<dialog>` element (focus trap and Escape handling built in).
+- Markdown (later) will be rendered without raw HTML.
 
 ## 7. Security boundary
 
@@ -140,3 +146,4 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0005](DECISIONS/0005-forward-only-migrations.md) | Forward-only migrations with pre-migration snapshot |
 | [0006](DECISIONS/0006-backup-and-export-formats.md) | Backup and export formats |
 | [0007](DECISIONS/0007-typescript-version-pin.md) | TypeScript 6.0 version pin |
+| [0008](DECISIONS/0008-ui-styling-and-state.md) | UI styling, data loading, and visual identity |

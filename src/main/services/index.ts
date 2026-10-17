@@ -1,9 +1,11 @@
 import type { Logger } from '../platform/logger';
 import type { ServiceContext } from './context';
+import { DashboardService } from './dashboard';
 import { DependencyService } from './dependencies';
 import { FolderService } from './folders';
 import { ensureInbox, ProjectService } from './projects';
 import { SearchService } from './search';
+import { SettingsService } from './settings';
 import { StatusService } from './statuses';
 import { TagService } from './tags';
 import { TaskService } from './tasks';
@@ -20,6 +22,8 @@ export interface ProfileServices {
   dependencies: DependencyService;
   trash: TrashService;
   search: SearchService;
+  settings: SettingsService;
+  dashboard: DashboardService;
 }
 
 export function createProfileServices(ctx: ServiceContext): ProfileServices {
@@ -32,6 +36,8 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
     dependencies: new DependencyService(ctx),
     trash: new TrashService(ctx),
     search: new SearchService(ctx),
+    settings: new SettingsService(ctx),
+    dashboard: new DashboardService(ctx),
   };
 }
 

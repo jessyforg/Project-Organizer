@@ -34,6 +34,8 @@ const ORDER_BY: Record<NonNullable<TaskListQuery['sort']>, string> = {
   due: `t.due_date IS NULL, t.due_date, ${PRIORITY_RANK_SQL}, t.created_at, t.id`,
   created: 't.created_at DESC, t.id',
   manual: 't.sort_key, t.created_at, t.id',
+  updated: 't.updated_at DESC, t.id',
+  completed: 't.completed_at IS NULL, t.completed_at DESC, t.id',
 };
 
 function assertDateOrder(start: string | null, due: string | null): void {
@@ -223,6 +225,24 @@ export class TaskService {
 
     const task = this.get(input.id);
     return { task, notices: this.noticesAfterStatusChange(current, task) };
+  }
+
+  /**
+   * The checkbox action: completing moves the task to the project's first "done" status;
+   * reopening moves it to the project's default status.
+   */
+  setCompleted(id: string, completed: boolean): TaskUpdateResult {
+    const task = this.get(id);
+    if ((task.statusCategory === 'done') === completed) return { task, notices: [] };
+    const status = this.ctx.db
+      .prepare(
+        completed
+          ? "SELECT id FROM project_statuses WHERE project_id = ? AND category = 'done' ORDER BY sort_key LIMIT 1"
+          : 'SELECT id FROM project_statuses WHERE project_id = ? AND is_default = 1',
+      )
+      .get(task.projectId) as { id: string } | undefined;
+    if (!status) throw new Error('Project workflow is missing a required status');
+    return this.update({ id, statusId: status.id });
   }
 
   /**

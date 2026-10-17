@@ -1,34 +1,29 @@
-import { useEffect, useState } from 'react';
-import type { AppInfo } from '@shared/types';
+import { useQuery } from '../../app/data';
+import { ErrorNotice } from '../../components/ui';
 
 export function AboutPanel() {
-  const [info, setInfo] = useState<AppInfo | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void window.api.app.getInfo().then((result) => {
-      if (result.ok) setInfo(result.data);
-      else setError(result.error.message);
-    });
-  }, []);
-
+  const info = useQuery('app-info', () => window.api.app.getInfo());
   return (
-    <section className="panel" aria-labelledby="about-heading">
+    <section className="section" aria-labelledby="about-heading">
       <h2 id="about-heading">About</h2>
-      {error && <p className="error">{error}</p>}
-      {info && (
+      {info.error && <ErrorNotice error={info.error} onRetry={info.reload} />}
+      {info.data && (
         <dl className="facts">
-          <dt>Version</dt>
-          <dd>{info.version}</dd>
-          <dt>Electron</dt>
-          <dd>{info.electronVersion}</dd>
-          <dt>Data folder</dt>
-          <dd>
-            <code>{info.dataDirectory}</code>
-          </dd>
+          <div>
+            <dt>Version</dt>
+            <dd>{info.data.version}</dd>
+          </div>
+          <div>
+            <dt>Electron</dt>
+            <dd>{info.data.electronVersion}</dd>
+          </div>
+          <div>
+            <dt>Data folder</dt>
+            <dd>{info.data.dataDirectory}</dd>
+          </div>
         </dl>
       )}
-      <p className="muted">
+      <p className="muted small">
         Your data is stored only on this computer and is not encrypted. Anyone who can sign in to
         your Windows account can read it.
       </p>

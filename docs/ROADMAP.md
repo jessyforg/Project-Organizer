@@ -35,13 +35,13 @@ Results are recorded in [STATUS.md](STATUS.md).
 - Profiles are isolated (separate files) and survive restart.
 - `npm run lint`, `typecheck`, `test`, `build`, `package` all succeed from a clean clone.
 
-## Phase 3 — Core domain (services and persistence) (implemented; awaiting checkpoint approval)
+## Phase 3 — Core domain (services and persistence) ✔ approved
 
 Projects, folders, tags, statuses, Inbox, tasks and subtasks, priorities, dates, dependencies, progress, trash/restore/purge.
 
 **Acceptance:** every invariant in DATA_MODEL.md has a passing test; edge cases in TESTING.md §4 for these areas pass.
 
-## Phase 4 — Core UI
+## Phase 4 — Core UI (implemented; reviewed under delegated approval)
 
 Design tokens and shared components; sidebar navigation; dashboard; project overview; list view; task details; search/filter/sort; quick add; themes; fixed shortcuts; empty/loading/error states.
 

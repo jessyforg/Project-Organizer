@@ -5,6 +5,7 @@ import {
   PROJECT_KINDS,
   PROJECT_STATES,
   STATUS_CATEGORIES,
+  THEMES,
 } from './domain';
 
 /** Input validation for domain operations. Used at the IPC boundary and by forms. */
@@ -119,7 +120,7 @@ export const moveTaskSchema = z.strictObject({ id, projectId: id });
 /** Places the task before `beforeTaskId` among its siblings, or last when null. */
 export const reorderTaskSchema = z.strictObject({ id, beforeTaskId: id.nullable() });
 
-export const TASK_SORTS = ['priority', 'due', 'created', 'manual'] as const;
+export const TASK_SORTS = ['priority', 'due', 'created', 'manual', 'updated', 'completed'] as const;
 export const DUE_FILTERS = ['overdue', 'today', 'upcoming', 'none'] as const;
 
 export const taskListQuerySchema = z.strictObject({
@@ -146,6 +147,12 @@ export const dependencySchema = z.strictObject({ taskId: id, dependsOnTaskId: id
 export const idSchema = z.strictObject({ id });
 export const batchSchema = z.strictObject({ batchId: id });
 export const searchSchema = z.strictObject({ text: z.string().max(LIMITS.searchText) });
+export const setCompletedSchema = z.strictObject({ id, completed: z.boolean() });
+export const taskIdSchema = z.strictObject({ taskId: id });
+export const projectIdSchema = z.strictObject({ projectId: id });
+export const listProjectsSchema = z.strictObject({ includeArchived: z.boolean().optional() });
+export const updateSettingsSchema = z.strictObject({ theme: z.enum(THEMES).optional() });
+export const emptySchema = z.strictObject({});
 
 export type CreateFolderInput = z.output<typeof createFolderSchema>;
 export type RenameFolderInput = z.output<typeof renameFolderSchema>;

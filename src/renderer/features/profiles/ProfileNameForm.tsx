@@ -37,10 +37,11 @@ export function ProfileNameForm({
   };
 
   return (
-    <form className="inline-form" onSubmit={(event) => void handleSubmit(event)}>
+    <form className="field" onSubmit={(event) => void handleSubmit(event)}>
       <label htmlFor={inputId}>{label}</label>
-      <div className="row">
+      <div className="filters">
         <input
+          className="input"
           id={inputId}
           value={value}
           maxLength={100}
@@ -48,12 +49,12 @@ export function ProfileNameForm({
           aria-invalid={error !== null}
           aria-describedby={error ? errorId : undefined}
         />
-        <button type="submit" disabled={busy}>
+        <button type="submit" className="btn btn--primary" disabled={busy}>
           {submitLabel}
         </button>
       </div>
       {error && (
-        <p id={errorId} className="error" role="alert">
+        <p id={errorId} className="field__error" role="alert">
           {error}
         </p>
       )}
