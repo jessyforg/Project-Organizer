@@ -41,13 +41,13 @@ Projects, folders, tags, statuses, Inbox, tasks and subtasks, priorities, dates,
 
 **Acceptance:** every invariant in DATA_MODEL.md has a passing test; edge cases in TESTING.md §4 for these areas pass.
 
-## Phase 4 — Core UI (implemented; reviewed under delegated approval)
+## Phase 4 — Core UI ✔ (delegated approval)
 
 Design tokens and shared components; sidebar navigation; dashboard; project overview; list view; task details; search/filter/sort; quick add; themes; fixed shortcuts; empty/loading/error states.
 
 **Acceptance:** component tests pass; end-to-end workflows 1–5 and 7 pass; keyboard-only walkthrough documented; layout checked at 1024×700 and 1920×1080.
 
-## Phase 5 — Data safety
+## Phase 5 — Data safety ✔ (delegated approval)
 
 Encrypted backup export with verification; restore test into temporary profile; restore as new or replacement; daily snapshots with retention; JSON export; profile trash.
 

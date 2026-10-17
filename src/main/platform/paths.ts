@@ -22,6 +22,8 @@ export interface AppPaths {
   appDb: string;
   appSnapshots: string;
   logs: string;
+  /** Staging area for backup and restore work; cleared at startup. */
+  tmp: string;
   electronData: string;
   profiles: string;
   profileDir(profileId: string): string;
@@ -41,6 +43,7 @@ export function createAppPaths(root: string): AppPaths {
     appDb: path.join(root, 'app.db'),
     appSnapshots: path.join(root, 'snapshots'),
     logs: path.join(root, 'logs'),
+    tmp: path.join(root, 'tmp'),
     electronData: path.join(root, 'electron'),
     profiles,
     profileDir,

@@ -1,3 +1,4 @@
+import { pruneSnapshots, takeDailySnapshot } from '../backup/snapshots';
 import type { Logger } from '../platform/logger';
 import type { ServiceContext } from './context';
 import { DashboardService } from './dashboard';
@@ -45,8 +46,23 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
  * Runs when a profile opens and once a day while it stays open:
  * makes sure the Inbox exists and purges trash older than 30 days.
  */
-export function runProfileMaintenance(ctx: ServiceContext, logger: Logger): void {
+export function runProfileMaintenance(
+  ctx: ServiceContext,
+  logger: Logger,
+  options: { snapshotDir?: string } = {},
+): void {
   ensureInbox(ctx);
   const purged = new TrashService(ctx).purgeExpired();
   if (purged > 0) logger.info('trash.purged', { batches: purged });
+  if (options.snapshotDir) {
+    // A failed snapshot must not stop the profile from opening; it is logged and retried later.
+    try {
+      if (takeDailySnapshot(ctx.db, options.snapshotDir, ctx.clock())) {
+        logger.info('snapshot.daily_created');
+      }
+      pruneSnapshots(options.snapshotDir);
+    } catch (error) {
+      logger.error('snapshot.daily_failed', error);
+    }
+  }
 }

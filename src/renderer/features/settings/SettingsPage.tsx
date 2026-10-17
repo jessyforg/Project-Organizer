@@ -5,6 +5,7 @@ import { useInvalidate, useQuery } from '../../app/data';
 import { applyTheme } from '../../app/Shell';
 import { SHORTCUTS } from '../../app/shortcuts';
 import { useToast } from '../../app/toasts';
+import { BackupPanel } from '../backup/BackupPanel';
 import { ProfileSettings } from '../profiles/ProfileSettings';
 import { AboutPanel } from './AboutPanel';
 
@@ -64,6 +65,7 @@ export function SettingsPage({
         </div>
       </section>
       <ProfileSettings active={active} profiles={profiles} onChanged={onProfilesChanged} />
+      <BackupPanel onProfilesChanged={onProfilesChanged} />
       <section className="section" aria-labelledby="shortcuts-heading">
         <h2 id="shortcuts-heading">Keyboard shortcuts</h2>
         <ShortcutTable />

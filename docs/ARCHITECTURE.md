@@ -45,7 +45,9 @@ src/
     services/           one class per aggregate (folders, tags, projects, statuses, tasks,
                         dependencies, trash, search); each owns its SQL; rows.ts holds
                         shared column lists and row mappers
-    profiles/           registry (app.db) and profile lifecycle service
+    profiles/           registry (app.db) and profile lifecycle service (trash, atomic
+                        database replacement with crash recovery, snapshot recovery)
+    backup/             encrypted backup export/restore, manifest, snapshots, JSON export
     platform/           paths, logger
   preload/
     api.ts              typed API factory (type-only imports)
@@ -111,8 +113,8 @@ type Result<T> =
 ├─ snapshots\         pre-migration snapshots of app.db
 ├─ profiles\<profile-uuid>\
 │   ├─ profile.db
-│   ├─ snapshots\
-│   └─ tmp\            staging for backup/restore operations (Phase 5)
+│   └─ snapshots\      daily-*, pre-migration-*, pre-restore-* copies
+├─ tmp\               staging for backup and restore; emptied at every start
 ├─ logs\              main.log, rotated at 1 MB, 3 older files kept
 └─ electron\          Chromium's own storage (Electron userData)
 ```

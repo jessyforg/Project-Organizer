@@ -1,6 +1,6 @@
 # Security and Privacy
 
-Status: **Electron boundary implemented and verified** (Phases 2 and 4, 2026-10-17); backup encryption mechanism verified, feature planned for Phase 5.
+Status: **Electron boundary implemented and verified** (Phases 2 and 4); **encrypted backups implemented and tested** (Phase 5), 2026-10-17.
 
 ## 1. What this application does and does not protect (MVP)
 
@@ -47,6 +47,8 @@ Each item is verified by an automated or documented manual check before release.
 - [x] No arbitrary filesystem path from the renderer — inspected (none of the 51 channels accepts a path; IDs must be UUIDs)
 - [x] Data channels refuse to run with no profile open (clear `NOT_FOUND` error) — E2E
 - [x] Fonts and icons are bundled; the renderer loads nothing from the network — inspected (CSP `font-src 'self'`)
+- [x] Backup and export files are chosen in main-process dialogs; the renderer receives only an opaque, expiring token and a file name, never a path — unit (`file-tokens.test.ts`) and inspected
+- [x] The test-only dialog override (`PROJECTFORGE_TEST_DIALOG_DIR`) is ignored by packaged builds — inspected
 - [x] No shell command execution anywhere — inspected
 - [x] Electron fuses: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments`, `GrantFileProtocolExtraPrivileges` disabled; ASAR integrity validation, `OnlyLoadAppFromAsar`, cookie encryption enabled — fuses
 - [x] DevTools disabled and application menu removed in packaged builds — inspected
@@ -55,12 +57,13 @@ Each item is verified by an automated or documented manual check before release.
 
 ## 4. Exported backup encryption (MVP)
 
-Design approved 2026-10-17; mechanism verified in Phase 2 and guarded by `tests/unit/db/encryption-mechanism.test.ts`. The backup feature itself is built in Phase 5.
+Implemented in Phase 5 (`src/main/backup/`); see [ADR-0006](DECISIONS/0006-backup-and-export-formats.md) for the full flow and `tests/unit/backup/backup.test.ts` for the failure cases.
 
 - Library: `better-sqlite3-multiple-ciphers` (SQLite3MultipleCiphers), using its **SQLCipher v4-compatible** cipher configuration (`cipher='sqlcipher'`, `legacy=4`) so backups can be opened with standard SQLCipher tools by the user if ever necessary. No custom cryptography, key derivation, or file format.
 - Key derivation: SQLCipher v4 defaults. Verified value: `kdf_iter` = 256000. Other parameters are the library's SQLCipher v4 defaults and are not overridden.
 - Process: online backup API copies the live DB to `profiles/<id>/tmp/` → the copy is switched to rollback-journal mode → encrypted in place with the password (rekey) → reopened with the password and verified (integrity check, schema version, manifest, record counts) → atomically moved to the user-chosen destination. The temporary plaintext copy lives in the same folder as the already-plaintext live database, so it creates no new exposure for unprotected profiles. This must be revisited for protected profiles in L2.
-- Password: entered twice at export, minimum 10 characters, never stored, logged, or remembered after the operation.
+- Password: entered twice at export, minimum 10 characters, never stored, logged, or remembered after the operation. It is passed to SQLite as bytes via `key()`/`rekey()`, never inside SQL text.
+- Staging copies (which are briefly plaintext during export and restore) live in `tmp/` inside the data folder and are deleted when each operation ends and again at every app start.
 - A wrong password and a damaged file are indistinguishable by design; the message says "wrong password or damaged file".
 
 ## 5. Content handling

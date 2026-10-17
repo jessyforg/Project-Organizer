@@ -18,7 +18,16 @@ import type {
 } from './domain';
 import type { IpcChannel } from './ipc-channels';
 import * as s from './schemas';
-import type { AppInfo, ProfileSummary } from './types';
+import type {
+  AppInfo,
+  BackupInfo,
+  ChosenFile,
+  ProfileSummary,
+  RestoreTestReport,
+  SaveResult,
+  SnapshotInfo,
+  TrashedProfile,
+} from './types';
 
 export type { IpcChannel } from './ipc-channels';
 
@@ -35,6 +44,14 @@ export const profileNameSchema = z
 
 const profileIdSchema = z.uuid();
 
+export const BACKUP_PASSWORD_MIN = 10;
+const passwordSchema = z
+  .string()
+  .min(BACKUP_PASSWORD_MIN, `Use at least ${BACKUP_PASSWORD_MIN} characters.`)
+  .max(1024, 'The password is too long.');
+const tokenSchema = z.uuid();
+const snapshotNameSchema = z.string().regex(/^[0-9A-Za-z.-]{1,120}$/, 'Unknown snapshot.');
+
 /**
  * Request schemas for every IPC channel. Payloads are validated in the main process;
  * unknown fields are rejected. The preload bridge never imports this file at runtime.
@@ -46,6 +63,29 @@ export const ipcContract = {
   'profiles:create': z.strictObject({ displayName: profileNameSchema }),
   'profiles:rename': z.strictObject({ id: profileIdSchema, displayName: profileNameSchema }),
   'profiles:switch': z.strictObject({ id: profileIdSchema }),
+  'profiles:listTrashed': s.emptySchema,
+  'profiles:trash': z.strictObject({ id: profileIdSchema }),
+  'profiles:restoreTrashed': z.strictObject({ id: profileIdSchema }),
+  'profiles:deletePermanently': z.strictObject({ id: profileIdSchema }),
+  'profiles:snapshots': z.strictObject({ id: profileIdSchema }),
+  'profiles:restoreSnapshot': z.strictObject({ id: profileIdSchema, name: snapshotNameSchema }),
+  'backup:export': z.strictObject({ password: passwordSchema }),
+  'backup:chooseFile': s.emptySchema,
+  'backup:inspect': z.strictObject({ token: tokenSchema, password: z.string().min(1).max(1024) }),
+  'backup:testRestore': z.strictObject({
+    token: tokenSchema,
+    password: z.string().min(1).max(1024),
+  }),
+  'backup:restoreAsNew': z.strictObject({
+    token: tokenSchema,
+    password: z.string().min(1).max(1024),
+    displayName: profileNameSchema,
+  }),
+  'backup:replaceActive': z.strictObject({
+    token: tokenSchema,
+    password: z.string().min(1).max(1024),
+  }),
+  'export:json': s.emptySchema,
   'settings:get': s.emptySchema,
   'settings:update': s.updateSettingsSchema,
   'dashboard:get': s.emptySchema,
@@ -106,6 +146,19 @@ export interface IpcResponses {
   'profiles:create': ProfileSummary;
   'profiles:rename': ProfileSummary;
   'profiles:switch': ProfileSummary;
+  'profiles:listTrashed': TrashedProfile[];
+  'profiles:trash': null;
+  'profiles:restoreTrashed': ProfileSummary;
+  'profiles:deletePermanently': null;
+  'profiles:snapshots': SnapshotInfo[];
+  'profiles:restoreSnapshot': ProfileSummary;
+  'backup:export': SaveResult;
+  'backup:chooseFile': ChosenFile | null;
+  'backup:inspect': BackupInfo;
+  'backup:testRestore': RestoreTestReport;
+  'backup:restoreAsNew': ProfileSummary;
+  'backup:replaceActive': ProfileSummary;
+  'export:json': SaveResult;
   'settings:get': ProfileSettings;
   'settings:update': ProfileSettings;
   'dashboard:get': Dashboard;

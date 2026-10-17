@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserWindow } from 'electron';
 import { app, dialog, ipcMain, Menu, protocol, session } from 'electron';
+import { BackupService } from './backup/backup-service';
 import { openDatabase, type Db } from './db/connection';
 import { migrate } from './db/migrator';
 import { appMigrations } from './db/migrations/app';
@@ -14,6 +16,7 @@ import { ProfileService } from './profiles/profile-service';
 import { createAppProtocolHandler } from './protocol';
 import { createProfileServices, runProfileMaintenance } from './services';
 import { createChannelImpls } from './ipc/channels';
+import { FileTokens } from './ipc/file-tokens';
 import { APP_ORIGIN, APP_SCHEME, contentSecurityPolicy, isTrustedOrigin } from './security';
 import { createMainWindow, hardenAllWebContents, hardenSession } from './window';
 
@@ -73,6 +76,9 @@ async function start(): Promise<void> {
     return;
   }
 
+  // Staging files from an interrupted backup or restore may contain plaintext copies.
+  fs.rmSync(paths.tmp, { recursive: true, force: true });
+
   const registry = new ProfileRegistry(appDb);
   const service = new ProfileService({
     registry,
@@ -80,14 +86,22 @@ async function start(): Promise<void> {
     clock,
     newId: randomUUID,
     logger,
-    onOpened: (db) => runProfileMaintenance({ db, clock, newId: randomUUID }, logger),
+    onOpened: (db, profileId) =>
+      runProfileMaintenance({ db, clock, newId: randomUUID }, logger, {
+        snapshotDir: paths.profileSnapshots(profileId),
+      }),
   });
   profiles = service;
+  const purgedProfiles = await service.purgeTrashed();
+  if (purgedProfiles > 0) logger.info('profiles.purged', { count: purgedProfiles });
   await service.openLastUsed();
   setInterval(() => {
-    if (service.getActive() === null) return;
+    const active = service.getActive();
+    if (active === null) return;
     try {
-      runProfileMaintenance({ db: service.activeDb(), clock, newId: randomUUID }, logger);
+      runProfileMaintenance({ db: service.activeDb(), clock, newId: randomUUID }, logger, {
+        snapshotDir: paths.profileSnapshots(active.id),
+      });
     } catch (error) {
       logger.error('maintenance.failed', error);
     }
@@ -112,6 +126,17 @@ async function start(): Promise<void> {
       }),
       profiles: service,
       services: () => createProfileServices({ db: service.activeDb(), clock, newId: randomUUID }),
+      backups: new BackupService({
+        paths,
+        profiles: service,
+        clock,
+        newId: randomUUID,
+        appVersion: app.getVersion(),
+        logger,
+      }),
+      fileTokens: new FileTokens(),
+      dialogs: testDialogs() ?? nativeDialogs,
+      clock,
     }),
     { isTrustedSender: (url) => isTrustedOrigin(url, devServerUrl), logger },
   );
@@ -131,6 +156,49 @@ async function start(): Promise<void> {
     logger.warn('renderer.gone', { reason: details.reason }),
   );
   logger.info('app.started');
+}
+
+const nativeDialogs = {
+  saveFile: async (defaultName: string, filter: { name: string; extension: string }) => {
+    const options = {
+      defaultPath: path.join(app.getPath('documents'), defaultName),
+      filters: [{ name: filter.name, extensions: [filter.extension] }],
+    };
+    const result = mainWindow
+      ? await dialog.showSaveDialog(mainWindow, options)
+      : await dialog.showSaveDialog(options);
+    return result.canceled || !result.filePath ? null : result.filePath;
+  },
+  openFile: async (filter: { name: string; extension: string }) => {
+    const options = {
+      properties: ['openFile' as const],
+      filters: [{ name: filter.name, extensions: [filter.extension] }],
+    };
+    const result = mainWindow
+      ? await dialog.showOpenDialog(mainWindow, options)
+      : await dialog.showOpenDialog(options);
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  },
+};
+
+/**
+ * End-to-end tests cannot click native dialogs. In unpackaged builds only, a test folder
+ * can stand in for them: saving writes there, opening picks the newest matching file.
+ */
+function testDialogs(): typeof nativeDialogs | null {
+  const dir = app.isPackaged ? undefined : process.env['PROJECTFORGE_TEST_DIALOG_DIR'];
+  if (!dir) return null;
+  return {
+    saveFile: (defaultName) => Promise.resolve(path.join(dir, defaultName)),
+    openFile: (filter) => {
+      const files = fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith(`.${filter.extension}`))
+        .map((f) => path.join(dir, f))
+        .sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+      return Promise.resolve(files[0] ?? null);
+    },
+  };
 }
 
 app.on('window-all-closed', () => app.quit());

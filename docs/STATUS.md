@@ -2,6 +2,35 @@
 
 Newest entries first.
 
+## 2026-10-17 — Phase 5: Data safety implemented (delegated approval)
+
+**Scope completed:** password-encrypted backup export with verification of the written file; backup check (inspect) showing what a backup contains; restore test into a temporary location; restore as a new profile; replace the open profile with a verified pre-restore copy, atomic swap, rollback, and crash recovery; daily automatic snapshots with retention; recovery of a damaged profile from its snapshots (from the start screen); unencrypted JSON export behind a warning; profile trash with restore and 30-day purge; staging cleanup at startup. Requirements covered: R15, R19, R20, R21; invariants 14 and 15.
+
+**Decisions made under delegation:**
+- Backup files are chosen in main-process dialogs and referred to by short-lived tokens; the renderer never sends paths.
+- Passwords are passed to SQLite as bytes (`key()`/`rekey()`), never in SQL text; minimum 10 characters.
+- Restoring as a new profile names it "<original> (restored)" by default, made unique if needed.
+- Snapshot retention: 7 daily, 5 pre-migration, 5 pre-restore.
+- A damaged profile is never overwritten: recovery keeps the damaged file as `profile.db.before-snapshot-<time>`.
+- End-to-end tests replace native dialogs with a folder (`PROJECTFORGE_TEST_DIALOG_DIR`), honoured only by unpackaged builds.
+
+**Verification (2026-10-17):**
+
+| Check | Result |
+|---|---|
+| `npm run check` | Passed — 205 tests (24 new data-safety tests, 1 file-token test) |
+| `npm run test:e2e` | Passed — 7 of 7, including workflow 6 (backup → test restore → restore as new profile → contents match) and profile trash |
+| Backup end-to-end stability (`--repeat-each=3`) | Passed — 6 of 6 |
+| Timing (small profile) | Export 0.8 s, check 0.25 s, test restore 1.2 s, restore 1–4 s |
+
+**Critical defect found and fixed during the phase:** replacing a profile's data could delete the original data if the restored file then failed to open. The open step ran crash recovery, which mistook the in-progress replacement for an interrupted one and removed the original copy, so the rollback had nothing to restore. Found by the rollback test before any release; fixed by never running crash recovery inside a replacement. The test now guards it.
+
+**Other fixes:** a test assumption about snapshot timing; ambiguous test locators.
+
+**Known limitations:** live profile data is not encrypted (L2); app-wide registry (`app.db`) corruption still shows a native error dialog without an in-app recovery path (profiles' own files are unaffected and can be restored from backups); restoring large profiles has not been measured yet (Phase 6).
+
+**Next step:** Phase 6 — Release hardening.
+
 ## 2026-10-17 — Phase 4: Core UI implemented
 
 **Approval:** the product owner delegated approval for Phase 4 onward ("start the next phase automatically… do what you recommend… tell me after"), and later extended it to the remaining phases. Decisions made under that delegation are listed below for review.

@@ -99,6 +99,64 @@ export class ProfileRegistry {
     }
   }
 
+  listTrashed(): (ProfileSummary & { trashedAt: string })[] {
+    const rows = this.db
+      .prepare(
+        `SELECT ${COLUMNS}, trashed_at FROM profiles WHERE trashed_at IS NOT NULL ORDER BY trashed_at DESC`,
+      )
+      .all() as (ProfileRow & { trashed_at: string })[];
+    return rows.map((row) => ({ ...toSummary(row), trashedAt: row.trashed_at }));
+  }
+
+  /** Trashed profile IDs, optionally only those trashed before `before`. */
+  trashedIds(before?: string): string[] {
+    const rows = (
+      before === undefined
+        ? this.db.prepare('SELECT id FROM profiles WHERE trashed_at IS NOT NULL').all()
+        : this.db
+            .prepare('SELECT id FROM profiles WHERE trashed_at IS NOT NULL AND trashed_at < ?')
+            .all(before)
+    ) as { id: string }[];
+    return rows.map((r) => r.id);
+  }
+
+  trash(id: string, now: string): void {
+    const result = this.db
+      .prepare(
+        'UPDATE profiles SET trashed_at = ?, updated_at = ? WHERE id = ? AND trashed_at IS NULL',
+      )
+      .run(now, now, id);
+    if (result.changes === 0) throw new AppError('NOT_FOUND', 'Profile not found.');
+  }
+
+  untrash(id: string, displayName: string, now: string): void {
+    try {
+      const result = this.db
+        .prepare(
+          `UPDATE profiles SET trashed_at = NULL, display_name = ?, name_key = ?, updated_at = ?
+           WHERE id = ? AND trashed_at IS NOT NULL`,
+        )
+        .run(displayName, profileNameKey(displayName), now, id);
+      if (result.changes === 0) throw new AppError('NOT_FOUND', 'Profile not found in the trash.');
+    } catch (error) {
+      if (sqliteErrorCode(error) === 'SQLITE_CONSTRAINT_UNIQUE') throw conflict(error);
+      throw error;
+    }
+  }
+
+  remove(id: string): void {
+    this.db.prepare('DELETE FROM profiles WHERE id = ?').run(id);
+  }
+
+  /** `base`, or `base (2)`, `base (3)`… — the first name not used by a live profile. */
+  uniqueName(base: string): string {
+    if (!this.isNameTaken(base)) return base;
+    for (let n = 2; ; n++) {
+      const candidate = `${base} (${n})`;
+      if (!this.isNameTaken(candidate)) return candidate;
+    }
+  }
+
   markOpened(id: string, now: string): void {
     this.db.prepare('UPDATE profiles SET last_opened_at = ? WHERE id = ?').run(now, id);
   }

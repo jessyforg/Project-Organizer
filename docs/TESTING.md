@@ -69,8 +69,8 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 | 11 No double-counted progress | `domain.test.ts` |
 | 12 Archive independent of status | `projects.test.ts` |
 | 13 Unique profile names | `profiles/profile-service.test.ts` |
-| 14 Imports and restores all-or-nothing | Trash restore is transactional; backup restore and import arrive in Phase 5 |
-| 15 Backups state their contents | Phase 5 |
+| 14 Imports and restores all-or-nothing | Trash restore is transactional; backup restore works on a staged copy and swaps atomically (`backup.test.ts`) |
+| 15 Backups state their contents | Manifest `includes`/`omits`, shown before restoring (`backup.test.ts`, E2E) |
 
 ## 5. End-to-end workflows
 
@@ -84,9 +84,31 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 
 ### Status of the end-to-end workflows
 
-Workflows 1–5 and 7 are automated in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts` and were run five times in a row without failure. Workflow 6 (backup and restore) arrives in Phase 5.
+All seven workflows are automated: 1–5 and 7 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
 
 Component tests use the real preload `createApi` over a scripted fake backend (`tests/renderer/harness.tsx`), so they exercise the exact API shape the app uses.
+
+### Data-safety gate coverage (Phase 5)
+
+| Case | Test |
+|---|---|
+| Backup success, verified by reopening; no readable content in the file | `tests/unit/backup/backup.test.ts`, `tests/e2e/backup.spec.ts` |
+| Wrong password | unit and E2E |
+| Truncated, corrupted, empty, random-bytes files | unit |
+| Encrypted file that is not a backup; missing records (counts differ) | unit |
+| Newer backup format; newer data schema | unit |
+| Interrupted write (no partial file left) | unit (injected failing copy) |
+| Insufficient disk space, before and during the write | unit (injected free-space check and ENOSPC) |
+| Test restore into a temporary location changes nothing | unit and E2E |
+| Restore as new profile; contents match | unit and E2E |
+| Replace current profile keeps a verified pre-restore copy | unit |
+| Replace rolls back if the restored data cannot be opened | unit |
+| Crash mid-replace: finish if new file usable, undo if not | unit |
+| Restore of an older-schema backup upgrades it | unit (v1 backup) |
+| Damaged profile recovered from a snapshot, damaged file kept | unit |
+| Daily snapshots, retention | unit (controllable clock) |
+| Profile trash, restore with rename, permanent delete, 30-day purge | unit and E2E |
+| JSON export validates and includes trashed rows | unit and E2E |
 
 ### Keyboard-only walkthrough
 

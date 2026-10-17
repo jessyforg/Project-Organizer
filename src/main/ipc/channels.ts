@@ -1,4 +1,10 @@
+import path from 'node:path';
 import type { AppInfo } from '@shared/types';
+import type { BackupService } from '../backup/backup-service';
+import { buildJsonExport, writeJsonExport } from '../backup/json-export';
+import { localIsoDate } from '../domain/dates';
+import { AppError } from '../errors';
+import type { FileTokens } from './file-tokens';
 import type { ProfileService } from '../profiles/profile-service';
 import type { ProfileServices } from '../services';
 import type { ChannelImpls } from './handler';
@@ -8,10 +14,41 @@ export interface ChannelDeps {
   profiles: ProfileService;
   /** Services bound to the open profile; throws NOT_FOUND when no profile is open. */
   services: () => ProfileServices;
+  backups: BackupService;
+  fileTokens: FileTokens;
+  /** Main-process file dialogs; they return null when the user cancels. */
+  dialogs: {
+    saveFile(
+      defaultName: string,
+      filter: { name: string; extension: string },
+    ): Promise<string | null>;
+    openFile(filter: { name: string; extension: string }): Promise<string | null>;
+  };
+  clock: () => Date;
+}
+
+const BACKUP_FILTER = { name: 'ProjectForge backup', extension: 'pfbackup' };
+const JSON_FILTER = { name: 'JSON export', extension: 'json' };
+
+/** A default file name that is safe on Windows. */
+function fileNameFor(profileName: string, date: string, extension: string): string {
+  const forbidden = '<>:"/\\|?*';
+  const safe =
+    [...profileName]
+      .map((ch) => (ch.charCodeAt(0) < 32 || forbidden.includes(ch) ? '-' : ch))
+      .join('')
+      .trim() || 'Profile';
+  return `ProjectForge ${safe} ${date}.${extension}`;
 }
 
 /** One implementation per channel; the mapped type makes a missing channel a compile error. */
-export function createChannelImpls({ appInfo, profiles, services: s }: ChannelDeps): ChannelImpls {
+export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
+  const { appInfo, profiles, services: s, backups, fileTokens, dialogs, clock } = deps;
+  const requireActive = () => {
+    const active = profiles.getActive();
+    if (!active) throw new AppError('NOT_FOUND', 'No profile is open.');
+    return active;
+  };
   return {
     'app:getInfo': () => appInfo(),
     'profiles:list': () => profiles.list(),
@@ -19,6 +56,62 @@ export function createChannelImpls({ appInfo, profiles, services: s }: ChannelDe
     'profiles:create': ({ displayName }) => profiles.create(displayName),
     'profiles:rename': ({ id, displayName }) => profiles.rename(id, displayName),
     'profiles:switch': ({ id }) => profiles.switchTo(id),
+    'profiles:listTrashed': () => profiles.listTrashed(),
+    'profiles:trash': async ({ id }) => {
+      await profiles.trash(id);
+      return null;
+    },
+    'profiles:restoreTrashed': ({ id }) => profiles.restoreTrashed(id),
+    'profiles:deletePermanently': async ({ id }) => {
+      await profiles.deletePermanently(id);
+      return null;
+    },
+    'profiles:snapshots': ({ id }) => profiles.listSnapshots(id),
+    'profiles:restoreSnapshot': ({ id, name }) => profiles.restoreSnapshot(id, name),
+
+    'backup:export': async ({ password }) => {
+      const active = requireActive();
+      const destination = await dialogs.saveFile(
+        fileNameFor(active.displayName, localIsoDate(clock()), BACKUP_FILTER.extension),
+        BACKUP_FILTER,
+      );
+      if (!destination) return { saved: false };
+      await backups.exportActive(password, destination);
+      return { saved: true, fileName: path.basename(destination) };
+    },
+    'backup:chooseFile': async () => {
+      const file = await dialogs.openFile(BACKUP_FILTER);
+      return file ? { token: fileTokens.issue(file), fileName: path.basename(file) } : null;
+    },
+    'backup:inspect': ({ token, password }) => backups.inspect(fileTokens.resolve(token), password),
+    'backup:testRestore': ({ token, password }) =>
+      backups.testRestore(fileTokens.resolve(token), password),
+    'backup:restoreAsNew': async ({ token, password, displayName }) => {
+      const summary = await backups.restoreAsNew(fileTokens.resolve(token), password, displayName);
+      fileTokens.revoke(token);
+      return summary;
+    },
+    'backup:replaceActive': async ({ token, password }) => {
+      const summary = await backups.replaceActive(fileTokens.resolve(token), password);
+      fileTokens.revoke(token);
+      return summary;
+    },
+    'export:json': async () => {
+      const active = requireActive();
+      const destination = await dialogs.saveFile(
+        fileNameFor(active.displayName, localIsoDate(clock()), JSON_FILTER.extension),
+        JSON_FILTER,
+      );
+      if (!destination) return { saved: false };
+      const document = buildJsonExport(
+        profiles.activeDb(),
+        { id: active.id, name: active.displayName },
+        appInfo().version,
+        clock(),
+      );
+      writeJsonExport(document, destination);
+      return { saved: true, fileName: path.basename(destination) };
+    },
 
     'settings:get': () => s().settings.get(),
     'settings:update': (patch) => s().settings.update(patch),

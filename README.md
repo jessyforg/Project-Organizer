@@ -4,7 +4,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 
 ## Status
 
-**Core features usable (Phase 4).** Local profiles; projects with folders, tags, custom workflows, archive, and progress; tasks with subtasks, priorities, dates, tags, and dependencies; Today dashboard, task lists with filters and sorting, global search, trash with 30-day recovery, light and dark themes, and keyboard shortcuts. Backups arrive in Phase 5. See the [roadmap](docs/ROADMAP.md) and [status log](docs/STATUS.md).
+**Core features usable (Phase 4).** Local profiles; projects with folders, tags, custom workflows, archive, and progress; tasks with subtasks, priorities, dates, tags, and dependencies; Today dashboard, task lists with filters and sorting, global search, trash with 30-day recovery, light and dark themes, and keyboard shortcuts. Encrypted backups with restore testing, automatic daily copies, profile trash, and JSON export. See the [roadmap](docs/ROADMAP.md) and [status log](docs/STATUS.md).
 
 ## Platform
 
@@ -48,12 +48,13 @@ If you run commands from inside an editor's extension or task runner and Electro
 
 Each profile is a separate database in `profiles\<id>\profile.db`. Before any database upgrade, the app saves a verified copy in a `snapshots` folder. Logs are in `logs\` and contain no task, note, or profile content. Uninstalling the app does not delete this folder.
 
-**Data is not encrypted on disk.** Anyone who can sign in to your Windows account can read it. Password-encrypted exported backups are planned for Phase 5.
+**Live data is not encrypted on disk.** Anyone who can sign in to your Windows account can read it. Backups you create in Settings → Backup and restore are encrypted with a password you choose; JSON exports are not encrypted.
+
+The app also keeps verified automatic copies in each profile's `snapshots` folder: one per day for the last 7 days, plus copies made before app updates and before restores. If a profile cannot be opened, the start screen offers these copies.
 
 ## Known limitations
 
 - The installer is not code-signed, so Windows SmartScreen shows a warning on first run.
-- No backup or export yet (Phase 5). Until then, copy the data folder while the app is closed if you want a manual copy.
 - Kanban, calendar, notes, and reminders are planned for later releases.
 
 ## Documentation

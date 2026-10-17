@@ -169,7 +169,8 @@ Archived projects keep their progress value; trashed tasks are excluded.
 | Permanent delete / purge | Hard `DELETE`; cascades remove tag links, dependencies, statuses, and subtasks. |
 | Automatic purge | When a profile opens and every 24 hours while it stays open, batches trashed more than 30 days ago are purged. The clock is injected for tests. |
 | Delete folder | Projects in it move to "no folder"; no project is deleted. |
-| Trash profile | Registry row gets `trashed_at`; files untouched until purge after 30 days. |
+| Trash profile | Registry row gets `trashed_at` (the profile is closed if open); files untouched. Restoring renames it if its name was taken meanwhile. Purged with its files 30 days later, at app start. |
+| Automatic snapshots | `snapshots/` in each profile: `daily-*.db` (one per day, last 7 kept), `pre-migration-*.db` and `pre-restore-*.db` (last 5 of each). Each is a verified single-file copy. |
 
 Independent backups and exports may still contain copies after permanent deletion; the UI says so on permanent delete.
 
