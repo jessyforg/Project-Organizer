@@ -120,7 +120,19 @@ Partly automated (the core workflow uses Ctrl+K, Ctrl+N, Ctrl+1, Ctrl+4, Ctrl+, 
 - After navigation, focus moves to the main area so screen readers start at the new page.
 - Visible focus outline on every control (`:focus-visible`).
 
-A full manual pass with a screen reader is part of the Phase 6 release gate.
+A full manual pass with a screen reader is still recommended before public release (RELEASE_CHECKLIST.md).
+
+### Accessibility scan
+
+`tests/e2e/accessibility.spec.ts` runs axe-core (WCAG 2.2 A/AA rules) on the start screen, Today, My tasks, a project with the task details panel open, Projects, Trash, Settings, and the new-task dialog, in light and dark themes. It uses axe's legacy mode because Electron cannot open the helper page axe otherwise needs. The scanner was confirmed to report injected violations.
+
+### Upgrade fixtures
+
+`tests/fixtures/` holds committed databases from each schema version (app v1, profile v1, profile v2). `tests/unit/fixtures.test.ts` upgrades copies to the current schema and checks data and relationships. When a version is released with a new migration, add its fixture with `REGENERATE_FIXTURES=1 npx vitest run tests/unit/fixtures.test.ts` (after extending the generator).
+
+### Performance
+
+Measured in Phase 6 through the real UI with 5,000 tasks and 1,250 subtasks in 20 projects: every screen under 300 ms (see RELEASE_CHECKLIST.md). Lists load 500 tasks at a time and say so when more exist.
 
 ### Window sizes
 

@@ -16,6 +16,7 @@ import { useToast } from '../../app/toasts';
 import { ConfirmDialog, ErrorNotice, Loading, ProgressMeter, Swatch } from '../../components/ui';
 import { formatDate, localToday } from '../../lib/format';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
+import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
 import { TaskList } from '../tasks/TaskList';
 import { useLookups } from '../tasks/useLookups';
 import { ProjectDialog } from './ProjectDialog';
@@ -64,8 +65,14 @@ function ProjectView({ details }: { details: ProjectDetails }) {
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [filters, setFilters] = useState(PROJECT_DEFAULTS);
+  const [limit, setLimit] = useState(PAGE_SIZE);
   const deferred = useDeferredValue(filters);
-  const query = { ...filtersToQuery(deferred), projectId: project.id, includeArchived: true };
+  const query = {
+    ...filtersToQuery(deferred),
+    projectId: project.id,
+    includeArchived: true,
+    limit,
+  };
   const tasks = useQuery(`project-tasks:${JSON.stringify(query)}`, () =>
     window.api.tasks.list(query),
   );
@@ -249,7 +256,10 @@ function ProjectView({ details }: { details: ProjectDetails }) {
         <FilterBar
           value={filters}
           defaults={PROJECT_DEFAULTS}
-          onChange={setFilters}
+          onChange={(next) => {
+            setFilters(next);
+            setLimit(PAGE_SIZE);
+          }}
           tags={lookups.tagList}
           allowManualSort
         />
@@ -271,6 +281,13 @@ function ProjectView({ details }: { details: ProjectDetails }) {
             today={today}
             separateUndated={deferred.sort === 'due'}
             tags={lookups.tags}
+          />
+        )}
+        {tasks.data && (
+          <LoadMore
+            shown={tasks.data.length}
+            limit={limit}
+            onMore={() => setLimit((l) => l + PAGE_SIZE)}
           />
         )}
       </section>

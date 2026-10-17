@@ -53,7 +53,7 @@ Each item is verified by an automated or documented manual check before release.
 - [x] Electron fuses: `RunAsNode`, `EnableNodeOptionsEnvironmentVariable`, `EnableNodeCliInspectArguments`, `GrantFileProtocolExtraPrivileges` disabled; ASAR integrity validation, `OnlyLoadAppFromAsar`, cookie encryption enabled — fuses
 - [x] DevTools disabled and application menu removed in packaged builds — inspected
 - [x] Single-instance lock — inspected
-- [ ] Re-verify the whole list in Phase 6 (release gate)
+- [x] Whole list re-verified in Phase 6 against the packaged build (RELEASE_CHECKLIST.md)
 
 ## 4. Exported backup encryption (MVP)
 

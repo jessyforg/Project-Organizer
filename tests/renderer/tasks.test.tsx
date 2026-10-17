@@ -193,3 +193,26 @@ describe('TaskDetails', () => {
     expect(backend.callsTo('trash:trashTask')).toEqual([{ id: task.id }]);
   });
 });
+
+describe('MyTasksPage paging', () => {
+  it('says when the list may be incomplete and loads more on request', async () => {
+    const { MyTasksPage } = await import('../../src/renderer/features/tasks/MyTasksPage');
+    const backend = installApi({
+      'tasks:list': (payload) => {
+        const limit = Number(payload['limit']);
+        return ok(
+          Array.from({ length: Math.min(limit, 700) }, (_, i) => makeTask({ title: `T${i}` })),
+        );
+      },
+    });
+    renderWithApp(<MyTasksPage />);
+    expect(
+      await screen.findByText(
+        'Showing the first 500 tasks. Use filters to narrow the list, or load more.',
+      ),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Load 500 more' }));
+    await waitFor(() => expect(backend.callsTo('tasks:list').at(-1)?.['limit']).toBe(1000));
+    await waitFor(() => expect(screen.queryByText(/Showing the first/)).not.toBeInTheDocument());
+  });
+});

@@ -53,7 +53,7 @@ Encrypted backup export with verification; restore test into temporary profile; 
 
 **Acceptance (data-safety gate):** all backup/restore cases in TESTING.md §4 pass, including corrupt, truncated, wrong-password, interrupted, and newer-version inputs; end-to-end workflow 6 passes; restore performed into a separate profile.
 
-## Phase 6 — Release hardening
+## Phase 6 — Release hardening ✔ (delegated approval; see RELEASE_CHECKLIST.md)
 
 Security checklist review; performance with ~5,000 tasks; upgrade test from fixtures; clean-install test on a second Windows account or VM; README with data locations and recovery; known limitations; `npm audit`.
 

@@ -15,7 +15,7 @@ export const LIMITS = {
   title: 500,
   description: 1_000_000,
   searchText: 200,
-  listPageSize: 1000,
+  listPageSize: 20_000,
 } as const;
 
 function isRealDate(value: string): boolean {
