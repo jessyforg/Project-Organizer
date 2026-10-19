@@ -1,9 +1,11 @@
 import { forwardRef } from 'react';
 import {
+  CalendarDays,
   FolderKanban,
   Inbox,
   LayoutList,
   ListChecks,
+  NotebookPen,
   Plus,
   Settings,
   Sun,
@@ -19,6 +21,8 @@ const NAV: { route: Route; label: string; icon: typeof Sun }[] = [
   { route: { name: 'dashboard' }, label: 'Today', icon: Sun },
   { route: { name: 'tasks' }, label: 'My tasks', icon: ListChecks },
   { route: { name: 'projects' }, label: 'Projects', icon: FolderKanban },
+  { route: { name: 'notes', noteId: null }, label: 'Notes', icon: NotebookPen },
+  { route: { name: 'calendar' }, label: 'Calendar', icon: CalendarDays },
   { route: { name: 'trash' }, label: 'Trash', icon: Trash2 },
   { route: { name: 'settings' }, label: 'Settings', icon: Settings },
 ];
@@ -39,7 +43,7 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
       <div className="wordmark">ProjectForge</div>
       <div className="field">
         <label htmlFor="global-search" className="visually-hidden">
-          Search projects and tasks
+          Search projects, tasks, and notes
         </label>
         <input
           id="global-search"

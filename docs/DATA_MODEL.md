@@ -91,7 +91,7 @@ Status rules: the default status cannot be removed (choose another default first
 | created_at, updated_at | TEXT NOT NULL | |
 | deleted_at, deletion_batch_id | TEXT NULL | |
 
-**tags** — `id` PK, `name`, `name_key` UNIQUE, `color` NULL (token), `created_at`, `updated_at`. Deleting a tag is immediate and removes it from every task and project.
+**tags** — `id` PK, `name`, `name_key` UNIQUE, `color` NULL (token), `created_at`, `updated_at`. Deleting a tag is immediate and removes it from every task, project, and note.
 
 **task_tags** — (`task_id` → tasks ON DELETE CASCADE, `tag_id` → tags ON DELETE CASCADE), PK (task_id, tag_id).
 
@@ -107,6 +107,20 @@ Status rules: the default status cannot be removed (choose another default first
 
 Done and cancelled prerequisites count as satisfied. Unfinished prerequisites produce a warning, never a block.
 
+**notes** (schema v3)
+| Column | Type | Notes |
+|---|---|---|
+| id | TEXT PK | |
+| project_id | TEXT NOT NULL → projects(id) ON DELETE CASCADE | Every note belongs to a project; notes created without one go to the Inbox |
+| title | TEXT NOT NULL CHECK(length(trim(title)) > 0) | A blank title is saved as "Untitled note" |
+| body | TEXT NOT NULL DEFAULT '' | Markdown source as typed, up to 1,000,000 characters (Zod limit); never stored or rendered as HTML |
+| created_at, updated_at | TEXT NOT NULL | `updated_at` changes only when the title, body, project, or tags change |
+| deleted_at, deletion_batch_id | TEXT NULL | Same trash model as tasks |
+
+Notes cannot be created in, or moved into, an archived project; notes already in one stay readable and editable.
+
+**note_tags** — (`note_id` → notes ON DELETE CASCADE, `tag_id` → tags ON DELETE CASCADE), PK (note_id, tag_id).
+
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
 ### Database guards
@@ -115,14 +129,17 @@ Triggers reject, even if application code is bypassed: a task whose status belon
 
 ### Moving tasks between projects
 
-Only top-level tasks move; their subtasks (including trashed ones) move with them. Each status is mapped to the target project's first status of the same category, or to its default status if that category is missing. Dependencies that would cross projects are removed and their count is reported.
+Kanban moves (`tasks:moveOnBoard`) change a top-level task's status and manual position in one transaction; no schema change was needed for the board or the calendar.
+
+Only top-level tasks move between projects; their subtasks (including trashed ones) move with them. Each status is mapped to the target project's first status of the same category, or to its default status if that category is missing. Dependencies that would cross projects are removed and their count is reported.
 
 ### Indexes and search
 
 - `tasks(project_id, deleted_at)`, `tasks(parent_task_id)`, `tasks(status_id)`, `tasks(due_date) WHERE deleted_at IS NULL`, `tasks(updated_at)`, `tasks(deletion_batch_id)`.
 - `projects(deleted_at, archived_at)`, `projects(folder_id)`, `projects(deletion_batch_id)`.
-- `task_dependencies(depends_on_task_id)`, `task_tags(tag_id)`, `project_tags(tag_id)`.
-- Full-text search: FTS5 tables `tasks_fts` (title, description) and `projects_fts` (name, description) with the `unicode61 remove_diacritics 2` tokenizer, so "cafe" finds "Café". Each keeps its own copy keyed by ID rather than rowid, so it stays correct even if SQLite renumbers rowids; triggers keep it in sync. User input is converted to quoted prefix terms, so search text is never interpreted as query syntax.
+- `task_dependencies(depends_on_task_id)`, `task_tags(tag_id)`, `project_tags(tag_id)`, `note_tags(tag_id)`.
+- `notes(project_id, deleted_at)`, `notes(updated_at)`, `notes(deletion_batch_id)`. Note lists read only the first 600 characters of each body (for the excerpt).
+- Full-text search: FTS5 tables `tasks_fts` (title, description), `projects_fts` (name, description), and `notes_fts` (title, body) with the `unicode61 remove_diacritics 2` tokenizer, so "cafe" finds "Café". Each keeps its own copy keyed by ID rather than rowid, so it stays correct even if SQLite renumbers rowids; triggers keep it in sync. User input is converted to quoted prefix terms, so search text is never interpreted as query syntax.
 - Measured in Phase 3 with 6,250 tasks: list, filter, and search queries 3–38 ms; progress for 20 projects 21 ms.
 
 ## 4. Invariants
@@ -144,6 +161,7 @@ These must always hold and each has an automated test.
 13. Profile display names are unique (case-insensitive) among non-trashed profiles.
 14. Imports and restores are all-or-nothing.
 15. Backups and exports accurately state which content is included.
+16. Every note belongs to an existing project in the same profile database; trashing a project trashes its live notes in the same deletion batch.
 
 ## 5. Progress calculation
 
@@ -164,9 +182,10 @@ Archived projects keep their progress value; trashed tasks are excluded.
 | Action | Effect |
 |---|---|
 | Move task to trash | Task and its subtasks get `deleted_at` and one `deletion_batch_id`. Dependencies are kept. Warning lists tasks that depend on it. |
-| Move project to trash | Project and all its tasks get one batch. Inbox cannot be trashed. |
-| Restore batch | Clears `deleted_at` for the batch. Refused with a message if the task's project or parent task is still in the trash (restore that first). Tasks trashed in an earlier, separate action stay in the trash when their project is restored. |
-| Permanent delete / purge | Hard `DELETE`; cascades remove tag links, dependencies, statuses, and subtasks. |
+| Move note to trash | The note gets its own batch. |
+| Move project to trash | Project and all its tasks and notes get one batch. Inbox cannot be trashed. |
+| Restore batch | Clears `deleted_at` for the batch. Refused with a message if the task's or note's project, or the task's parent task, is still in the trash (restore that first). Tasks and notes trashed in an earlier, separate action stay in the trash when their project is restored. |
+| Permanent delete / purge | Hard `DELETE`; cascades remove tag links, dependencies, statuses, subtasks, and a deleted project's notes. |
 | Automatic purge | When a profile opens and every 24 hours while it stays open, batches trashed more than 30 days ago are purged. The clock is injected for tests. |
 | Delete folder | Projects in it move to "no folder"; no project is deleted. |
 | Trash profile | Registry row gets `trashed_at` (the profile is closed if open); files untouched. Restoring renames it if its name was taken meanwhile. Purged with its files 30 days later, at app start. |

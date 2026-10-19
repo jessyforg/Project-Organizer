@@ -128,9 +128,9 @@ export interface TaskTrashPreview {
 
 export interface TrashEntry {
   batchId: string;
-  kind: 'project' | 'task';
+  kind: 'project' | 'task' | 'note';
   title: string;
-  /** For task entries: the project the task belongs to. */
+  /** For task and note entries: the project the item belongs to. */
   projectName: string | null;
   itemCount: number;
   deletedAt: string;
@@ -140,13 +140,37 @@ export interface TrashEntry {
 export interface RestoreResult {
   restoredProjects: number;
   restoredTasks: number;
+  restoredNotes: number;
   /** Dependencies of restored tasks whose prerequisite is still in the trash. */
   unresolvedDependencies: { taskId: string; prerequisiteId: string }[];
+}
+
+/** A note without its body, for lists. `excerpt` is the start of the body as plain text. */
+export interface NoteSummary {
+  id: string;
+  projectId: string;
+  title: string;
+  excerpt: string;
+  tagIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A Markdown note (R26). The body is stored as typed and never rendered as HTML. */
+export interface Note {
+  id: string;
+  projectId: string;
+  title: string;
+  body: string;
+  tagIds: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SearchResults {
   projects: Project[];
   tasks: Task[];
+  notes: NoteSummary[];
 }
 
 export const THEMES = ['system', 'light', 'dark'] as const;

@@ -120,6 +120,9 @@ if (process.env['REGENERATE_FIXTURES']) {
       expect(s.trash.list().map((e) => e.title)).toEqual(['Old idea']);
       expect(s.projects.progress(website.id)).toEqual({ done: 1, total: 3, ratio: 1 / 3 });
       expect(s.settings.get().theme).toBe('dark');
+      // Schema v3: notes work on an upgraded profile and are searchable.
+      s.notes.create({ title: 'After upgrade', projectId: website.id, body: 'Launch checklist' });
+      expect(s.search.search('checklist').notes.map((n) => n.title)).toEqual(['After upgrade']);
       db.close();
     });
 

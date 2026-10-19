@@ -7,6 +7,7 @@ import {
 } from '@shared/domain';
 import type {
   CreateTaskInput,
+  MoveOnBoardInput,
   MoveTaskInput,
   ReorderTaskInput,
   TaskListQuery,
@@ -355,6 +356,29 @@ export class TaskService {
       db.transaction(() => ordered.forEach((id, i) => update.run(keys[i], now, id)))();
     }
     return this.get(task.id);
+  }
+
+  /**
+   * Kanban move (L1.1): sets the status and the position in one transaction, so a failed
+   * move changes nothing. Only top-level tasks are cards; `beforeTaskId` must be a card
+   * already in the target column.
+   */
+  moveOnBoard(input: MoveOnBoardInput): TaskUpdateResult {
+    const task = this.get(input.id);
+    if (task.parentTaskId !== null) {
+      throw new AppError('VALIDATION_FAILED', 'Subtasks are not shown on the board.');
+    }
+    if (input.beforeTaskId !== null) {
+      const before = this.get(input.beforeTaskId);
+      if (before.statusId !== input.statusId || before.id === task.id) {
+        throw new AppError('VALIDATION_FAILED', 'The target position is not in that column.');
+      }
+    }
+    return this.ctx.db.transaction(() => {
+      const { notices } = this.update({ id: input.id, statusId: input.statusId });
+      this.reorder({ id: input.id, beforeTaskId: input.beforeTaskId });
+      return { task: this.get(input.id), notices };
+    })();
   }
 
   private resolveStatus(projectId: string, statusId: string | undefined): StatusRef {

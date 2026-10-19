@@ -119,6 +119,12 @@ export const updateTaskSchema = z.strictObject({
 export const moveTaskSchema = z.strictObject({ id, projectId: id });
 /** Places the task before `beforeTaskId` among its siblings, or last when null. */
 export const reorderTaskSchema = z.strictObject({ id, beforeTaskId: id.nullable() });
+/** A Kanban move: into `statusId`, before `beforeTaskId` (a card in that column) or last. */
+export const moveOnBoardSchema = z.strictObject({
+  id,
+  statusId: id,
+  beforeTaskId: id.nullable(),
+});
 
 export const TASK_SORTS = ['priority', 'due', 'created', 'manual', 'updated', 'completed'] as const;
 export const DUE_FILTERS = ['overdue', 'today', 'upcoming', 'none'] as const;
@@ -139,6 +145,29 @@ export const taskListQuerySchema = z.strictObject({
   sort: z.enum(TASK_SORTS).optional(),
   limit: z.number().int().min(1).max(LIMITS.listPageSize).optional(),
   offset: z.number().int().min(0).optional(),
+});
+
+// Notes
+const noteBody = z.string().max(LIMITS.description, 'This note is too long.');
+export const createNoteSchema = z.strictObject({
+  title,
+  projectId: id.optional(),
+  body: noteBody.optional(),
+  tagIds: idList.optional(),
+});
+export const updateNoteSchema = z.strictObject({
+  id,
+  title: title.optional(),
+  body: noteBody.optional(),
+});
+export const moveNoteSchema = z.strictObject({ id, projectId: id });
+export const setNoteTagsSchema = z.strictObject({ noteId: id, tagIds: idList });
+export const noteListQuerySchema = z.strictObject({
+  projectId: id.optional(),
+  tagIds: idList.optional(),
+  text: z.string().max(LIMITS.searchText).optional(),
+  includeArchived: z.boolean().optional(),
+  limit: z.number().int().min(1).max(LIMITS.listPageSize).optional(),
 });
 
 // Dependencies
@@ -166,5 +195,10 @@ export type CreateTaskInput = z.output<typeof createTaskSchema>;
 export type UpdateTaskInput = z.output<typeof updateTaskSchema>;
 export type MoveTaskInput = z.output<typeof moveTaskSchema>;
 export type ReorderTaskInput = z.output<typeof reorderTaskSchema>;
+export type MoveOnBoardInput = z.output<typeof moveOnBoardSchema>;
 export type TaskListQuery = z.output<typeof taskListQuerySchema>;
 export type DependencyInput = z.output<typeof dependencySchema>;
+export type CreateNoteInput = z.output<typeof createNoteSchema>;
+export type UpdateNoteInput = z.output<typeof updateNoteSchema>;
+export type MoveNoteInput = z.output<typeof moveNoteSchema>;
+export type NoteListQuery = z.output<typeof noteListQuerySchema>;

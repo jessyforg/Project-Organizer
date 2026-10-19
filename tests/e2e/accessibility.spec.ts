@@ -83,6 +83,27 @@ async function seed(page: Page) {
     });
     await api.tasks.create({ title: 'Call the bank', priority: 'low' });
     if (late.ok) await api.tasks.create({ title: 'Reproduce', parentTaskId: late.data.id });
+    await api.notes.create({
+      title: 'Launch plan',
+      projectId: project.data.id,
+      body: [
+        '# Launch',
+        '',
+        '- [x] Pick a date',
+        '- [ ] Email the list, see [the guide](https://example.com)',
+        '',
+        '| Step | Owner |',
+        '|---|---|',
+        '| Copy | Jes |',
+        '',
+        '> Keep it short.',
+        '',
+        '`npm run build`',
+        '',
+        '![Logo](https://example.com/logo.png)',
+      ].join('\n'),
+      ...(tag.ok ? { tagIds: [tag.data.id] } : {}),
+    });
   });
   await page.reload();
   await page.getByTestId('active-profile').waitFor();
@@ -118,8 +139,31 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByRole('complementary', { name: 'Task details' })).toBeVisible();
     await expectNoViolations(page, 'Project with task details');
 
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Board' }).click();
+    await expect(page.getByRole('region', { name: /^To do/ })).toBeVisible();
+    await expectNoViolations(page, 'Project board');
+    await page.getByRole('button', { name: 'Move Pick fonts' }).click();
+    await expectNoViolations(page, 'Board move dialog');
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancel' }).click();
+
+    await nav.getByRole('button', { name: 'Calendar' }).click();
+    await expect(page.getByRole('button', { name: /Write copy/ })).toBeVisible();
+    await expectNoViolations(page, 'Calendar (month)');
+    await page.getByRole('button', { name: 'Week' }).click();
+    await expectNoViolations(page, 'Calendar (week)');
+    await page.getByRole('button', { name: 'Show overdue tasks' }).click();
+    await expectNoViolations(page, 'Calendar (day)');
+
     await nav.getByRole('button', { name: 'Projects', exact: true }).click();
     await expectNoViolations(page, 'Projects');
+
+    await nav.getByRole('button', { name: 'Notes' }).click();
+    await page.getByRole('list', { name: 'Notes' }).getByRole('button').first().click();
+    await expect(page.getByRole('heading', { name: 'Launch', level: 1 })).toBeVisible();
+    await expectNoViolations(page, 'Notes (preview)');
+    await page.getByRole('button', { name: 'Write' }).click();
+    await expectNoViolations(page, 'Notes (write)');
 
     await nav.getByRole('button', { name: 'Trash' }).click();
     await expectNoViolations(page, 'Trash');

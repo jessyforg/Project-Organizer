@@ -9,6 +9,9 @@ import './styles/base.css';
 import './styles/controls.css';
 import './styles/layout.css';
 import './styles/tasks.css';
+import './styles/notes.css';
+import './styles/board.css';
+import './styles/calendar.css';
 import { App } from './app/App';
 
 const container = document.getElementById('root');

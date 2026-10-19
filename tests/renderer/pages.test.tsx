@@ -31,6 +31,7 @@ describe('TrashPage', () => {
         ok({
           restoredProjects: 0,
           restoredTasks: 1,
+          restoredNotes: 0,
           unresolvedDependencies: [{ taskId: 'a', prerequisiteId: 'b' }],
         }),
     });

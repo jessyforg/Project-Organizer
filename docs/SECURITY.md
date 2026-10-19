@@ -68,8 +68,8 @@ Implemented in Phase 5 (`src/main/backup/`); see [ADR-0006](DECISIONS/0006-backu
 
 ## 5. Content handling
 
-- Markdown: rendered with `react-markdown`, no raw HTML plugins; links pass the external-link allowlist.
-- Input size limits: profile names 100 characters (implemented). Planned: titles 500 characters, descriptions and notes 1 MB, import files size-checked before parsing; each limit is set in the Zod schema when its field is introduced.
+- Markdown (notes, implemented): rendered with `react-markdown` and `remark-gfm` only, with no raw-HTML plugin, so HTML in a note is shown as text and never becomes elements ([ADR-0009](DECISIONS/0009-markdown-notes.md)). Links open in the system browser only for `http`, `https`, and `mailto` (checked in the renderer and again by the main process's window-open handler); other links are inert text. Images are never loaded, because fetching one would contact a server; the preview shows "[Image not shown]" instead. Component tests cover each rule.
+- Input size limits (Zod, implemented): profile names 100 characters, names 200, titles 500, descriptions and note bodies 1,000,000 characters. Planned: import files size-checked before parsing.
 - Logs: event names, IDs, counts, error names/codes, and stack frames only. Error **messages are not logged** because they can contain user content (unit-tested). Never content, titles, profile names, passwords, or user file paths.
 
 ## 6. Dependency policy

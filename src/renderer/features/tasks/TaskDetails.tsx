@@ -5,6 +5,7 @@ import type { UpdateTaskInput } from '@shared/schemas';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
+import { TagPicker } from '../../components/TagPicker';
 import { ConfirmDialog, ErrorNotice, Loading } from '../../components/ui';
 import { CATEGORY_LABEL, formatTimestamp, plural, PRIORITY_LABEL } from '../../lib/format';
 import { CompleteCheckbox } from './CompleteCheckbox';
@@ -239,7 +240,7 @@ function TaskEditor({ task }: { task: Task }) {
         )}
       </div>
 
-      <TagPicker task={task} />
+      <TaskTags task={task} />
 
       <div className="field">
         <label htmlFor={`${id}-description`}>Description</label>
@@ -297,69 +298,15 @@ function TaskEditor({ task }: { task: Task }) {
   );
 }
 
-function TagPicker({ task }: { task: Task }) {
-  const id = useId();
-  const { tagList } = useLookups();
+function TaskTags({ task }: { task: Task }) {
   const invalidate = useInvalidate();
   const toast = useToast();
-  const [newTag, setNewTag] = useState('');
-
   const setTags = async (tagIds: string[]) => {
     const result = await window.api.tags.setTaskTags({ taskId: task.id, tagIds });
     if (!result.ok) toast({ message: result.error.message, tone: 'error' });
     invalidate();
   };
-
-  const createTag = async () => {
-    const name = newTag.trim();
-    if (!name) return;
-    const result = await window.api.tags.create({ name });
-    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
-    setNewTag('');
-    await setTags([...task.tagIds, result.data.id]);
-  };
-
-  return (
-    <div className="field">
-      <span className="field__label" id={`${id}-label`}>
-        Tags
-      </span>
-      <div className="chips" role="group" aria-labelledby={`${id}-label`}>
-        {tagList.map((tag) => {
-          const on = task.tagIds.includes(tag.id);
-          return (
-            <button
-              key={tag.id}
-              type="button"
-              className="chip"
-              aria-pressed={on}
-              onClick={() =>
-                void setTags(
-                  on ? task.tagIds.filter((t) => t !== tag.id) : [...task.tagIds, tag.id],
-                )
-              }
-            >
-              {tag.name}
-            </button>
-          );
-        })}
-      </div>
-      <input
-        className="input"
-        value={newTag}
-        aria-label="New tag name"
-        placeholder="New tag, then Enter"
-        maxLength={200}
-        onChange={(e) => setNewTag(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            void createTag();
-          }
-        }}
-      />
-    </div>
-  );
+  return <TagPicker selected={task.tagIds} onChange={setTags} />;
 }
 
 function Subtasks({ task }: { task: Task }) {

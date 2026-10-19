@@ -71,6 +71,7 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 | 13 Unique profile names | `profiles/profile-service.test.ts` |
 | 14 Imports and restores all-or-nothing | Trash restore is transactional; backup restore works on a staged copy and swaps atomically (`backup.test.ts`) |
 | 15 Backups state their contents | Manifest `includes`/`omits`, shown before restoring (`backup.test.ts`, E2E) |
+| 16 Notes belong to a project; trashed with it | `services/notes.test.ts` |
 
 ## 5. End-to-end workflows
 
@@ -81,10 +82,15 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 5. Trash and restore a task hierarchy.
 6. Export encrypted backup → restore into new profile → contents match.
 7. Archive and unarchive a project.
+8. Notes (L1.5): write Markdown → autosave → preview → leave the screen while typing (saved first) → global search finds the body → trash and restore → restart → note persists.
+9. Notes: close the window right after typing → restart → the text was saved. (Removing the editor's `beforeunload` handler makes this test fail.) The retry and the "could not be saved" dialog in the main process, used when a save is still running or fails, are not automated; they were reviewed in code only.
 
 ### Status of the end-to-end workflows
 
-All seven workflows are automated: 1–5 and 7 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
+10. Kanban: move cards with the Move dialog and by real drag and drop → order and status persist across a restart → Done completes the task.
+11. Calendar: a task appears on its due date → open it from the calendar → change the due date → the entry moves at once → completed tasks hidden unless shown.
+
+All eleven workflows are automated: 1–5 and 7–11 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
 
 Component tests use the real preload `createApi` over a scripted fake backend (`tests/renderer/harness.tsx`), so they exercise the exact API shape the app uses.
 
@@ -124,11 +130,11 @@ A full manual pass with a screen reader is still recommended before public relea
 
 ### Accessibility scan
 
-`tests/e2e/accessibility.spec.ts` runs axe-core (WCAG 2.2 A/AA rules) on the start screen, Today, My tasks, a project with the task details panel open, Projects, Trash, Settings, and the new-task dialog, in light and dark themes. It uses axe's legacy mode because Electron cannot open the helper page axe otherwise needs. The scanner was confirmed to report injected violations.
+`tests/e2e/accessibility.spec.ts` runs axe-core (WCAG 2.2 A/AA rules) on the start screen, Today, My tasks, a project with the task details panel open, the project board and its Move dialog, Projects, Notes (preview and write modes, with headings, a task list, a table, a link, code, and an image reference), Calendar (month, week, and day views), Trash, Settings, and the new-task dialog, in light and dark themes. It uses axe's legacy mode because Electron cannot open the helper page axe otherwise needs. The scanner was confirmed to report injected violations.
 
 ### Upgrade fixtures
 
-`tests/fixtures/` holds committed databases from each schema version (app v1, profile v1, profile v2). `tests/unit/fixtures.test.ts` upgrades copies to the current schema and checks data and relationships. When a version is released with a new migration, add its fixture with `REGENERATE_FIXTURES=1 npx vitest run tests/unit/fixtures.test.ts` (after extending the generator).
+`tests/fixtures/` holds committed databases from each released schema version (app v1, profile v1, profile v2). Profile v3 (notes) is not released yet, so it has no fixture; the v2 fixture test upgrades to v3 and creates and searches a note. `tests/unit/fixtures.test.ts` upgrades copies to the current schema and checks data and relationships. When a version is released with a new migration, add its fixture with `REGENERATE_FIXTURES=1 npx vitest run tests/unit/fixtures.test.ts` (after extending the generator).
 
 ### Performance
 
@@ -136,7 +142,7 @@ Measured in Phase 6 through the real UI with 5,000 tasks and 1,250 subtasks in 2
 
 ### Window sizes
 
-Screens were captured and reviewed at 1280×800 and 1024×700 in light and dark themes during Phase 4. The minimum window size is 900×600.
+Screens were captured and reviewed at 1280×800 and 1024×700 in light and dark themes during Phase 4, and the Notes, Kanban board, and Calendar screens again on 2026-10-20. The minimum window size is 900×600.
 
 ## 6. Reporting
 

@@ -2,6 +2,103 @@
 
 Newest entries first.
 
+## 2026-10-20 — Kanban board (L1.1) and calendar (L3.4) implemented — version 0.2.0
+
+**Approval:** the product owner accepted the Notes decisions ("the changes you made are good enough") and gave the go-ahead: "do the kanban and calendar".
+
+**Scope completed:**
+- **Kanban board:** a List/Board switch on each project. Columns follow the project's workflow. Cards move by drag and drop or with a keyboard-accessible Move dialog.
+- **Atomic moves:** a new channel, `tasks:moveOnBoard` (72 channels in total), changes the status and the position together.
+- **Calendar:** month, week, and day views of due dates, with an overdue notice and list, and project and done/cancelled filters. Selecting an entry opens the task.
+- **Version:** 0.2.0, covering Notes, Kanban, and Calendar.
+- **Decisions:** recorded in [ADR-0010](DECISIONS/0010-kanban-and-calendar.md).
+
+**Decisions made within the go-ahead (see ADR-0010):**
+- The board is per project, because each project has its own workflow.
+- Cards are top-level tasks; subtasks appear as a count on their parent's card.
+- The board has no filters.
+- Calendar entries are due dates only, because milestones (L1.2) and recurring occurrences (L3.1) do not exist yet. This is the conflict noted when the priority order was recorded; it is now documented in the requirement row.
+- The calendar's first weekday comes from the Windows locale.
+- No new dependencies.
+
+**Defects found and fixed during the work:** screenshot review found two calendar layout problems, both fixed:
+- long task titles spilled into neighbouring day cells, and caused sideways scrolling at 1024×700;
+- the "N more" button was unstyled.
+
+**Verification (2026-10-20):**
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, formatting (all files except the untracked `PROJECT_STATUS_REPORT.md`) | Passed |
+| `npm test` | Passed — 244 of 244 (12 new: 3 board service, 4 board component, 5 calendar, including a daylight-saving time zone) |
+| `npm run test:e2e` | Passed — 13 of 13, including Kanban (Move dialog and real drag and drop, persisted across restart), Calendar (a due-date change moves the entry), and accessibility of the board, Move dialog, and the three calendar views in both themes |
+| Visual review | Board and calendar at 1280×800 and 1024×700, light and dark |
+
+**Not done:** Calendar has no drag-to-reschedule (change the due date in the task panel instead). Nothing is committed.
+
+**Next step:** build the 0.2.0 installer and update the installed app (see the README section "Updating to a new version").
+
+## 2026-10-20 — Notes (L1.5) implemented (awaiting review)
+
+**Approval:** the product owner said "let's go build it" after the priority order was recorded. Notes, the first item, was built. Kanban and Calendar were not started; each still needs its own go-ahead.
+
+**Scope completed:**
+- Profile schema v3: `notes`, `note_tags`, full-text search on title and body.
+- Notes service (create, edit, move, tags, list with project, tag, and text filters) and 7 IPC channels (71 in total).
+- Notes screen: filterable list beside the editor; Write and Preview modes; autosave; Ctrl+S.
+- A Notes section on each project page.
+- Notes included in global search, the trash (alone or with their project), encrypted backups (counted in the manifest), and JSON exports.
+- Requirements covered: R26 and L1.5 ([REQUIREMENTS.md](REQUIREMENTS.md)).
+
+**Decisions for review** ([ADR-0009](DECISIONS/0009-markdown-notes.md)):
+- Every note belongs to a project (loose notes go to the Inbox), and **projects act as note folders**. No separate note folders were built, which is a simplification of L1.5's "simple folders".
+- Notes save themselves 0.8 s after typing pauses, rather than through a Save button. Leaving the screen or closing the window saves first. If saving fails, the user is asked before changes are discarded.
+- Preview rules:
+  - raw HTML is shown as text;
+  - images are never loaded (a remote image would contact a server);
+  - only http, https, and mailto links open, in the system browser.
+- A blank title becomes "Untitled note".
+- Notes cannot be created in or moved into archived projects; existing ones stay editable.
+- The two Markdown packages (react-markdown 10.1.0 and remark-gfm 4.0.1) were already installed on this branch. They add 95 packages, all MIT or ISC licensed, dev-only, with no install scripts.
+
+**Defects found and fixed during the work:**
+- A backup damaged in the middle failed with a raw SQLite error instead of "wrong password or damaged file". The extra full-text table moved the damaged bytes into an index page; the existing corrupted-file test caught it. Backup validation now maps any unexpected SQLite error to the damaged-file message.
+- The accessibility scan found unlabelled checkboxes in Markdown task lists; they now have names.
+- Screenshot review found three layout problems, all fixed:
+  - the editor dropped below the list at 1024×700;
+  - long titles were cut off;
+  - list excerpts showed table rules.
+
+**Verification (2026-10-20):**
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint` | Passed |
+| Formatting | Passed for all project files. `npm run check` stops at the format step only because of the untracked `PROJECT_STATUS_REPORT.md`, which is not part of this work. |
+| `npm test` | Passed — 232 of 232 (21 new: 12 notes service, 9 component) |
+| `npm run test:e2e` | Passed — 11 of 11, including two new notes workflows and accessibility of the Notes screen in both themes |
+| Test strength | Removing the editor's close handler makes the close-while-typing test fail; the file was then restored byte-for-byte |
+| `npm audit --omit=dev` | 0 vulnerabilities |
+| Visual review | Notes screen at 1280×800 and 1024×700, light and dark |
+
+**Not done:**
+- No installer was built and no install test was run for this change.
+- The main-process retry and "could not be saved" dialog on window close were reviewed in code but not automated.
+- Notes performance with large numbers of notes was not measured.
+- Nothing is committed.
+
+**Next step:** product owner review of Notes and of the decisions above. Kanban and Calendar wait for their own go-ahead.
+
+## 2026-10-20 — Priority for next feature work recorded
+
+**Decision (product owner):** the next feature work is prioritised in this order: (1) Notes, (2) Kanban, (3) Calendar. Recorded in [ROADMAP.md](ROADMAP.md#after-the-mvp) and [REQUIREMENTS.md §4](REQUIREMENTS.md#4-later-free-local-release).
+
+**Scope:** a priority order only. It does not approve implementation, does not change the Core MVP scope (0.1.0), and does not decide where other later-release items, including L2, fall. Each feature still needs its own proposal and approval.
+
+**Code:** none changed.
+
+**Next step:** unchanged — product owner review of the MVP.
+
 ## 2026-10-17 — Phase 6: Release hardening complete (delegated approval) — MVP 0.1.0
 
 **Scope completed:** accessibility scan of all main screens in both themes (0 violations); committed upgrade fixtures for every schema version; performance measured through the UI at 5,000 tasks; app icon; dependency audit; packaged build with fuses re-verified; silent install, launch, and uninstall test; release checklist, changelog, and README with installation and recovery instructions. Requirement statuses updated in the register.

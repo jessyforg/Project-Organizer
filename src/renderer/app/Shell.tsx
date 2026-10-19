@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProfileSummary } from '@shared/types';
 import { Dialog } from '../components/ui';
+import { CalendarPage } from '../features/calendar/CalendarPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
+import { NotesPage } from '../features/notes/NotesPage';
 import { ProjectPage } from '../features/projects/ProjectPage';
 import { ProjectsPage } from '../features/projects/ProjectsPage';
 import { SearchPage } from '../features/search/SearchPage';
@@ -65,6 +67,8 @@ export function Shell({
         {route.name === 'tasks' && <MyTasksPage />}
         {route.name === 'projects' && <ProjectsPage />}
         {route.name === 'project' && <ProjectPage projectId={route.id} />}
+        {route.name === 'calendar' && <CalendarPage />}
+        {route.name === 'notes' && <NotesPage noteId={route.noteId} projectId={route.projectId} />}
         {route.name === 'search' && <SearchPage text={route.text} />}
         {route.name === 'trash' && <TrashPage />}
         {route.name === 'settings' && (

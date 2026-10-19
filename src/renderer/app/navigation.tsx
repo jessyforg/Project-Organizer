@@ -1,13 +1,26 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 export type Route =
   | { name: 'dashboard' }
   | { name: 'tasks' }
   | { name: 'projects' }
   | { name: 'project'; id: string }
+  | { name: 'notes'; noteId: string | null; projectId?: string }
+  | { name: 'calendar' }
   | { name: 'search'; text: string }
   | { name: 'trash' }
   | { name: 'settings' };
+
+/** Runs before the route changes; resolves false to stay (for example, unsaved changes). */
+export type LeaveGuard = () => Promise<boolean>;
 
 interface NavigationValue {
   route: Route;
@@ -15,6 +28,8 @@ interface NavigationValue {
   /** The task shown in the details panel, if any. */
   openTaskId: string | null;
   openTask: (id: string | null) => void;
+  /** Registers the current screen's leave guard; pass null to remove it. */
+  setLeaveGuard: (guard: LeaveGuard | null) => void;
 }
 
 const NavigationContext = createContext<NavigationValue | null>(null);
@@ -22,9 +37,20 @@ const NavigationContext = createContext<NavigationValue | null>(null);
 export function NavigationProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState<Route>({ name: 'dashboard' });
   const [openTaskId, openTask] = useState<string | null>(null);
+  const guard = useRef<LeaveGuard | null>(null);
+  const navigate = useCallback((next: Route) => {
+    const check = guard.current;
+    if (!check) return setRoute(next);
+    void check().then((leave) => {
+      if (leave) setRoute(next);
+    });
+  }, []);
+  const setLeaveGuard = useCallback((next: LeaveGuard | null) => {
+    guard.current = next;
+  }, []);
   const value = useMemo(
-    () => ({ route, navigate: setRoute, openTaskId, openTask }),
-    [route, openTaskId],
+    () => ({ route, navigate, openTaskId, openTask, setLeaveGuard }),
+    [route, navigate, openTaskId, setLeaveGuard],
   );
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }

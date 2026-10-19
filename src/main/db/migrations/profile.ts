@@ -187,4 +187,45 @@ export const profileMigrations: readonly Migration[] = [
       END;
     `,
   },
+  {
+    version: 3,
+    name: 'notes',
+    sql: `
+      CREATE TABLE notes (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+        title TEXT NOT NULL CHECK (length(trim(title)) > 0),
+        body TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        deletion_batch_id TEXT,
+        CHECK ((deleted_at IS NULL) = (deletion_batch_id IS NULL))
+      ) STRICT;
+      CREATE INDEX notes_project ON notes (project_id, deleted_at);
+      CREATE INDEX notes_updated ON notes (updated_at);
+      CREATE INDEX notes_batch ON notes (deletion_batch_id) WHERE deletion_batch_id IS NOT NULL;
+
+      CREATE TABLE note_tags (
+        note_id TEXT NOT NULL REFERENCES notes (id) ON DELETE CASCADE,
+        tag_id TEXT NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
+        PRIMARY KEY (note_id, tag_id)
+      ) STRICT;
+      CREATE INDEX note_tags_tag ON note_tags (tag_id);
+
+      CREATE VIRTUAL TABLE notes_fts USING fts5 (
+        note_id UNINDEXED, title, body, tokenize = 'unicode61 remove_diacritics 2'
+      );
+      CREATE TRIGGER notes_fts_insert AFTER INSERT ON notes BEGIN
+        INSERT INTO notes_fts (note_id, title, body) VALUES (NEW.id, NEW.title, NEW.body);
+      END;
+      CREATE TRIGGER notes_fts_update AFTER UPDATE OF title, body ON notes BEGIN
+        DELETE FROM notes_fts WHERE note_id = OLD.id;
+        INSERT INTO notes_fts (note_id, title, body) VALUES (NEW.id, NEW.title, NEW.body);
+      END;
+      CREATE TRIGGER notes_fts_delete AFTER DELETE ON notes BEGIN
+        DELETE FROM notes_fts WHERE note_id = OLD.id;
+      END;
+    `,
+  },
 ];

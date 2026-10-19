@@ -6,6 +6,12 @@ import { useToast } from '../../app/toasts';
 import { ConfirmDialog, ErrorNotice, Loading } from '../../components/ui';
 import { formatTimestamp, plural } from '../../lib/format';
 
+const KIND_LABEL: Record<TrashEntry['kind'], string> = {
+  project: 'Project',
+  task: 'Task',
+  note: 'Note',
+};
+
 /** Recoverable deletion (R14): restore, delete permanently, or empty the trash. */
 export function TrashPage() {
   const trash = useQuery('trash', () => window.api.trash.list());
@@ -66,7 +72,7 @@ export function TrashPage() {
             <li key={entry.batchId} className="trash-row">
               <div>
                 <strong>{entry.title}</strong>{' '}
-                <span className="label">{entry.kind === 'project' ? 'Project' : 'Task'}</span>
+                <span className="label">{KIND_LABEL[entry.kind]}</span>
                 <p className="muted small">
                   {entry.projectName ? `In ${entry.projectName}. ` : ''}
                   {entry.itemCount > 1 ? `${plural(entry.itemCount, 'item')}. ` : ''}

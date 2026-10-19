@@ -149,3 +149,5 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0006](DECISIONS/0006-backup-and-export-formats.md) | Backup and export formats |
 | [0007](DECISIONS/0007-typescript-version-pin.md) | TypeScript 6.0 version pin |
 | [0008](DECISIONS/0008-ui-styling-and-state.md) | UI styling, data loading, and visual identity |
+| [0009](DECISIONS/0009-markdown-notes.md) | Markdown notes: storage, rendering, and saving |
+| [0010](DECISIONS/0010-kanban-and-calendar.md) | Kanban board and calendar |

@@ -62,3 +62,17 @@ Security checklist review; performance with ~5,000 tasks; upgrade test from fixt
 ## After the MVP
 
 Later Free Local Release steps L1–L6 as listed in [REQUIREMENTS.md](REQUIREMENTS.md#4-later-free-local-release). Each step is proposed with full acceptance criteria and approved individually. L2 (profile protection) requires an approved threat model and key/recovery design before any code.
+
+### Next feature work: priority order (product owner, 2026-10-20)
+
+1. Notes (R26 / L1.5)
+2. Kanban board (L1.1)
+3. Calendar (L3.4)
+
+This is a priority order only. It does not approve implementing any of these features, does not change the Core MVP scope, and does not set the position of other later-release items (including L2). Each feature still needs its own proposal with full acceptance criteria and a separate approval.
+
+| Feature | Approval | State |
+|---|---|---|
+| Notes | Product owner's go-ahead on 2026-10-20 ("let's go build it"); decisions accepted the same day | Implemented and verified |
+| Kanban board | Product owner's go-ahead on 2026-10-20 ("do the kanban and calendar") | Implemented and verified ([STATUS.md](STATUS.md)) |
+| Calendar | Same go-ahead | Implemented and verified for deadlines; milestones and recurring occurrences wait for L1.2 and L3.1 |

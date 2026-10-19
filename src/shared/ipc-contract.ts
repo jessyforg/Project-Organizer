@@ -2,6 +2,8 @@ import { z } from 'zod';
 import type {
   Dashboard,
   Folder,
+  Note,
+  NoteSummary,
   ProfileSettings,
   Project,
   ProjectDetails,
@@ -100,6 +102,7 @@ export const ipcContract = {
   'tags:delete': s.idSchema,
   'tags:setTaskTags': s.setTaskTagsSchema,
   'tags:setProjectTags': s.setProjectTagsSchema,
+  'tags:setNoteTags': s.setNoteTagsSchema,
   'projects:list': s.listProjectsSchema,
   'projects:get': s.idSchema,
   'projects:create': s.createProjectSchema,
@@ -120,6 +123,12 @@ export const ipcContract = {
   'tasks:setCompleted': s.setCompletedSchema,
   'tasks:move': s.moveTaskSchema,
   'tasks:reorder': s.reorderTaskSchema,
+  'tasks:moveOnBoard': s.moveOnBoardSchema,
+  'notes:list': s.noteListQuerySchema,
+  'notes:get': s.idSchema,
+  'notes:create': s.createNoteSchema,
+  'notes:update': s.updateNoteSchema,
+  'notes:move': s.moveNoteSchema,
   'dependencies:list': s.taskIdSchema,
   'dependencies:add': s.dependencySchema,
   'dependencies:remove': s.dependencySchema,
@@ -127,6 +136,7 @@ export const ipcContract = {
   'trash:previewTask': s.idSchema,
   'trash:trashTask': s.idSchema,
   'trash:trashProject': s.idSchema,
+  'trash:trashNote': s.idSchema,
   'trash:restore': s.batchSchema,
   'trash:deletePermanently': s.batchSchema,
   'trash:empty': s.emptySchema,
@@ -173,6 +183,7 @@ export interface IpcResponses {
   'tags:delete': null;
   'tags:setTaskTags': null;
   'tags:setProjectTags': null;
+  'tags:setNoteTags': null;
   'projects:list': ProjectListItem[];
   'projects:get': ProjectDetails;
   'projects:create': Project;
@@ -193,6 +204,12 @@ export interface IpcResponses {
   'tasks:setCompleted': TaskUpdateResult;
   'tasks:move': { task: Task; removedDependencies: number };
   'tasks:reorder': Task;
+  'tasks:moveOnBoard': TaskUpdateResult;
+  'notes:list': NoteSummary[];
+  'notes:get': Note;
+  'notes:create': Note;
+  'notes:update': Note;
+  'notes:move': Note;
   'dependencies:list': TaskRelations;
   'dependencies:add': null;
   'dependencies:remove': null;
@@ -200,6 +217,7 @@ export interface IpcResponses {
   'trash:previewTask': TaskTrashPreview;
   'trash:trashTask': { batchId: string };
   'trash:trashProject': { batchId: string };
+  'trash:trashNote': { batchId: string };
   'trash:restore': RestoreResult;
   'trash:deletePermanently': null;
   'trash:empty': { removed: number };

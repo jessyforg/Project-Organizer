@@ -10,6 +10,7 @@ export const SHORTCUTS = [
   { keys: 'Ctrl+4', description: 'Go to Trash' },
   { keys: 'Ctrl+,', description: 'Open settings' },
   { keys: 'Ctrl+/', description: 'Show keyboard shortcuts' },
+  { keys: 'Ctrl+S', description: 'Save the open note now (notes also save automatically)' },
   { keys: 'Esc', description: 'Close task details' },
 ] as const;
 

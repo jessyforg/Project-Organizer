@@ -4,7 +4,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 
 ## Status
 
-**MVP complete (0.1.0), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
+**Version 0.2.0 (MVP plus notes, Kanban board, and calendar), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
 
 ## Features
 
@@ -12,6 +12,9 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 - Projects with folders, tags, colours, dates, custom workflows, archive, and calculated progress.
 - Tasks with subtasks, priorities, start and due dates, tags, and dependencies.
 - Today dashboard, task lists with filters, sorting, and search, and a task details panel.
+- Kanban board for each project (drag and drop, or the Move button from the keyboard).
+- Calendar of due dates by month, week, or day.
+- Markdown notes in projects, with a safe preview, tags, and search.
 - Trash for tasks and projects with 30-day recovery.
 - Password-encrypted backups with a test restore, automatic daily copies, and JSON export.
 - Light and dark themes and keyboard shortcuts (press Ctrl+/ in the app to see them).
@@ -21,6 +24,20 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 Run `ProjectForge Setup <version>.exe` from `release/` (or from wherever it was shared). It installs for the current user only and does not need administrator rights. The installer is not code-signed, so Windows SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**.
 
 Uninstalling (Settings → Apps in Windows) removes the program but keeps your data folder, so reinstalling brings your profiles back.
+
+## Updating to a new version
+
+There is no automatic updater (the app never goes online). To update:
+
+1. **Make a backup first** (recommended): in the app, Settings → Backup and restore → **Create backup…**. Keep the file somewhere outside the app's folder.
+2. **Close ProjectForge.**
+3. **Run the new `ProjectForge Setup <version>.exe`.** Keep the same installation folder. It replaces the program files; your data folder is not touched.
+4. **Start ProjectForge.** When a profile opens, the app upgrades its data to the new format by itself. Before upgrading, it saves a verified copy in the profile's `snapshots` folder.
+5. **Check the version** in Settings → About.
+
+You cannot go back to an older version after an upgrade: older versions refuse data in a newer format, to protect it. To undo an update, install the older version and restore the backup from step 1 as a new profile.
+
+To build the installer from the source code, run `npm ci` once, then `npm run package`. The installer appears in `release/`.
 
 ## Where your data lives
 
@@ -37,7 +54,7 @@ Uninstalling (Settings → Apps in Windows) removes the program but keeps your d
 
 ## If something goes wrong
 
-- **A deleted task or project:** open Trash in the sidebar and choose Restore (within 30 days).
+- **A deleted task, note, or project:** open Trash in the sidebar and choose Restore (within 30 days).
 - **A deleted profile:** Settings → Profiles → Profiles in the trash → Restore (within 30 days).
 - **A profile will not open:** the start screen lists its automatic copies; choose "Restore this copy". The damaged file is kept next to it, not deleted.
 - **Lost or damaged data:** Settings → Backup and restore → Restore from a backup. Use "Test restore" first if unsure; "Restore as new profile" never touches existing data.
@@ -48,8 +65,8 @@ Uninstalling (Settings → Apps in Windows) removes the program but keeps your d
 
 - The installer is not code-signed (SmartScreen warning).
 - Profiles cannot be password-protected yet, and live data is not encrypted (planned for a later release).
-- Kanban board, calendar, milestones, notes, reminders, recurring tasks, attachments, and time tracking are planned for later releases ([requirements](docs/REQUIREMENTS.md#4-later-free-local-release)).
-- Manual task ordering exists in the data layer and the "Manual order" sort, but there is no drag-and-drop or reorder control in the UI yet.
+- Milestones, reminders, recurring tasks, attachments, and time tracking are planned for later releases ([requirements](docs/REQUIREMENTS.md#4-later-free-local-release)).
+- Tasks can be reordered on the Kanban board; the list view's "Manual order" sort shows that order but has no reorder control of its own.
 - Windows only; English only.
 
 ## Development

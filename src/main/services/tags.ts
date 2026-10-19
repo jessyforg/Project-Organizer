@@ -45,7 +45,7 @@ export class TagService {
     return this.get(input.id);
   }
 
-  /** Removes the tag from every task and project. */
+  /** Removes the tag from every task, project, and note. */
   delete(id: string): void {
     const result = this.ctx.db.prepare('DELETE FROM tags WHERE id = ?').run(id);
     if (result.changes === 0) throw notFound('Tag');
@@ -59,10 +59,14 @@ export class TagService {
     this.replaceLinks('project_tags', 'project_id', 'projects', 'Project', projectId, tagIds);
   }
 
+  setNoteTags(noteId: string, tagIds: string[]): void {
+    this.replaceLinks('note_tags', 'note_id', 'notes', 'Note', noteId, tagIds);
+  }
+
   private replaceLinks(
-    table: 'task_tags' | 'project_tags',
-    ownerColumn: 'task_id' | 'project_id',
-    ownerTable: 'tasks' | 'projects',
+    table: 'task_tags' | 'project_tags' | 'note_tags',
+    ownerColumn: 'task_id' | 'project_id' | 'note_id',
+    ownerTable: 'tasks' | 'projects' | 'notes',
     ownerLabel: string,
     ownerId: string,
     tagIds: string[],

@@ -265,6 +265,12 @@ export class BackupService {
         throw new AppError('BACKUP_INVALID', 'The written backup does not match what was saved.');
       }
       return manifest;
+    } catch (error) {
+      // Damage can surface as any SQLite error (for example, a broken full-text index page).
+      if (error instanceof AppError) throw error;
+      throw new AppError('BACKUP_WRONG_PASSWORD_OR_DAMAGED', 'The backup file is damaged.', {
+        cause: error,
+      });
     } finally {
       db.close();
     }

@@ -132,6 +132,7 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
       s().tags.setProjectTags(projectId, tagIds),
       null
     ),
+    'tags:setNoteTags': ({ noteId, tagIds }) => (s().tags.setNoteTags(noteId, tagIds), null),
 
     'projects:list': (options) => s().projects.listWithProgress(options),
     'projects:get': ({ id }) => s().projects.details(id),
@@ -155,6 +156,13 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'tasks:setCompleted': ({ id, completed }) => s().tasks.setCompleted(id, completed),
     'tasks:move': (input) => s().tasks.move(input),
     'tasks:reorder': (input) => s().tasks.reorder(input),
+    'tasks:moveOnBoard': (input) => s().tasks.moveOnBoard(input),
+
+    'notes:list': (query) => s().notes.list(query),
+    'notes:get': ({ id }) => s().notes.get(id),
+    'notes:create': (input) => s().notes.create(input),
+    'notes:update': (input) => s().notes.update(input),
+    'notes:move': (input) => s().notes.move(input),
 
     'dependencies:list': ({ taskId }) => ({
       prerequisites: s().dependencies.prerequisites(taskId),
@@ -167,6 +175,7 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'trash:previewTask': ({ id }) => s().trash.previewTaskTrash(id),
     'trash:trashTask': ({ id }) => s().trash.trashTask(id),
     'trash:trashProject': ({ id }) => s().trash.trashProject(id),
+    'trash:trashNote': ({ id }) => s().trash.trashNote(id),
     'trash:restore': ({ batchId }) => s().trash.restore(batchId),
     'trash:deletePermanently': ({ batchId }) => (s().trash.deletePermanently(batchId), null),
     'trash:empty': () => ({ removed: s().trash.empty() }),

@@ -42,7 +42,7 @@ export function buildJsonExport(
     encrypted: false,
     profile,
     includes: [
-      'Projects, folders, workflow statuses, tasks, tags, dependencies, and settings',
+      'Projects, folders, workflow statuses, tasks, notes, tags, dependencies, and settings',
       'Items in the trash (rows with a deleted_at value)',
     ],
     data,

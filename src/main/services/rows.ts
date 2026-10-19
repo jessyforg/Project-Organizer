@@ -1,6 +1,8 @@
 import type {
   ColorToken,
   Folder,
+  Note,
+  NoteSummary,
   Priority,
   Project,
   ProjectKind,
@@ -180,6 +182,67 @@ export function toTask(row: TaskRow): Task {
     subtaskCount: row.subtask_count,
     completedSubtaskCount: row.completed_subtask_count,
   };
+}
+
+export interface NoteRow {
+  id: string;
+  project_id: string;
+  title: string;
+  /** The full body for `NOTE_SELECT`, only its start for `NOTE_SUMMARY_SELECT`. */
+  body: string;
+  created_at: string;
+  updated_at: string;
+  tag_ids: string;
+}
+
+const NOTE_COLUMNS = `n.id, n.project_id, n.title, n.created_at, n.updated_at,
+  (SELECT json_group_array(tag_id) FROM note_tags WHERE note_id = n.id) AS tag_ids`;
+
+export const NOTE_SELECT = `SELECT ${NOTE_COLUMNS}, n.body FROM notes n JOIN projects p ON p.id = n.project_id`;
+
+/** Lists read only the start of each body; a note can be up to 1 MB. */
+export const NOTE_SUMMARY_SELECT = `SELECT ${NOTE_COLUMNS}, substr(n.body, 1, 600) AS body
+  FROM notes n JOIN projects p ON p.id = n.project_id`;
+
+export function toNote(row: NoteRow): Note {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title,
+    body: row.body,
+    tagIds: idList(row.tag_ids),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function toNoteSummary(row: NoteRow): NoteSummary {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    title: row.title,
+    excerpt: markdownExcerpt(row.body),
+    tagIds: idList(row.tag_ids),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+const EXCERPT_LENGTH = 160;
+
+/** A one-line plain-text preview of Markdown: syntax characters removed, whitespace collapsed. */
+export function markdownExcerpt(markdown: string): string {
+  const text = markdown
+    .replace(/```[^\n]*/g, ' ')
+    .replace(/<[^>]*>/g, ' ')
+    // Table delimiter rows and horizontal rules: only pipes, dashes, colons, and spaces.
+    .replace(/^[\s|:-]*-[\s|:-]*$/gm, ' ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+[.)])\s+(\[[ xX]\]\s+)?/gm, '')
+    .replace(/[*_~`|]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH - 1).trimEnd()}…` : text;
 }
 
 /** Sorts Urgent → High → Medium → Low → no priority. */

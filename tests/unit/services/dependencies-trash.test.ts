@@ -78,6 +78,7 @@ describe('TrashService', () => {
     expect(p.trash.restore(batchId)).toEqual({
       restoredProjects: 0,
       restoredTasks: 2,
+      restoredNotes: 0,
       unresolvedDependencies: [],
     });
     expect(p.tasks.get(child.id).parentTaskId).toBe(parent.id);
@@ -125,6 +126,7 @@ describe('TrashService', () => {
     expect(p.trash.restore(batchId)).toEqual({
       restoredProjects: 1,
       restoredTasks: 1,
+      restoredNotes: 0,
       unresolvedDependencies: [],
     });
     expect(p.tasks.get(kept.id).title).toBe('Kept');

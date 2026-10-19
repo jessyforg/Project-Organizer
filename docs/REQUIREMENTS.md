@@ -52,7 +52,7 @@ Status as of 2026-10-17 (0.1.0): every Must and Should item is implemented and v
 | R23 | Fixed essential keyboard shortcuts (navigation, search, quick add) with in-app reference | Should | R01 | Shortcuts do not override Windows/accessibility shortcuts | Low | Verified |
 | R24 | Structured error handling; local rotating logs without user content | Must | R01 | Every IPC call returns a typed result; logs contain no titles, notes, or paths of user content | Privacy | Verified |
 | R25 | Repeatable Windows installer build; documented data locations | Must | R01 | Clean build from lockfile produces installer; install/launch/uninstall tested on a clean account or VM | Compatibility | Verified |
-| R26 | Markdown notes per project with safe preview | Could | R04 | Raw HTML never rendered; unsaved-change guard; moves to L1 if it threatens the release | XSS | Deferred to L1.5 |
+| R26 | Markdown notes per project with safe preview | Could | R04 | Raw HTML never rendered; unsaved-change guard; moves to L1 if it threatens the release | XSS | Deferred to L1.5; implemented there 2026-10-20 (unreleased, awaiting review) |
 | R27 | Project resource links (repository, branch, commit, PR URLs) | Could | R04 | Only http/https links opened, via system browser after allowlist check | Low | Deferred to L4 |
 | R28 | Built-in Inbox project per profile for quick-added tasks | Must | R04 | Inbox cannot be deleted; quick add lands there | Low | Verified |
 
@@ -60,14 +60,16 @@ Status as of 2026-10-17 (0.1.0): every Must and Should item is implemented and v
 
 Acceptance criteria below are the minimum; each step gets full criteria when it is scheduled.
 
+Priority for the next feature work (product owner, 2026-10-20): Notes (L1.5), then Kanban (L1.1), then Calendar (L3.4). For these three items this takes precedence over the recommended step order; it is not approval to implement them. See [ROADMAP.md](ROADMAP.md#after-the-mvp) for which of them have since been approved.
+
 | ID | Requirement | Pri | Depends on | Key acceptance criteria | Risk |
 |---|---|---|---|---|---|
 | **L1 — visible productivity** |||||
-| L1.1 | Kanban board reflecting each project's statuses, with keyboard alternative to drag-and-drop | Should | R09 | Moves persist status and order; accessible move menu | Low |
+| L1.1 | Kanban board reflecting each project's statuses, with keyboard alternative to drag-and-drop | Should | R09 | Moves persist status and order; accessible move menu. Implemented 2026-10-20 (unreleased): moves are atomic; Move dialog for keyboard users ([ADR-0010](DECISIONS/0010-kanban-and-calendar.md)) | Low |
 | L1.2 | Milestones: name, description, target date, completion, progress, optional task association | Should | R04 | Distinct from tasks; progress uses R13 rules over associated tasks | Low |
 | L1.3 | Dashboard milestone indicators | Should | L1.2 | — | Low |
 | L1.4 | Dashboard sections show/hide/reorder, per profile (no free-form resizing) | Could | R16 | Preferences persist per profile | Low |
-| L1.5 | Markdown notes (if R26 slipped); document list with search, tags, simple folders | Should | R04 | As R26 | XSS |
+| L1.5 | Markdown notes (if R26 slipped); document list with search, tags, simple folders | Should | R04 | As R26; plus: notes searchable by title and body; tags; trash, backup, and JSON export include notes; images never fetched; only http/https/mailto links open. Implemented 2026-10-20 (awaiting review); projects serve as the folders ([ADR-0009](DECISIONS/0009-markdown-notes.md)) | XSS |
 | **L2 — profile protection (security workstream; threat model and recovery design approved first)** |||||
 | L2.1 | Optional profile password; verifier stored with a memory-hard KDF, never plaintext | Must (for L2) | R03 | Wrong password rejected; no plaintext anywhere | Security |
 | L2.2 | Encryption of protected profile data at rest | Must (for L2) | L2.1 | Interrupted encrypt/decrypt leaves original intact | Data loss |
@@ -79,7 +81,7 @@ Acceptance criteria below are the minimum; each step gets full criteria when it 
 | L3.1 | Recurring tasks: daily, weekly, monthly, custom; original-schedule recurrence | Should | R08 | Occurrences generated once per series and scheduled time, across restarts and offline periods | Duplication |
 | L3.2 | Per-occurrence status, deadline, history; skip or reschedule a single occurrence; missed occurrences stay overdue | Should | L3.1 | — | Correctness |
 | L3.3 | Completion-based recurrence option | Could | L3.1 | — | Low |
-| L3.4 | Calendar day/week/month showing deadlines, milestones, occurrences, overdue tasks; navigate to task | Should | R08 | Deadline change moves entry immediately | Low |
+| L3.4 | Calendar day/week/month showing deadlines, milestones, occurrences, overdue tasks; navigate to task | Should | R08 | Deadline change moves entry immediately. Implemented 2026-10-20 (unreleased) for deadlines and overdue tasks; milestones (L1.2) and occurrences (L3.1) will appear once those exist ([ADR-0010](DECISIONS/0010-kanban-and-calendar.md)) | Low |
 | L3.5 | Reminders: pre-deadline, recurring, optional overdue; recalculated on deadline change; no duplicates; DST- and time-zone-aware | Should | L3.4 | Never claims delivery that cannot be confirmed | Correctness |
 | L3.6 | Windows desktop notifications with permission handling; in-app notification centre with read/unread, priorities, preferences | Should | L3.5 | — | Low |
 | **L4 — organisation** |||||

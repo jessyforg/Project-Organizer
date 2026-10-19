@@ -43,6 +43,7 @@ afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
 });
 const SECRET_TITLE = 'Quarterly salary negotiation notes';
+const SECRET_NOTE = 'Counter-offer floor is confidential';
 
 async function setup(overrides: Partial<BackupDeps> = {}) {
   const root = tempDir();
@@ -92,6 +93,13 @@ async function setup(overrides: Partial<BackupDeps> = {}) {
     priority: 'high',
   });
   services().tasks.create({ title: 'Gather offers', parentTaskId: parent.id });
+  const tag = services().tags.create({ name: 'Private' });
+  services().notes.create({
+    title: 'Talking points',
+    projectId: project.id,
+    body: SECRET_NOTE,
+    tagIds: [tag.id],
+  });
   const backupFile = path.join(tempDir(), 'work.pfbackup');
   const cleanup = () => {
     profiles.close();
@@ -120,6 +128,7 @@ describe('BackupService: export and inspect', () => {
     const manifest = await t.backups.exportActive(PASSWORD, t.backupFile);
     const bytes = fs.readFileSync(t.backupFile);
     expect(bytes.includes(Buffer.from(SECRET_TITLE))).toBe(false);
+    expect(bytes.includes(Buffer.from(SECRET_NOTE))).toBe(false);
     expect(bytes.subarray(0, 15).toString()).not.toBe('SQLite format 3');
     expect(manifest).toMatchObject({
       format: 'projectforge-backup',
@@ -127,6 +136,8 @@ describe('BackupService: export and inspect', () => {
       schemaVersion: profileMigrations.length,
     });
     expect(manifest.counts['tasks']).toBe(2);
+    expect(manifest.counts['notes']).toBe(1);
+    expect(manifest.counts['note_tags']).toBe(1);
     expect(manifest.includes.length).toBeGreaterThan(0);
     expect(t.backups.inspect(t.backupFile, PASSWORD)).toEqual(manifest);
     expect(tmpEntries(t.paths)).toEqual([]);
@@ -262,6 +273,11 @@ describe('BackupService: restore', () => {
     expect(titles).toEqual(['Gather offers', SECRET_TITLE]);
     const parent = t.services().tasks.list({ parentTaskId: null })[0]!;
     expect(parent.subtaskCount).toBe(1);
+    const [note] = t.services().notes.list({ text: 'confidential' });
+    expect(t.services().notes.get(note!.id)).toMatchObject({
+      body: SECRET_NOTE,
+      tagIds: [expect.any(String)],
+    });
   });
 
   it('replaces the open profile, keeping a verified copy of the previous data', async () => {
@@ -458,6 +474,7 @@ describe('JSON export (R21)', () => {
     );
     expect(exportSchema.safeParse(doc).success).toBe(true);
     expect(doc.data['tasks']).toHaveLength(3);
+    expect(doc.data['notes']).toEqual([expect.objectContaining({ body: SECRET_NOTE })]);
     expect(doc.encrypted).toBe(false);
 
     const file = path.join(tempDir(), 'export.json');

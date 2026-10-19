@@ -3,6 +3,8 @@ import {
   Archive,
   ArchiveRestore,
   CheckCircle2,
+  Columns3,
+  List,
   Pencil,
   Plus,
   RotateCcw,
@@ -15,6 +17,8 @@ import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
 import { ConfirmDialog, ErrorNotice, Loading, ProgressMeter, Swatch } from '../../components/ui';
 import { formatDate, localToday } from '../../lib/format';
+import { TaskBoard } from '../board/TaskBoard';
+import { ProjectNotes } from '../notes/ProjectNotes';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
 import { TaskList } from '../tasks/TaskList';
@@ -64,6 +68,7 @@ function ProjectView({ details }: { details: ProjectDetails }) {
   const [editing, setEditing] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
+  const [view, setView] = useState<'list' | 'board'>('list');
   const [filters, setFilters] = useState(PROJECT_DEFAULTS);
   const [limit, setLimit] = useState(PAGE_SIZE);
   const deferred = useDeferredValue(filters);
@@ -251,46 +256,71 @@ function ProjectView({ details }: { details: ProjectDetails }) {
       <section className="section" aria-labelledby="project-tasks">
         <div className="section__header">
           <h2 id="project-tasks">Tasks</h2>
+          <div className="view-switch" role="group" aria-label="Task view">
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={view === 'list'}
+              onClick={() => setView('list')}
+            >
+              <List aria-hidden /> List
+            </button>
+            <button
+              type="button"
+              className="chip"
+              aria-pressed={view === 'board'}
+              onClick={() => setView('board')}
+            >
+              <Columns3 aria-hidden /> Board
+            </button>
+          </div>
         </div>
         {!archived && <InlineAdd projectId={project.id} />}
-        <FilterBar
-          value={filters}
-          defaults={PROJECT_DEFAULTS}
-          onChange={(next) => {
-            setFilters(next);
-            setLimit(PAGE_SIZE);
-          }}
-          tags={lookups.tagList}
-          allowManualSort
-        />
-        {tasks.error && <ErrorNotice error={tasks.error} onRetry={tasks.reload} />}
-        {tasks.data && tasks.data.length === 0 && (
-          <div className="empty">
-            <p>
-              {JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS)
-                ? 'No tasks in this project yet.'
-                : 'No tasks match these filters.'}
-            </p>
-          </div>
-        )}
-        {tasks.data && tasks.data.length > 0 && (
-          <TaskList
-            label={`Tasks in ${project.name}`}
-            tasks={tasks.data}
-            grouping={{ kind: 'statuses', statuses }}
-            today={today}
-            separateUndated={deferred.sort === 'due'}
-            tags={lookups.tags}
-          />
-        )}
-        {tasks.data && (
-          <LoadMore
-            shown={tasks.data.length}
-            limit={limit}
-            onMore={() => setLimit((l) => l + PAGE_SIZE)}
-          />
+        {view === 'board' && <TaskBoard project={project} statuses={statuses} />}
+        {view === 'list' && (
+          <>
+            <FilterBar
+              value={filters}
+              defaults={PROJECT_DEFAULTS}
+              onChange={(next) => {
+                setFilters(next);
+                setLimit(PAGE_SIZE);
+              }}
+              tags={lookups.tagList}
+              allowManualSort
+            />
+            {tasks.error && <ErrorNotice error={tasks.error} onRetry={tasks.reload} />}
+            {tasks.data && tasks.data.length === 0 && (
+              <div className="empty">
+                <p>
+                  {JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS)
+                    ? 'No tasks in this project yet.'
+                    : 'No tasks match these filters.'}
+                </p>
+              </div>
+            )}
+            {tasks.data && tasks.data.length > 0 && (
+              <TaskList
+                label={`Tasks in ${project.name}`}
+                tasks={tasks.data}
+                grouping={{ kind: 'statuses', statuses }}
+                today={today}
+                separateUndated={deferred.sort === 'due'}
+                tags={lookups.tags}
+              />
+            )}
+            {tasks.data && (
+              <LoadMore
+                shown={tasks.data.length}
+                limit={limit}
+                onMore={() => setLimit((l) => l + PAGE_SIZE)}
+              />
+            )}
+          </>
         )}
       </section>
+
+      <ProjectNotes project={project} />
 
       <ProjectDialog open={editing} project={project} onClose={() => setEditing(false)} />
       <StatusManager

@@ -234,7 +234,7 @@ describe('TaskService: list, sort, filter, search', () => {
     const results = p.search.search('garden');
     expect(results.projects.map((x) => x.name)).toEqual(['Garden plan']);
     expect(results.tasks.map((x) => x.title)).toEqual(['Plant garden beds']);
-    expect(p.search.search('   ')).toEqual({ projects: [], tasks: [] });
+    expect(p.search.search('   ')).toEqual({ projects: [], tasks: [], notes: [] });
   });
 });
 

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.2.0 — Notes, Kanban board, and calendar (2026-10-20, not yet publicly released)
+
+### Kanban board (L1.1)
+
+- Each project's tasks can be shown as a board with one column per workflow status (switch between List and Board).
+- Drag cards between columns and within a column, or use a card's Move button to choose a column and position from the keyboard.
+- Moving a card to a Done status completes the task; the order is saved.
+
+### Calendar (L3.4)
+
+- A Calendar screen shows tasks on their due dates in month, week, and day views, starting the week as Windows does for your region.
+- Overdue tasks are marked in red with an icon; a notice links to today's list of them.
+- Select an entry to open the task; changing its due date moves it at once.
+- Filter by project and choose whether to show done and cancelled tasks.
+
+### Notes (L1.5)
+
+- Markdown notes in every project (loose notes go to the Inbox), with tags, a Notes screen with search and filters, and a Notes section on each project page.
+- Write and Preview modes. The preview supports headings, lists, task lists, tables, quotes, code, and links. Raw HTML is shown as text, images are never loaded, and only web and mail links open (in the system browser).
+- Notes save themselves while you type (Ctrl+S saves at once). Leaving a note or closing the window saves first, and asks before discarding changes that could not be saved.
+- Global search, the trash (including moving a project to the trash), encrypted backups, and JSON exports include notes.
+- Profile data schema version 3; existing profiles upgrade automatically after a verified snapshot.
+
+### Fixed
+
+- A backup damaged in a particular place could fail with a technical database error instead of "wrong password or damaged file".
+
 ## 0.1.0 — MVP (2026-10-17, not yet publicly released)
 
 First complete version of the free, local-first project organizer for Windows.

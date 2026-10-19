@@ -141,3 +141,178 @@ test('theme preference applies immediately and persists', async () => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await app.close();
 });
+
+test('notes: write Markdown, autosave, preview, search, leave safely, trash and restore, restart', async () => {
+  let { app, page } = await launch(dataDir);
+  await page.getByLabel('Profile name').fill('Notes');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+
+  // Create a note; it saves itself after a pause.
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  await expect(page.getByText('No notes yet. Create one to start.')).toBeVisible();
+  await page.getByRole('button', { name: 'New note' }).click();
+  await page.getByLabel('Note title').fill('Meeting notes');
+  await page
+    .getByLabel('Note text (Markdown)')
+    .fill('# Agenda\n\n- Budget **review**\n\n<b>not bold</b>');
+  await expect(page.getByTestId('note-save-state')).toHaveText('Saved');
+  await expect(page.getByRole('list', { name: 'Notes' })).toContainText('Meeting notes');
+
+  // The preview renders Markdown and shows raw HTML as text.
+  await page.getByRole('button', { name: 'Preview' }).click();
+  const editor = page.getByRole('region', { name: 'Open note' });
+  await expect(editor.getByRole('heading', { name: 'Agenda', level: 1 })).toBeVisible();
+  await expect(editor.locator('strong')).toHaveText('review');
+  await expect(editor.getByText('<b>not bold</b>')).toBeVisible();
+
+  // Typing and leaving at once still saves (the leave guard waits for the save).
+  await page.getByRole('button', { name: 'Write' }).click();
+  await page.getByLabel('Note text (Markdown)').press('End');
+  await page.getByLabel('Note text (Markdown)').pressSequentially(' Decide date.');
+  await nav(page).getByRole('button', { name: 'Today' }).click();
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible();
+
+  // Global search finds note bodies.
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('decide');
+  await page.getByRole('list', { name: 'Matching notes' }).getByRole('button').click();
+  await expect(page.getByTestId('note-save-state')).toHaveText('Saved');
+  await expect(editor).toContainText('Decide date.');
+
+  // Trash the note, then restore it from the trash.
+  await editor.getByRole('button', { name: 'Move to trash' }).click();
+  await expect(page.getByText('No notes yet. Create one to start.')).toBeVisible();
+  await page.keyboard.press('Control+4');
+  await expect(page.getByRole('list', { name: 'Items in trash' })).toContainText('Note');
+  await page.getByRole('button', { name: 'Restore' }).click();
+  await expect(page.getByText('The trash is empty.')).toBeVisible();
+  await app.close();
+
+  // The note persists across a restart and appears in its project.
+  ({ app, page } = await launch(dataDir));
+  await nav(page).getByRole('button', { name: 'Inbox' }).click();
+  await page.getByRole('list', { name: 'Notes in Inbox' }).getByRole('button').click();
+  await expect(page.getByRole('region', { name: 'Open note' })).toContainText('Decide date.');
+  await app.close();
+});
+
+test('notes: closing the window while typing saves the note first', async () => {
+  let { app, page } = await launch(dataDir);
+  await page.getByLabel('Profile name').fill('Close');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('button', { name: 'New note' }).click();
+  await page.getByLabel('Note text (Markdown)').fill('Typed just before closing');
+  // Close at once, before the autosave pause ends: the page saves as the window closes
+  // (removing its beforeunload handler makes this test fail). Electron shows no
+  // beforeunload dialog; the listener stops Playwright from trying to dismiss one.
+  page.on('dialog', () => undefined);
+  const closed = app.waitForEvent('close');
+  await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close());
+  await closed;
+
+  ({ app, page } = await launch(dataDir));
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('list', { name: 'Notes' }).getByRole('button').click();
+  await expect(page.getByRole('region', { name: 'Open note' })).toContainText(
+    'Typed just before closing',
+  );
+  await app.close();
+});
+
+test('kanban: move cards with the Move dialog and by drag and drop; order persists', async () => {
+  let { app, page } = await launch(dataDir);
+  await page.getByLabel('Profile name').fill('Board');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await page.evaluate(async () => {
+    const project = await window.api.projects.create({ name: 'Website' });
+    if (!project.ok) throw new Error('seed');
+    for (const title of ['Alpha', 'Beta', 'Gamma']) {
+      await window.api.tasks.create({ title, projectId: project.data.id });
+    }
+  });
+  await page.reload();
+  await nav(page).getByRole('button', { name: 'Website' }).click();
+  await page.getByRole('button', { name: 'Board' }).click();
+  const column = (name: string) => page.getByRole('region', { name: new RegExp(`^${name}`) });
+  const titles = (name: string) => column(name).locator('.card__title').allTextContents();
+  await expect.poll(() => titles('To do')).toEqual(['Alpha', 'Beta', 'Gamma']);
+
+  // Keyboard path: the Move dialog.
+  await page.getByRole('button', { name: 'Move Gamma' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Move Gamma' });
+  await dialog.getByLabel('Column').selectOption({ label: 'In progress' });
+  await dialog.getByRole('button', { name: 'Move' }).click();
+  await expect.poll(() => titles('In progress')).toEqual(['Gamma']);
+
+  // Mouse path: drag Alpha onto the top half of Gamma, so it lands above it.
+  await page
+    .getByRole('button', { name: 'Alpha', exact: true })
+    .dragTo(column('In progress').locator('.card').first(), { targetPosition: { x: 20, y: 4 } });
+  await expect.poll(() => titles('In progress')).toEqual(['Alpha', 'Gamma']);
+  await expect.poll(() => titles('To do')).toEqual(['Beta']);
+
+  // Moving to Done completes the task.
+  await page.getByRole('button', { name: 'Move Beta' }).click();
+  await page.getByRole('dialog').getByLabel('Column').selectOption({ label: 'Done' });
+  await page.getByRole('dialog').getByRole('button', { name: 'Move' }).click();
+  await expect.poll(() => titles('Done')).toEqual(['Beta']);
+  await app.close();
+
+  ({ app, page } = await launch(dataDir));
+  await nav(page).getByRole('button', { name: 'Website' }).click();
+  await page.getByRole('button', { name: 'Board' }).click();
+  await expect.poll(() => titles('In progress')).toEqual(['Alpha', 'Gamma']);
+  await page.getByRole('button', { name: 'List' }).click();
+  await expect(page.getByRole('button', { name: /^Done 1/ })).toBeVisible();
+  await app.close();
+});
+
+test('calendar: tasks appear on due dates; changing a due date moves the entry at once', async () => {
+  const { app, page } = await launch(dataDir);
+  await page.getByLabel('Profile name').fill('Dates');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  const day = (offset: number) =>
+    page.evaluate((o) => {
+      const d = new Date();
+      d.setDate(d.getDate() + o);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }, offset);
+  const today = await day(0);
+  const tomorrow = await day(1);
+  await page.evaluate(
+    async ({ today }) => {
+      await window.api.tasks.create({ title: 'Pay rent', dueDate: today });
+    },
+    { today },
+  );
+  await page.reload();
+  await nav(page).getByRole('button', { name: 'Calendar' }).click();
+  await page.getByRole('button', { name: 'Week' }).click();
+  const weekDay = (iso: string) =>
+    page.locator('.week__day').filter({ has: page.locator(`[data-day="${iso}"]`) });
+  await expect(weekDay(today).getByRole('button', { name: 'Pay rent' })).toBeVisible();
+
+  // Open the task from the calendar and move its due date.
+  await weekDay(today).getByRole('button', { name: 'Pay rent' }).click();
+  const details = page.getByRole('complementary', { name: 'Task details' });
+  await details.getByLabel('Due date').fill(tomorrow);
+  await page.keyboard.press('Escape');
+  await expect(weekDay(today).getByRole('button', { name: 'Pay rent' })).toBeHidden();
+  // Tomorrow can fall in next week's view.
+  if ((await page.locator(`[data-day="${tomorrow}"]`).count()) === 0) {
+    await page.getByRole('button', { name: 'Next week' }).click();
+  }
+  await expect(weekDay(tomorrow).getByRole('button', { name: 'Pay rent' })).toBeVisible();
+
+  // Completed tasks are hidden unless asked for.
+  await weekDay(tomorrow).getByRole('button', { name: 'Pay rent' }).click();
+  await details.getByLabel('Status').selectOption({ label: 'Done' });
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /Pay rent/ })).toBeHidden();
+  await page.getByLabel('Show done and cancelled').check();
+  await expect(page.getByRole('button', { name: /Pay rent.*done/ })).toBeVisible();
+  await app.close();
+});

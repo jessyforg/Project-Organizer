@@ -11,7 +11,7 @@ import { requireLiveProject } from './projects';
 
 interface BatchRow {
   batch_id: string;
-  kind: 'project' | 'task';
+  kind: 'project' | 'task' | 'note';
   title: string;
   project_name: string | null;
   deleted_at: string;
@@ -61,7 +61,21 @@ export class TrashService {
     return { batchId };
   }
 
-  /** Moves a project and all its live tasks to the trash as one batch. */
+  /** Moves a note to the trash. */
+  trashNote(noteId: string): { batchId: string } {
+    const batchId = this.ctx.newId();
+    const now = nowIso(this.ctx);
+    const result = this.ctx.db
+      .prepare(
+        `UPDATE notes SET deleted_at = ?, deletion_batch_id = ?, updated_at = ?
+         WHERE id = ? AND deleted_at IS NULL`,
+      )
+      .run(now, batchId, now, noteId);
+    if (result.changes === 0) throw notFound('Note');
+    return { batchId };
+  }
+
+  /** Moves a project and all its live tasks and notes to the trash as one batch. */
   trashProject(projectId: string): { batchId: string } {
     const { db } = this.ctx;
     const project = requireLiveProject(db, projectId);
@@ -73,6 +87,9 @@ export class TrashService {
     db.transaction(() => {
       db.prepare(
         'UPDATE tasks SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE project_id = ? AND deleted_at IS NULL',
+      ).run(now, batchId, now, projectId);
+      db.prepare(
+        'UPDATE notes SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE project_id = ? AND deleted_at IS NULL',
       ).run(now, batchId, now, projectId);
       db.prepare(
         'UPDATE projects SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE id = ?',
@@ -87,6 +104,7 @@ export class TrashService {
         `SELECT p.deletion_batch_id AS batch_id, 'project' AS kind, p.name AS title,
                 NULL AS project_name, p.deleted_at,
                 1 + (SELECT count(*) FROM tasks t WHERE t.deletion_batch_id = p.deletion_batch_id)
+                  + (SELECT count(*) FROM notes n WHERE n.deletion_batch_id = p.deletion_batch_id)
                   AS item_count
          FROM projects p WHERE p.deleted_at IS NOT NULL
          UNION ALL
@@ -98,6 +116,11 @@ export class TrashService {
            AND NOT EXISTS (SELECT 1 FROM projects bp WHERE bp.deletion_batch_id = t.deletion_batch_id)
            AND NOT EXISTS (SELECT 1 FROM tasks parent WHERE parent.id = t.parent_task_id
                            AND parent.deletion_batch_id = t.deletion_batch_id)
+         UNION ALL
+         SELECT n.deletion_batch_id, 'note', n.title, p.name, n.deleted_at, 1
+         FROM notes n JOIN projects p ON p.id = n.project_id
+         WHERE n.deleted_at IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM projects bp WHERE bp.deletion_batch_id = n.deletion_batch_id)
          ORDER BY deleted_at DESC, batch_id`,
       )
       .all() as BatchRow[];
@@ -137,8 +160,18 @@ export class TrashService {
         project_trashed: number;
         parent_trashed: number | null;
       }[];
-      if (projects.length === 0 && tasks.length === 0) throw notFound('Trash item');
-      if (tasks.some((t) => t.project_trashed === 1)) {
+      const notes = db
+        .prepare(
+          `SELECT n.id,
+                  (SELECT p.deleted_at IS NOT NULL AND p.deletion_batch_id IS NOT n.deletion_batch_id
+                   FROM projects p WHERE p.id = n.project_id) AS project_trashed
+           FROM notes n WHERE n.deletion_batch_id = ?`,
+        )
+        .all(batchId) as { id: string; project_trashed: number }[];
+      if (projects.length === 0 && tasks.length === 0 && notes.length === 0) {
+        throw notFound('Trash item');
+      }
+      if ([...tasks, ...notes].some((item) => item.project_trashed === 1)) {
         throw new AppError('CONFLICT', 'Restore the project first; it is also in the trash.');
       }
       if (tasks.some((t) => t.parent_trashed === 1)) {
@@ -151,6 +184,9 @@ export class TrashService {
       ).run(now, batchId);
       db.prepare(
         'UPDATE tasks SET deleted_at = NULL, deletion_batch_id = NULL, updated_at = ? WHERE deletion_batch_id = ?',
+      ).run(now, batchId);
+      db.prepare(
+        'UPDATE notes SET deleted_at = NULL, deletion_batch_id = NULL, updated_at = ? WHERE deletion_batch_id = ?',
       ).run(now, batchId);
 
       const unresolved = tasks.length
@@ -166,6 +202,7 @@ export class TrashService {
       return {
         restoredProjects: projects.length,
         restoredTasks: tasks.length,
+        restoredNotes: notes.length,
         unresolvedDependencies: unresolved.map((u) => ({
           taskId: u.task_id,
           prerequisiteId: u.depends_on_task_id,
@@ -192,18 +229,23 @@ export class TrashService {
 
   private allBatchIds(deletedBefore?: string): string[] {
     const filter = deletedBefore === undefined ? '' : 'AND deleted_at < ?';
-    const args = deletedBefore === undefined ? [] : [deletedBefore, deletedBefore];
+    const args = deletedBefore === undefined ? [] : [deletedBefore, deletedBefore, deletedBefore];
     const rows = this.ctx.db
       .prepare(
         `SELECT deletion_batch_id AS id FROM projects WHERE deleted_at IS NOT NULL ${filter}
          UNION
-         SELECT deletion_batch_id FROM tasks WHERE deleted_at IS NOT NULL ${filter}`,
+         SELECT deletion_batch_id FROM tasks WHERE deleted_at IS NOT NULL ${filter}
+         UNION
+         SELECT deletion_batch_id FROM notes WHERE deleted_at IS NOT NULL ${filter}`,
       )
       .all(...args) as { id: string }[];
     return rows.map((r) => r.id);
   }
 
-  /** Hard deletes; foreign-key cascades remove statuses, subtasks, tags links, and dependencies. */
+  /**
+   * Hard deletes; foreign-key cascades remove statuses, subtasks, tag links, dependencies,
+   * and the notes of deleted projects.
+   */
   private purgeBatches(batchIds: string[]): number {
     if (batchIds.length === 0) return 0;
     const { db } = this.ctx;
@@ -211,8 +253,12 @@ export class TrashService {
       let purged = 0;
       const deleteProjects = db.prepare('DELETE FROM projects WHERE deletion_batch_id = ?');
       const deleteTasks = db.prepare('DELETE FROM tasks WHERE deletion_batch_id = ?');
+      const deleteNotes = db.prepare('DELETE FROM notes WHERE deletion_batch_id = ?');
       for (const batchId of batchIds) {
-        const changes = deleteProjects.run(batchId).changes + deleteTasks.run(batchId).changes;
+        const changes =
+          deleteProjects.run(batchId).changes +
+          deleteTasks.run(batchId).changes +
+          deleteNotes.run(batchId).changes;
         if (changes > 0) purged++;
       }
       return purged;
