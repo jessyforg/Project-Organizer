@@ -2,6 +2,44 @@
 
 Newest entries first.
 
+## 2026-10-20 — Interface refresh (UI/UX modernisation)
+
+**Request:** the product owner asked for a UI/UX modernisation that keeps the features, the local-only design, and the zero-cost constraints. Decisions are recorded in [ADR-0011](DECISIONS/0011-interface-refresh.md).
+
+**Method:**
+1. Captured every screen and dialog with realistic data (19 screenshots).
+2. Listed the problems and set the direction.
+3. Changed tokens, then the shell, then the screens.
+4. Captured everything again in light and dark at 1280×800 and 960×640, and fixed what the captures showed.
+
+**Scope completed:**
+- **Foundation:** refined tokens (surfaces, text, type scale, radii, shadows, motion), checked for contrast in both themes.
+- **Shell:** a grouped sidebar with a brand mark, a search field showing its shortcut, and a footer for Trash, Settings, and the profile.
+- **Shared components:** `PageHeader` on every screen, `EmptyState`, and an accessible `MenuButton`. Lists sit on panels; filters became compact toolbars; segmented controls replace pill toggles.
+- **Project page:** a summary panel, a breadcrumb, and a "More project actions" menu.
+- **Other screens:** Projects with folder menus and richer rows; Settings in cards; an aligned Workflow dialog; a first-run card; refreshed Trash, Search, Notes, Calendar, and task panel.
+
+**Defects found and fixed:**
+- **Long project names** broke the sidebar list: it scrolled sideways and left a blank highlighted row. This existed before the refresh.
+- **The whole window could scroll** and leave a blank strip under the sidebar. Screen-reader-only text and hidden inputs had no positioned container.
+- **One-column grids** let long note excerpts widen the Notes list past its column.
+- **The new theme radios** were not clickable by tests, because their inputs ignored the pointer.
+- **Success-green badge text** was 4.4:1 on its tint; it was darkened.
+
+**Verification (2026-10-20):**
+
+| Check | Result |
+|---|---|
+| `npm run typecheck`, `npm run lint`, formatting (all files except the untracked `PROJECT_STATUS_REPORT.md`) | Passed |
+| `npm test` | Passed — 247 of 247 (3 new: menu keyboard behaviour). One assertion was updated: the dashboard summary now uses "·" separators. The 500-row paging test was given a 15-second limit: about 2 s normally, but over 5 s on a busy machine, as also seen before the refresh. |
+| `npm run test:e2e` | Passed — 13 of 13, including the accessibility scan of every screen in both themes. One step was updated: Archive is now in the project's menu. |
+| `npm audit --omit=dev` | 0 vulnerabilities |
+| Contrast | Every text token on every surface ≥ 4.5:1 (lowest 5.1 light, 4.9 dark) |
+
+**Known limitations:** form-field borders are about 1.6:1 against white, below the 3:1 WCAG guideline for component boundaries (ADR-0011). No manual screen-reader pass has been done yet. The installer has not been rebuilt for this change. Nothing is committed.
+
+**Next step:** product owner review of the refreshed interface.
+
 ## 2026-10-20 — Kanban board (L1.1) and calendar (L3.4) implemented — version 0.2.0
 
 **Approval:** the product owner accepted the Notes decisions ("the changes you made are good enough") and gave the go-ahead: "do the kanban and calendar".

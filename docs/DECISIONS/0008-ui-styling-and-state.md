@@ -1,6 +1,6 @@
 # ADR-0008: UI styling, data loading, and visual identity
 
-- Status: Approved (decided within the product owner's delegated authority for Phase 4)
+- Status: Approved (decided within the product owner's delegated authority for Phase 4); the visual layer is refined by [ADR-0011](0011-interface-refresh.md)
 - Date: 2026-10-17
 
 ## Context

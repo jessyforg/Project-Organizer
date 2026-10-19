@@ -53,12 +53,14 @@ export function BackupPanel({ onProfilesChanged }: { onProfilesChanged: () => Pr
   };
 
   return (
-    <section className="section" aria-labelledby="backup-heading">
-      <h2 id="backup-heading">Backup and restore</h2>
-      <p className="muted small">
-        Backups are encrypted with a password you choose. The app also keeps automatic daily copies
-        of this profile for 7 days in its data folder.
-      </p>
+    <section className="panel settings-card" aria-labelledby="backup-heading">
+      <div className="settings-card__intro">
+        <h2 id="backup-heading">Backup and restore</h2>
+        <p>
+          Backups are encrypted with a password you choose. The app also keeps automatic daily
+          copies of this profile for 7 days in its data folder.
+        </p>
+      </div>
       <div className="page__actions">
         <button type="button" className="btn btn--primary" onClick={() => setExporting(true)}>
           <Download aria-hidden /> Create backup…

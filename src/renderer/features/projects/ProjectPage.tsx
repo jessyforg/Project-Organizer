@@ -3,6 +3,8 @@ import {
   Archive,
   ArchiveRestore,
   CheckCircle2,
+  ChevronRight,
+  ClipboardList,
   Columns3,
   List,
   Pencil,
@@ -15,7 +17,16 @@ import type { ProjectDetails } from '@shared/domain';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
-import { ConfirmDialog, ErrorNotice, Loading, ProgressMeter, Swatch } from '../../components/ui';
+import {
+  ConfirmDialog,
+  EmptyState,
+  ErrorNotice,
+  Loading,
+  MenuButton,
+  PageHeader,
+  ProgressMeter,
+  Swatch,
+} from '../../components/ui';
 import { formatDate, localToday } from '../../lib/format';
 import { TaskBoard } from '../board/TaskBoard';
 import { ProjectNotes } from '../notes/ProjectNotes';
@@ -117,16 +128,92 @@ function ProjectView({ details }: { details: ProjectDetails }) {
 
   const archived = project.archivedAt !== null;
 
+  const setStatus = (status: 'active' | 'completed') =>
+    void run(
+      window.api.projects.setStatus({ id: project.id, status }),
+      status === 'completed' ? 'Project marked completed.' : 'Project reopened.',
+    );
+  const unarchive = () =>
+    void run(window.api.projects.unarchive({ id: project.id }), 'Project restored from archive.');
+  const tagNames = project.tagIds
+    .map((t) => lookups.tags.get(t)?.name)
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <div className="page">
-      <header className="project-head">
-        <div className="project-head__title">
-          <Swatch color={project.color} />
-          <h1>{project.name}</h1>
-          {archived && <span className="label">Archived</span>}
-          {project.status === 'completed' && <span className="label">Completed</span>}
-        </div>
-        {project.description && <p className="muted">{project.description}</p>}
+      <PageHeader
+        eyebrow={
+          <>
+            <button type="button" className="link" onClick={() => navigate({ name: 'projects' })}>
+              Projects
+            </button>
+            <ChevronRight aria-hidden width={14} height={14} />
+            <span className="truncate">{project.isInbox ? 'Inbox' : project.name}</span>
+          </>
+        }
+        leading={<Swatch color={project.color} />}
+        title={project.name}
+        titleAdornment={
+          <>
+            {archived && <span className="label">Archived</span>}
+            {project.status === 'completed' && (
+              <span className="label label--success">Completed</span>
+            )}
+          </>
+        }
+        description={project.description}
+        actions={
+          <>
+            {!project.isInbox && (
+              <button type="button" className="btn" onClick={() => setEditing(true)}>
+                <Pencil aria-hidden /> Edit
+              </button>
+            )}
+            <button type="button" className="btn" onClick={() => setWorkflowOpen(true)}>
+              <Workflow aria-hidden /> Workflow
+            </button>
+            {!project.isInbox && (
+              <MenuButton
+                label="More project actions"
+                items={[
+                  project.status === 'active'
+                    ? {
+                        label: 'Mark completed',
+                        icon: CheckCircle2,
+                        onSelect: () => setStatus('completed'),
+                      }
+                    : {
+                        label: 'Reopen project',
+                        icon: RotateCcw,
+                        onSelect: () => setStatus('active'),
+                      },
+                  archived
+                    ? { label: 'Unarchive', icon: ArchiveRestore, onSelect: unarchive }
+                    : {
+                        label: 'Archive',
+                        icon: Archive,
+                        onSelect: () =>
+                          void run(
+                            window.api.projects.archive({ id: project.id }),
+                            'Project archived.',
+                          ),
+                      },
+                  {
+                    label: 'Move to trash',
+                    icon: Trash2,
+                    danger: true,
+                    separated: true,
+                    onSelect: () => setConfirmTrash(true),
+                  },
+                ]}
+              />
+            )}
+          </>
+        }
+      />
+
+      <div className="panel project-head__summary">
         <dl className="facts">
           <div>
             <dt>Type</dt>
@@ -144,91 +231,18 @@ function ProjectView({ details }: { details: ProjectDetails }) {
               <dd>{formatDate(project.targetDate, today)}</dd>
             </div>
           )}
-          {project.tagIds.length > 0 && (
+          {tagNames && (
             <div>
               <dt>Tags</dt>
-              <dd>
-                {project.tagIds
-                  .map((t) => lookups.tags.get(t)?.name)
-                  .filter(Boolean)
-                  .join(', ')}
-              </dd>
+              <dd>{tagNames}</dd>
             </div>
           )}
         </dl>
-        <div style={{ maxWidth: 420 }}>
+        <div>
           <ProgressMeter progress={progress} label={`${project.name} progress`} />
           <p className="stamp">Calculated from tasks; cancelled tasks are not counted.</p>
         </div>
-        <div className="page__actions">
-          {!project.isInbox && (
-            <button type="button" className="btn" onClick={() => setEditing(true)}>
-              <Pencil aria-hidden /> Edit
-            </button>
-          )}
-          <button type="button" className="btn" onClick={() => setWorkflowOpen(true)}>
-            <Workflow aria-hidden /> Workflow
-          </button>
-          {!project.isInbox &&
-            (project.status === 'active' ? (
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  void run(
-                    window.api.projects.setStatus({ id: project.id, status: 'completed' }),
-                    'Project marked completed.',
-                  )
-                }
-              >
-                <CheckCircle2 aria-hidden /> Mark completed
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  void run(
-                    window.api.projects.setStatus({ id: project.id, status: 'active' }),
-                    'Project reopened.',
-                  )
-                }
-              >
-                <RotateCcw aria-hidden /> Reopen project
-              </button>
-            ))}
-          {!project.isInbox &&
-            (archived ? (
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  void run(
-                    window.api.projects.unarchive({ id: project.id }),
-                    'Project restored from archive.',
-                  )
-                }
-              >
-                <ArchiveRestore aria-hidden /> Unarchive
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  void run(window.api.projects.archive({ id: project.id }), 'Project archived.')
-                }
-              >
-                <Archive aria-hidden /> Archive
-              </button>
-            ))}
-          {!project.isInbox && (
-            <button type="button" className="btn btn--danger" onClick={() => setConfirmTrash(true)}>
-              <Trash2 aria-hidden /> Move to trash
-            </button>
-          )}
-        </div>
-      </header>
+      </div>
 
       {suggestCompletion && (
         <div className="notice">
@@ -250,27 +264,20 @@ function ProjectView({ details }: { details: ProjectDetails }) {
       {archived && (
         <div className="notice">
           <p>This project is archived. Unarchive it to add tasks.</p>
+          <button type="button" className="btn" onClick={unarchive}>
+            <ArchiveRestore aria-hidden /> Unarchive
+          </button>
         </div>
       )}
 
       <section className="section" aria-labelledby="project-tasks">
         <div className="section__header">
           <h2 id="project-tasks">Tasks</h2>
-          <div className="view-switch" role="group" aria-label="Task view">
-            <button
-              type="button"
-              className="chip"
-              aria-pressed={view === 'list'}
-              onClick={() => setView('list')}
-            >
+          <div className="segmented" role="group" aria-label="Task view">
+            <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
               <List aria-hidden /> List
             </button>
-            <button
-              type="button"
-              className="chip"
-              aria-pressed={view === 'board'}
-              onClick={() => setView('board')}
-            >
+            <button type="button" aria-pressed={view === 'board'} onClick={() => setView('board')}>
               <Columns3 aria-hidden /> Board
             </button>
           </div>
@@ -291,12 +298,19 @@ function ProjectView({ details }: { details: ProjectDetails }) {
             />
             {tasks.error && <ErrorNotice error={tasks.error} onRetry={tasks.reload} />}
             {tasks.data && tasks.data.length === 0 && (
-              <div className="empty">
-                <p>
-                  {JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS)
-                    ? 'No tasks in this project yet.'
-                    : 'No tasks match these filters.'}
-                </p>
+              <div className="panel">
+                <EmptyState
+                  icon={ClipboardList}
+                  title={
+                    JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS)
+                      ? 'No tasks in this project yet.'
+                      : 'No tasks match these filters.'
+                  }
+                >
+                  {JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS) && !archived
+                    ? 'Type a title in “Add a task” above and press Enter.'
+                    : null}
+                </EmptyState>
               </div>
             )}
             {tasks.data && tasks.data.length > 0 && (
@@ -355,20 +369,23 @@ function InlineAdd({ projectId }: { projectId: string }) {
     invalidate();
   };
   return (
-    <form className="filters" onSubmit={(e) => void submit(e)}>
-      <div className="field filters__search">
-        <label htmlFor="inline-add">Add a task</label>
+    <form className="toolbar" onSubmit={(e) => void submit(e)}>
+      <div className="search-field toolbar__grow">
+        <label htmlFor="inline-add" className="visually-hidden">
+          Add a task
+        </label>
+        <Plus aria-hidden />
         <input
           id="inline-add"
           className="input"
           value={title}
           maxLength={500}
-          placeholder="Task title, then Enter"
+          placeholder="Add a task: type a title and press Enter"
           onChange={(e) => setTitle(e.target.value)}
         />
       </div>
       <button type="submit" className="btn">
-        <Plus aria-hidden /> Add
+        Add
       </button>
     </form>
   );

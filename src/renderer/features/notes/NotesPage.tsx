@@ -1,9 +1,9 @@
 import { useDeferredValue, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { NotebookPen, Plus, Search } from 'lucide-react';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
-import { ErrorNotice, Loading } from '../../components/ui';
+import { EmptyState, ErrorNotice, Loading, PageHeader } from '../../components/ui';
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
 import { useLookups } from '../tasks/useLookups';
 import { NoteEditor, UNTITLED } from './NoteEditor';
@@ -46,31 +46,37 @@ export function NotesPage({
 
   return (
     <div className="page notes-page">
-      <header className="page__header">
-        <h1>Notes</h1>
-        <button type="button" className="btn btn--primary" onClick={() => void create()}>
-          <Plus aria-hidden /> New note
-        </button>
-      </header>
+      <PageHeader
+        title="Notes"
+        description="Markdown notes for your projects. Loose notes go to the Inbox."
+        actions={
+          <button type="button" className="btn btn--primary" onClick={() => void create()}>
+            <Plus aria-hidden /> New note
+          </button>
+        }
+      />
       <div className="notes">
         <section className="notes__list" aria-label="All notes">
           <div className="notes__filters">
-            <div className="field">
-              <label htmlFor="notes-search">Search notes</label>
+            <div className="search-field">
+              <label htmlFor="notes-search" className="visually-hidden">
+                Search notes
+              </label>
+              <Search aria-hidden />
               <input
                 id="notes-search"
                 className="input"
                 type="search"
                 value={text}
                 maxLength={200}
+                placeholder="Search notes"
                 onChange={(e) => setText(e.target.value)}
               />
             </div>
-            <div className="field">
+            <div className="inline-field">
               <label htmlFor="notes-project">Project</label>
               <select
                 id="notes-project"
-                className="select"
                 value={project}
                 onChange={(e) => setProject(e.target.value)}
               >
@@ -83,14 +89,9 @@ export function NotesPage({
               </select>
             </div>
             {lookups.tagList.length > 0 && (
-              <div className="field">
+              <div className="inline-field">
                 <label htmlFor="notes-tag">Tag</label>
-                <select
-                  id="notes-tag"
-                  className="select"
-                  value={tag}
-                  onChange={(e) => setTag(e.target.value)}
-                >
+                <select id="notes-tag" value={tag} onChange={(e) => setTag(e.target.value)}>
                   <option value="">Any tag</option>
                   {lookups.tagList.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -124,7 +125,11 @@ export function NotesPage({
           {noteId ? (
             <NoteLoader key={noteId} noteId={noteId} />
           ) : (
-            <p className="muted">Choose a note from the list, or create a new one.</p>
+            <div className="panel">
+              <EmptyState icon={NotebookPen} title="No note open">
+                Choose a note from the list, or create a new one.
+              </EmptyState>
+            </div>
           )}
         </section>
       </div>

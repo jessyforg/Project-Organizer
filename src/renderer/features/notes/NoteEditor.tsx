@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Eye, PenLine, Trash2 } from 'lucide-react';
 import type { Note } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
 import { useInvalidate } from '../../app/data';
@@ -232,23 +232,19 @@ export function NoteEditor({ note }: { note: Note }) {
         <TagPicker selected={note.tagIds} onChange={setTags} />
       </div>
 
-      <div className="note-editor__modes" role="group" aria-label="Editor mode">
-        <button
-          type="button"
-          className="chip"
-          aria-pressed={mode === 'write'}
-          onClick={() => setMode('write')}
-        >
-          Write
-        </button>
-        <button
-          type="button"
-          className="chip"
-          aria-pressed={mode === 'preview'}
-          onClick={() => setMode('preview')}
-        >
-          Preview
-        </button>
+      <div className="note-editor__modes">
+        <div className="segmented" role="group" aria-label="Editor mode">
+          <button type="button" aria-pressed={mode === 'write'} onClick={() => setMode('write')}>
+            <PenLine aria-hidden /> Write
+          </button>
+          <button
+            type="button"
+            aria-pressed={mode === 'preview'}
+            onClick={() => setMode('preview')}
+          >
+            <Eye aria-hidden /> Preview
+          </button>
+        </div>
         <span className="muted small">
           Markdown: # heading, **bold**, - list, [link](https://…)
         </span>

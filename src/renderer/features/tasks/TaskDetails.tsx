@@ -21,11 +21,12 @@ export function TaskDetails({ taskId }: { taskId: string }) {
     <aside className="details" aria-label="Task details">
       <div className="task-details">
         <div className="task-details__top">
-          <span className="muted small">Task</span>
+          <span className="task-details__kind">Task details</span>
           <button
             type="button"
             className="btn btn--quiet btn--icon"
             aria-label="Close task details"
+            title="Close (Esc)"
             onClick={() => openTask(null)}
           >
             <X aria-hidden />

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FolderPlus, Plus } from 'lucide-react';
+import { Folder as FolderIcon, FolderKanban, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { Folder, ProjectListItem } from '@shared/domain';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
@@ -7,8 +7,11 @@ import { useToast } from '../../app/toasts';
 import {
   ConfirmDialog,
   Dialog,
+  EmptyState,
   ErrorNotice,
   Loading,
+  MenuButton,
+  PageHeader,
   ProgressMeter,
   Swatch,
 } from '../../components/ui';
@@ -46,33 +49,43 @@ export function ProjectsPage() {
 
   return (
     <div className="page">
-      <header className="page__header">
-        <h1>Projects</h1>
-        <div className="page__actions">
-          <label className="chip" style={{ cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
-            />
-            Show archived
-          </label>
-          <button type="button" className="btn" onClick={() => setFolderDialog({})}>
-            <FolderPlus aria-hidden /> New folder
-          </button>
-          <button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>
-            <Plus aria-hidden /> New project
-          </button>
-        </div>
-      </header>
+      <PageHeader
+        title="Projects"
+        description="Group projects into folders. Open a project to see its tasks, board, and notes."
+        actions={
+          <>
+            <label className="chip">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+              />
+              Show archived
+            </label>
+            <button type="button" className="btn" onClick={() => setFolderDialog({})}>
+              <FolderPlus aria-hidden /> New folder
+            </button>
+            <button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>
+              <Plus aria-hidden /> New project
+            </button>
+          </>
+        }
+      />
       {projects.error && <ErrorNotice error={projects.error} onRetry={projects.reload} />}
       {projects.loading && !projects.data && <Loading />}
       {projects.data && all.length === 0 && (
-        <div className="empty">
-          <p>No projects yet. Tasks you add without a project go to the Inbox.</p>
-          <button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>
-            Create a project
-          </button>
+        <div className="panel">
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects yet."
+            action={
+              <button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>
+                Create a project
+              </button>
+            }
+          >
+            Tasks you add without a project go to the Inbox.
+          </EmptyState>
         </div>
       )}
       {all.length > 0 &&
@@ -84,24 +97,28 @@ export function ProjectsPage() {
               aria-label={folder?.name ?? 'No folder'}
             >
               <div className="section__header">
-                <h2>{folder?.name ?? 'No folder'}</h2>
+                <div className="section__title">
+                  <FolderIcon aria-hidden width={16} height={16} className="muted" />
+                  <h2>{folder?.name ?? 'No folder'}</h2>
+                  <span className="count">{items.length}</span>
+                </div>
                 {folder && (
-                  <div className="page__actions">
-                    <button
-                      type="button"
-                      className="btn btn--quiet"
-                      onClick={() => setFolderDialog({ folder })}
-                    >
-                      Rename folder
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn--quiet"
-                      onClick={() => setDeleting(folder)}
-                    >
-                      Delete folder
-                    </button>
-                  </div>
+                  <MenuButton
+                    label={`Actions for folder ${folder.name}`}
+                    items={[
+                      {
+                        label: 'Rename folder',
+                        icon: Pencil,
+                        onSelect: () => setFolderDialog({ folder }),
+                      },
+                      {
+                        label: 'Delete folder',
+                        icon: Trash2,
+                        danger: true,
+                        onSelect: () => setDeleting(folder),
+                      },
+                    ]}
+                  />
                 )}
               </div>
               {items.length === 0 ? (
@@ -135,19 +152,23 @@ function ProjectRows({ projects }: { projects: ProjectListItem[] }) {
       {projects.map((p) => (
         <li key={p.id} className="project-row">
           <Swatch color={p.color} />
-          <span>
-            <button
-              type="button"
-              className="link"
-              onClick={() => navigate({ name: 'project', id: p.id })}
-            >
-              {p.name}
-            </button>{' '}
-            {p.archivedAt && <span className="label">Archived</span>}{' '}
-            {p.status === 'completed' && <span className="label">Completed</span>}
-          </span>
+          <div className="project-row__main">
+            <div className="project-row__name">
+              <button
+                type="button"
+                className="link"
+                title={p.name}
+                onClick={() => navigate({ name: 'project', id: p.id })}
+              >
+                {p.name}
+              </button>
+              {p.archivedAt && <span className="label">Archived</span>}
+              {p.status === 'completed' && <span className="label label--success">Completed</span>}
+            </div>
+            {p.description && <span className="project-row__description">{p.description}</span>}
+          </div>
           <ProgressMeter progress={p.progress} label={`${p.name} progress`} />
-          <span className="muted small">
+          <span className="project-row__date">
             {p.targetDate ? `Target ${formatDate(p.targetDate, today)}` : ''}
           </span>
         </li>

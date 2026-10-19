@@ -1,5 +1,5 @@
 import { useId, useState } from 'react';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, Plus, Star, X } from 'lucide-react';
 import { STATUS_CATEGORIES, type StatusCategory, type WorkflowStatus } from '@shared/domain';
 import { useInvalidate } from '../../app/data';
 import { useToast } from '../../app/toasts';
@@ -19,7 +19,7 @@ export function StatusManager({
   onClose: () => void;
 }) {
   return (
-    <Dialog open={open} onClose={onClose} label="Edit workflow">
+    <Dialog open={open} onClose={onClose} label="Edit workflow" wide>
       <div className="dialog__form">
         <h2>Workflow</h2>
         <p className="muted small">
@@ -84,7 +84,7 @@ function StatusEditor({ projectId, statuses }: { projectId: string; statuses: Wo
 
   return (
     <div className="section">
-      <ul className="mini-list">
+      <ul className="status-list">
         {statuses.map((status, index) => (
           <li key={status.id} className="status-editor">
             <input
@@ -99,15 +99,16 @@ function StatusEditor({ projectId, statuses }: { projectId: string; statuses: Wo
                 }
               }}
             />
-            <span className="muted small">
-              {CATEGORY_LABEL[status.category]}
-              {status.isDefault && ', default'}
+            <span className="status-editor__category">
+              <span className="label">{CATEGORY_LABEL[status.category]}</span>
+              {status.isDefault && <span className="label label--accent">Default</span>}
             </span>
-            <span>
+            <span className="status-editor__actions">
               <button
                 type="button"
-                className="btn btn--quiet btn--icon"
+                className="btn btn--quiet btn--icon btn--small"
                 aria-label={`Move ${status.name} up`}
+                title="Move up"
                 disabled={index === 0}
                 onClick={() => move(index, -1)}
               >
@@ -115,8 +116,9 @@ function StatusEditor({ projectId, statuses }: { projectId: string; statuses: Wo
               </button>
               <button
                 type="button"
-                className="btn btn--quiet btn--icon"
+                className="btn btn--quiet btn--icon btn--small"
                 aria-label={`Move ${status.name} down`}
+                title="Move down"
                 disabled={index === statuses.length - 1}
                 onClick={() => move(index, 1)}
               >
@@ -126,22 +128,26 @@ function StatusEditor({ projectId, statuses }: { projectId: string; statuses: Wo
                 (status.category === 'todo' || status.category === 'in_progress') && (
                   <button
                     type="button"
-                    className="btn btn--quiet"
+                    className="btn btn--quiet btn--icon btn--small"
+                    aria-label={`Make ${status.name} the default`}
+                    title="Make default (new tasks start here)"
                     onClick={() => void run(window.api.statuses.setDefault({ id: status.id }))}
                   >
-                    Make default
+                    <Star aria-hidden />
                   </button>
                 )}
               {!status.isDefault && (
                 <button
                   type="button"
-                  className="btn btn--quiet"
+                  className="btn btn--quiet btn--icon btn--small"
+                  aria-label={`Remove ${status.name}`}
+                  title="Remove"
                   onClick={() => {
                     setRemoving(status);
                     setReplacement(statuses.find((s) => s.id !== status.id)?.id ?? '');
                   }}
                 >
-                  Remove
+                  <X aria-hidden />
                 </button>
               )}
             </span>
@@ -177,8 +183,8 @@ function StatusEditor({ projectId, statuses }: { projectId: string; statuses: Wo
         </div>
       )}
 
-      <div className="filters">
-        <div className="field filters__search">
+      <div className="status-add">
+        <div className="field">
           <label htmlFor={`${id}-new`}>New status</label>
           <input
             id={`${id}-new`}
@@ -204,7 +210,7 @@ function StatusEditor({ projectId, statuses }: { projectId: string; statuses: Wo
           </select>
         </div>
         <button type="button" className="btn" onClick={() => void add()}>
-          Add status
+          <Plus aria-hidden /> Add status
         </button>
       </div>
     </div>

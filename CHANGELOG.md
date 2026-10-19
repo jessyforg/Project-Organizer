@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — interface refresh
+
+- **Sidebar:** grouped by purpose (planning views, projects and notes, the projects list, then Trash, Settings, and your profile). The search box shows its shortcut, and long project names no longer break the list.
+- **Every screen:** a consistent page header, lists on clean panels, compact filter toolbars, and helpful empty states.
+- **Project page:** a summary panel and a breadcrumb back to Projects. Less common actions (complete, archive, move to trash) are in a "More project actions" menu; an archived project shows an Unarchive button.
+- **Settings:** grouped into cards. The Workflow dialog has aligned rows.
+- **First run:** a welcome card.
+- **Behaviour and accessibility:** subtle motion that respects "reduce motion"; text contrast re-checked in both themes.
+- **Fixed:** the whole window could scroll and leave a blank strip under the sidebar.
+- No features, data, or settings changed.
+
 ## 0.2.0 — Notes, Kanban board, and calendar (2026-10-20, not yet publicly released)
 
 ### Kanban board (L1.1)

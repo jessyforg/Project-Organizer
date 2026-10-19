@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { Search, X } from 'lucide-react';
 import {
   PRIORITIES,
   type Priority,
@@ -58,24 +59,26 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
     list.includes(item) ? list.filter((x) => x !== item) : [...list, item];
 
   return (
-    <div className="section" role="search" aria-label="Filter tasks">
-      <div className="filters">
-        <div className="field filters__search">
-          <label htmlFor={`${id}-text`}>Search</label>
+    <div className="filter-bar" role="search" aria-label="Filter tasks">
+      <div className="toolbar">
+        <div className="search-field toolbar__grow">
+          <label htmlFor={`${id}-text`} className="visually-hidden">
+            Search
+          </label>
+          <Search aria-hidden />
           <input
             id={`${id}-text`}
             className="input"
             type="search"
             value={value.text}
-            placeholder="Words in title or description"
+            placeholder="Search titles and descriptions"
             onChange={(e) => set('text', e.target.value)}
           />
         </div>
-        <div className="field">
+        <div className="inline-field">
           <label htmlFor={`${id}-due`}>Due</label>
           <select
             id={`${id}-due`}
-            className="select"
             value={value.due}
             onChange={(e) => set('due', e.target.value as DueFilter)}
           >
@@ -87,11 +90,10 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
           </select>
         </div>
         {projects && (
-          <div className="field">
+          <div className="inline-field">
             <label htmlFor={`${id}-project`}>Project</label>
             <select
               id={`${id}-project`}
-              className="select"
               value={value.projectId}
               onChange={(e) => set('projectId', e.target.value)}
             >
@@ -105,11 +107,10 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
           </div>
         )}
         {tags.length > 0 && (
-          <div className="field">
+          <div className="inline-field">
             <label htmlFor={`${id}-tag`}>Tag</label>
             <select
               id={`${id}-tag`}
-              className="select"
               value={value.tagId}
               onChange={(e) => set('tagId', e.target.value)}
             >
@@ -122,11 +123,10 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
             </select>
           </div>
         )}
-        <div className="field">
+        <div className="inline-field">
           <label htmlFor={`${id}-sort`}>Sort by</label>
           <select
             id={`${id}-sort`}
-            className="select"
             value={value.sort}
             onChange={(e) => set('sort', e.target.value as SortKey)}
           >
@@ -137,8 +137,11 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
           </select>
         </div>
       </div>
-      <div className="filters">
+      <div className="filter-chips">
         <div className="chips" role="group" aria-label="Status">
+          <span className="chips__caption" aria-hidden="true">
+            Status
+          </span>
           {CATEGORIES.map((c) => (
             <button
               key={c}
@@ -152,6 +155,9 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
           ))}
         </div>
         <div className="chips" role="group" aria-label="Priority">
+          <span className="chips__caption" aria-hidden="true">
+            Priority
+          </span>
           {[...PRIORITIES, 'none' as const].map((p) => (
             <button
               key={p}
@@ -165,8 +171,12 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
           ))}
         </div>
         {!sameFilters(value, defaults) && (
-          <button type="button" className="btn btn--quiet" onClick={() => onChange(defaults)}>
-            Clear filters
+          <button
+            type="button"
+            className="btn btn--quiet btn--small"
+            onClick={() => onChange(defaults)}
+          >
+            <X aria-hidden /> Clear filters
           </button>
         )}
       </div>

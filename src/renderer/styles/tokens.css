@@ -1,27 +1,36 @@
 /*
- * Design tokens. Palette: cool steel neutrals with "temper blue" for actions and focus.
- * The one expressive element is the heat scale, borrowed from the colours of hot steel,
+ * Design tokens (ADR-0011). Palette: cool steel neutrals with "temper blue" for actions and
+ * focus. The one expressive element is the heat scale, borrowed from the colours of hot steel,
  * used only for task priority (always paired with a text label).
+ *
+ * Surfaces, from back to front: --bg (app background) → --surface (panels, cards, sidebar)
+ * → --surface-raised (menus, dialogs). --surface-hover is the hover tint on any surface;
+ * --surface-sunken is for tracks and inset areas.
  */
 :root {
   color-scheme: light;
 
   /* Neutrals */
-  --bg: #f1f3f5;
+  --bg: #f4f5f7;
   --surface: #ffffff;
-  --surface-sunken: #e8ebef;
-  --ink: #1d2229;
+  --surface-raised: #ffffff;
+  --surface-hover: #f0f2f5;
+  --surface-sunken: #e9ecf0;
+  --track: #e3e7ec;
+  --ink: #171b21;
   --ink-muted: #4a515c;
-  --ink-faint: #5d6572;
-  --line: #d5dae1;
-  --line-strong: #b7bec8;
+  --ink-faint: #5b6370;
+  --line: #e1e4e9;
+  --line-strong: #c6ccd5;
 
   /* Action and focus: temper blue */
   --accent: #2a5aa6;
   --accent-hover: #234d8f;
   --accent-ink: #ffffff;
-  --accent-soft: #e2eaf7;
+  --accent-soft: #e7eefa;
+  --accent-text: #24508f;
   --focus: #2a5aa6;
+  --focus-ring: 0 0 0 3px rgb(42 90 166 / 22%);
 
   /* Heat scale (priority) */
   --heat-urgent: #b3261e;
@@ -31,9 +40,12 @@
 
   /* Feedback */
   --danger: #b3261e;
-  --danger-soft: #fbe9e7;
-  --success: #2e7d4f;
-  --notice-soft: #fff5d6;
+  --danger-hover: #951f19;
+  --danger-soft: #fcebe9;
+  --success: #276c44;
+  --success-soft: #e5f4ea;
+  --notice-soft: #fff6dc;
+  --notice-line: #f0dc9c;
 
   /* Project colour tokens */
   --c-slate: #64748b;
@@ -47,17 +59,18 @@
   --c-violet: #7d4fb5;
   --c-pink: #b84c86;
 
-  /* Type: one family, modular scale (ratio ~1.2) */
+  /* Type: one family; sizes form a gentle scale */
   --font: 'Atkinson Hyperlegible Next', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: Consolas, 'Cascadia Mono', monospace;
   --text-xs: 12px;
   --text-sm: 13px;
-  --text-md: 15px;
-  --text-lg: 18px;
-  --text-xl: 22px;
-  --text-2xl: 28px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
   --leading: 1.5;
 
-  /* Space and shape */
+  /* Space (4 px base) */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -65,63 +78,102 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
+
+  /* Shape and depth */
+  --radius-sm: 4px;
   --radius-control: 6px;
   --radius-panel: 10px;
-  --shadow-overlay: 0 12px 32px rgb(20 28 40 / 18%), 0 2px 6px rgb(20 28 40 / 10%);
-  --sidebar-width: 236px;
+  --radius-dialog: 12px;
+  --control-height: 32px;
+  --shadow-sm: 0 1px 2px rgb(20 28 40 / 6%);
+  --shadow-md: 0 4px 12px rgb(20 28 40 / 10%), 0 1px 3px rgb(20 28 40 / 8%);
+  --shadow-overlay: 0 16px 40px rgb(20 28 40 / 18%), 0 2px 6px rgb(20 28 40 / 8%);
+  --backdrop: rgb(15 20 28 / 40%);
+
+  /* Motion: short and only for feedback; disabled for reduced motion (base.css) */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 120ms;
+  --duration: 180ms;
+
+  /* Layout */
+  --sidebar-width: 240px;
   --details-width: 400px;
+  --page-width: 1040px;
 }
 
+/* Dark theme values, shared by the system preference and the explicit choice. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --bg: #161a20;
-    --surface: #1d222a;
-    --surface-sunken: #13171c;
-    --ink: #e3e7ec;
-    --ink-muted: #b4bcc7;
-    --ink-faint: #97a0ad;
-    --line: #2f3641;
-    --line-strong: #46505d;
+    --bg: #14171c;
+    --surface: #1b1f26;
+    --surface-raised: #222731;
+    --surface-hover: #252b35;
+    --surface-sunken: #11141a;
+    --track: #313845;
+    --ink: #e6e9ee;
+    --ink-muted: #b6bdc8;
+    --ink-faint: #9aa3b0;
+    --line: #2c323c;
+    --line-strong: #434b58;
     --accent: #7ea4e6;
     --accent-hover: #9ab8ee;
     --accent-ink: #0f1622;
-    --accent-soft: #233149;
+    --accent-soft: #22304a;
+    --accent-text: #a9c3f0;
     --focus: #9ab8ee;
+    --focus-ring: 0 0 0 3px rgb(126 164 230 / 28%);
     --heat-urgent: #f07a70;
     --heat-high: #f0a060;
     --heat-medium: #e2c35a;
     --heat-low: #93aecb;
     --danger: #f07a70;
-    --danger-soft: #3a2224;
+    --danger-hover: #f4978f;
+    --danger-soft: #3a2326;
     --success: #6fc28f;
-    --notice-soft: #3a3320;
-    --shadow-overlay: 0 12px 32px rgb(0 0 0 / 45%);
+    --success-soft: #1d3326;
+    --notice-soft: #362f1d;
+    --notice-line: #5a4d2a;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+    --shadow-md: 0 4px 12px rgb(0 0 0 / 40%);
+    --shadow-overlay: 0 16px 40px rgb(0 0 0 / 55%);
+    --backdrop: rgb(0 0 0 / 55%);
   }
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #161a20;
-  --surface: #1d222a;
-  --surface-sunken: #13171c;
-  --ink: #e3e7ec;
-  --ink-muted: #b4bcc7;
-  --ink-faint: #97a0ad;
-  --line: #2f3641;
-  --line-strong: #46505d;
+  --bg: #14171c;
+  --surface: #1b1f26;
+  --surface-raised: #222731;
+  --surface-hover: #252b35;
+  --surface-sunken: #11141a;
+  --track: #313845;
+  --ink: #e6e9ee;
+  --ink-muted: #b6bdc8;
+  --ink-faint: #9aa3b0;
+  --line: #2c323c;
+  --line-strong: #434b58;
   --accent: #7ea4e6;
   --accent-hover: #9ab8ee;
   --accent-ink: #0f1622;
-  --accent-soft: #233149;
+  --accent-soft: #22304a;
+  --accent-text: #a9c3f0;
   --focus: #9ab8ee;
+  --focus-ring: 0 0 0 3px rgb(126 164 230 / 28%);
   --heat-urgent: #f07a70;
   --heat-high: #f0a060;
   --heat-medium: #e2c35a;
   --heat-low: #93aecb;
   --danger: #f07a70;
-  --danger-soft: #3a2224;
+  --danger-hover: #f4978f;
+  --danger-soft: #3a2326;
   --success: #6fc28f;
-  --notice-soft: #3a3320;
-  --shadow-overlay: 0 12px 32px rgb(0 0 0 / 45%);
+  --success-soft: #1d3326;
+  --notice-soft: #362f1d;
+  --notice-line: #5a4d2a;
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 40%);
+  --shadow-overlay: 0 16px 40px rgb(0 0 0 / 55%);
+  --backdrop: rgb(0 0 0 / 55%);
 }

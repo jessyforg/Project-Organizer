@@ -1,8 +1,9 @@
 import { useDeferredValue } from 'react';
 import { useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
-import { ErrorNotice, Swatch } from '../../components/ui';
-import { localToday } from '../../lib/format';
+import { Search } from 'lucide-react';
+import { EmptyState, ErrorNotice, PageHeader, Swatch } from '../../components/ui';
+import { localToday, plural } from '../../lib/format';
 import { NoteList } from '../notes/NoteList';
 import { TaskList } from '../tasks/TaskList';
 import { useLookups } from '../tasks/useLookups';
@@ -17,8 +18,12 @@ export function SearchPage({ text }: { text: string }) {
   if (!deferred.trim()) {
     return (
       <div className="page">
-        <h1>Search</h1>
-        <p className="muted">Type in the search box to find projects, tasks, and notes.</p>
+        <PageHeader title="Search" />
+        <div className="panel">
+          <EmptyState icon={Search} title="Search everything">
+            Type in the search box to find projects, tasks, and notes. Press Ctrl+K to jump there.
+          </EmptyState>
+        </div>
       </div>
     );
   }
@@ -28,10 +33,28 @@ export function SearchPage({ text }: { text: string }) {
 
   return (
     <div className="page">
-      <h1>Results for “{deferred}”</h1>
+      <PageHeader
+        title={`Results for “${deferred}”`}
+        description={
+          data && !empty
+            ? [
+                [data.projects.length, 'project'] as const,
+                [data.tasks.length, 'task'] as const,
+                [data.notes.length, 'note'] as const,
+              ]
+                .filter(([count]) => count > 0)
+                .map(([count, noun]) => plural(count, noun))
+                .join(' · ')
+            : undefined
+        }
+      />
       {results.error && <ErrorNotice error={results.error} onRetry={results.reload} />}
       {empty && (
-        <p className="muted">No projects, tasks, or notes match. Try fewer or shorter words.</p>
+        <div className="panel">
+          <EmptyState icon={Search} title="No projects, tasks, or notes match.">
+            Try fewer or shorter words.
+          </EmptyState>
+        </div>
       )}
       {data && data.projects.length > 0 && (
         <section className="section" aria-label="Projects">
@@ -40,16 +63,21 @@ export function SearchPage({ text }: { text: string }) {
             {data.projects.map((p) => (
               <li key={p.id} className="project-row" style={{ gridTemplateColumns: 'auto 1fr' }}>
                 <Swatch color={p.color} />
-                <span>
-                  <button
-                    type="button"
-                    className="link"
-                    onClick={() => navigate({ name: 'project', id: p.id })}
-                  >
-                    {p.name}
-                  </button>{' '}
-                  {p.archivedAt && <span className="label">Archived</span>}
-                </span>
+                <div className="project-row__main">
+                  <div className="project-row__name">
+                    <button
+                      type="button"
+                      className="link"
+                      onClick={() => navigate({ name: 'project', id: p.id })}
+                    >
+                      {p.name}
+                    </button>
+                    {p.archivedAt && <span className="label">Archived</span>}
+                  </div>
+                  {p.description && (
+                    <span className="project-row__description">{p.description}</span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -71,7 +99,9 @@ export function SearchPage({ text }: { text: string }) {
       {data && data.notes.length > 0 && (
         <section className="section">
           <h2>Notes</h2>
-          <NoteList label="Matching notes" notes={data.notes} />
+          <div className="panel" style={{ padding: 'var(--space-1)' }}>
+            <NoteList label="Matching notes" notes={data.notes} />
+          </div>
         </section>
       )}
     </div>

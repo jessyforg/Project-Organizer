@@ -142,7 +142,7 @@ Measured in Phase 6 through the real UI with 5,000 tasks and 1,250 subtasks in 2
 
 ### Window sizes
 
-Screens were captured and reviewed at 1280×800 and 1024×700 in light and dark themes during Phase 4, and the Notes, Kanban board, and Calendar screens again on 2026-10-20. The minimum window size is 900×600.
+Screens were captured and reviewed at 1280×800 and 1024×700 in light and dark themes during Phase 4, and the Notes, Kanban board, and Calendar screens again on 2026-10-20. After the interface refresh (ADR-0011), every screen and dialog was captured again at 1280×800 and 960×640 in both themes and compared with the earlier captures, and text contrast was recalculated for every text token on every surface. The minimum window size is 900×600.
 
 ## 6. Reporting
 

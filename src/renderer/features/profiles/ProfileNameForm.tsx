@@ -7,6 +7,8 @@ interface Props {
   initialValue?: string;
   onSubmit: (displayName: string) => Promise<Result<unknown>>;
   onDone: () => Promise<void>;
+  /** Show the button as the screen's main action. */
+  primary?: boolean;
 }
 
 export function ProfileNameForm({
@@ -15,6 +17,7 @@ export function ProfileNameForm({
   initialValue = '',
   onSubmit,
   onDone,
+  primary = false,
 }: Props) {
   const inputId = useId();
   const errorId = useId();
@@ -39,9 +42,9 @@ export function ProfileNameForm({
   return (
     <form className="field" onSubmit={(event) => void handleSubmit(event)}>
       <label htmlFor={inputId}>{label}</label>
-      <div className="filters">
+      <div className="toolbar">
         <input
-          className="input"
+          className="input toolbar__grow"
           id={inputId}
           value={value}
           maxLength={100}
@@ -49,7 +52,7 @@ export function ProfileNameForm({
           aria-invalid={error !== null}
           aria-describedby={error ? errorId : undefined}
         />
-        <button type="submit" className="btn btn--primary" disabled={busy}>
+        <button type="submit" className={`btn${primary ? ' btn--primary' : ''}`} disabled={busy}>
           {submitLabel}
         </button>
       </div>

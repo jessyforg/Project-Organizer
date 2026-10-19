@@ -214,5 +214,6 @@ describe('MyTasksPage paging', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Load 500 more' }));
     await waitFor(() => expect(backend.callsTo('tasks:list').at(-1)?.['limit']).toBe(1000));
     await waitFor(() => expect(screen.queryByText(/Showing the first/)).not.toBeInTheDocument());
-  });
+    // Renders 500, then 700 rows: about 2 s normally, but it has exceeded 5 s on a busy machine.
+  }, 15_000);
 });

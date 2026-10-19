@@ -1,9 +1,16 @@
-import { Plus } from 'lucide-react';
+import { CalendarCheck, FolderKanban, Plus } from 'lucide-react';
 import type { Task } from '@shared/domain';
 import { useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { useQuickAdd } from '../../app/quick-add';
-import { ErrorNotice, Loading, ProgressMeter, Swatch } from '../../components/ui';
+import {
+  EmptyState,
+  ErrorNotice,
+  Loading,
+  PageHeader,
+  ProgressMeter,
+  Swatch,
+} from '../../components/ui';
 import { formatLongDate, plural } from '../../lib/format';
 import { TaskRow } from '../tasks/TaskList';
 import { useLookups } from '../tasks/useLookups';
@@ -33,12 +40,20 @@ export function DashboardPage() {
 
   const nothingScheduled = d.overdue.length + d.dueToday.length + d.upcoming.length === 0;
 
-  const list = (title: string, tasks: Task[], empty?: string) =>
-    tasks.length === 0 && !empty ? null : (
-      <section className="section" aria-label={title}>
-        <h2>{title}</h2>
+  const list = (title: string, tasks: Task[], options: { empty?: string; alert?: boolean } = {}) =>
+    tasks.length === 0 && !options.empty ? null : (
+      <section
+        className={`dash-section${options.alert ? ' dash-section--alert' : ''}`}
+        aria-label={title}
+      >
+        <div className="dash-section__header">
+          <h2>{title}</h2>
+          {tasks.length > 0 && <span className="count">{tasks.length}</span>}
+        </div>
         {tasks.length === 0 ? (
-          <p className="muted">{empty}</p>
+          <p className="muted small" style={{ padding: '0 var(--space-1)' }}>
+            {options.empty}
+          </p>
         ) : (
           <ul className="task-list">
             {tasks.map((task) => (
@@ -57,73 +72,84 @@ export function DashboardPage() {
 
   return (
     <div className="page">
-      <header className="page__header">
-        <div>
-          <h1>Today</h1>
-          <p className="muted">
-            {formatLongDate(d.today)}. {plural(d.openTaskCount, 'open task')}, {d.completedThisWeek}{' '}
-            completed in the last 7 days.
-          </p>
-        </div>
-        <div className="page__actions">
+      <PageHeader
+        title="Today"
+        description={`${formatLongDate(d.today)} · ${plural(d.openTaskCount, 'open task')} · ${d.completedThisWeek} completed in the last 7 days`}
+        actions={
           <button type="button" className="btn btn--primary" onClick={() => quickAdd()}>
             <Plus aria-hidden /> New task
           </button>
-        </div>
-      </header>
+        }
+      />
 
       <div className="columns">
-        <div className="section" style={{ gap: 'var(--space-6)' }}>
-          {list('Overdue', d.overdue)}
-          {list(
-            'Due today',
-            d.dueToday,
-            nothingScheduled ? undefined : 'Nothing else is due today.',
-          )}
+        <div className="section" style={{ gap: 'var(--space-5)' }}>
+          {list('Overdue', d.overdue, { alert: true })}
+          {list('Due today', d.dueToday, {
+            ...(nothingScheduled ? {} : { empty: 'Nothing else is due today.' }),
+          })}
           {list('Next 7 days', d.upcoming)}
           {nothingScheduled && (
-            <div className="empty">
-              <p>Nothing is due in the next week.</p>
-              <button type="button" className="btn" onClick={() => navigate({ name: 'tasks' })}>
-                See all tasks
-              </button>
+            <div className="panel">
+              <EmptyState
+                icon={CalendarCheck}
+                title="Nothing is due in the next week."
+                action={
+                  <button type="button" className="btn" onClick={() => navigate({ name: 'tasks' })}>
+                    See all tasks
+                  </button>
+                }
+              >
+                Add due dates to tasks to see them here.
+              </EmptyState>
             </div>
           )}
           {list('Recently updated', d.recentlyUpdated)}
         </div>
 
-        <div className="section" style={{ gap: 'var(--space-6)' }}>
-          <section className="section" aria-label="Active projects">
-            <h2>Active projects</h2>
-            {d.activeProjects.length === 0 ? (
-              <div className="empty">
-                <p>No active projects.</p>
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => navigate({ name: 'projects' })}
-                >
-                  Go to projects
-                </button>
-              </div>
-            ) : (
-              <ul className="mini-list" style={{ gap: 'var(--space-4)' }}>
-                {d.activeProjects.map((p) => (
-                  <li key={p.id} style={{ display: 'grid', alignItems: 'stretch' }}>
+        <div className="section" style={{ gap: 'var(--space-5)' }}>
+          <section className="dash-section" aria-label="Active projects">
+            <div className="dash-section__header">
+              <h2>Active projects</h2>
+              {d.activeProjects.length > 0 && (
+                <span className="count">{d.activeProjects.length}</span>
+              )}
+            </div>
+            <div className="panel">
+              {d.activeProjects.length === 0 ? (
+                <EmptyState
+                  compact
+                  icon={FolderKanban}
+                  title="No active projects."
+                  action={
                     <button
                       type="button"
-                      className="link"
-                      style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700 }}
-                      onClick={() => navigate({ name: 'project', id: p.id })}
+                      className="btn"
+                      onClick={() => navigate({ name: 'projects' })}
                     >
-                      <Swatch color={p.color} />
-                      {p.name}
+                      Go to projects
                     </button>
-                    <ProgressMeter progress={p.progress} label={`${p.name} progress`} />
-                  </li>
-                ))}
-              </ul>
-            )}
+                  }
+                />
+              ) : (
+                <ul className="project-progress">
+                  {d.activeProjects.map((p) => (
+                    <li key={p.id}>
+                      <button
+                        type="button"
+                        className="link"
+                        title={p.name}
+                        onClick={() => navigate({ name: 'project', id: p.id })}
+                      >
+                        <Swatch color={p.color} />
+                        <span>{p.name}</span>
+                      </button>
+                      <ProgressMeter progress={p.progress} label={`${p.name} progress`} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </section>
           {list('Recently completed', d.recentlyCompleted)}
         </div>

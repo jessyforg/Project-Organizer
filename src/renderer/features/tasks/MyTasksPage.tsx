@@ -1,8 +1,8 @@
 import { useDeferredValue, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { ListFilter, Plus } from 'lucide-react';
 import { useQuery } from '../../app/data';
 import { useQuickAdd } from '../../app/quick-add';
-import { ErrorNotice, Loading } from '../../components/ui';
+import { EmptyState, ErrorNotice, Loading, PageHeader } from '../../components/ui';
 import { localToday } from '../../lib/format';
 import { FilterBar, filtersToQuery, type TaskFilters } from './FilterBar';
 import { LoadMore, PAGE_SIZE } from './LoadMore';
@@ -31,14 +31,15 @@ export function MyTasksPage() {
 
   return (
     <div className="page">
-      <header className="page__header">
-        <h1>My tasks</h1>
-        <div className="page__actions">
+      <PageHeader
+        title="My tasks"
+        description="Every task across your projects, grouped by status."
+        actions={
           <button type="button" className="btn btn--primary" onClick={() => quickAdd()}>
             <Plus aria-hidden /> New task
           </button>
-        </div>
-      </header>
+        }
+      />
       <FilterBar
         value={filters}
         defaults={MY_TASKS_DEFAULTS}
@@ -52,8 +53,23 @@ export function MyTasksPage() {
       {tasks.error && <ErrorNotice error={tasks.error} onRetry={tasks.reload} />}
       {tasks.loading && !tasks.data && <Loading />}
       {tasks.data && tasks.data.length === 0 && (
-        <div className="empty">
-          <p>No tasks match these filters.</p>
+        <div className="panel">
+          <EmptyState
+            icon={ListFilter}
+            title="No tasks match these filters."
+            action={
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setFilters(MY_TASKS_DEFAULTS);
+                  setLimit(PAGE_SIZE);
+                }}
+              >
+                Show open tasks
+              </button>
+            }
+          />
         </div>
       )}
       {tasks.data && tasks.data.length > 0 && (

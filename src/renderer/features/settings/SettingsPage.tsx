@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { THEMES, type Theme } from '@shared/domain';
 import type { ProfileSummary } from '@shared/types';
 import { useInvalidate, useQuery } from '../../app/data';
+import { PageHeader } from '../../components/ui';
 import { applyTheme } from '../../app/Shell';
 import { SHORTCUTS } from '../../app/shortcuts';
 import { useToast } from '../../app/toasts';
@@ -45,13 +46,24 @@ export function SettingsPage({
   };
 
   return (
-    <div className="page">
-      <h1>Settings</h1>
-      <section className="section" aria-labelledby="appearance-heading">
-        <h2 id="appearance-heading">Appearance</h2>
-        <div className="chips" role="radiogroup" aria-label="Theme">
+    <div className="page page--narrow">
+      <PageHeader
+        title="Settings"
+        description="Preferences for this profile, your profiles, and backups."
+      />
+      <section className="panel settings-card" aria-labelledby="appearance-heading">
+        <div className="settings-card__intro">
+          <h2 id="appearance-heading">Appearance</h2>
+          <p>Choose a colour theme, or follow the light or dark mode set in Windows.</p>
+        </div>
+        <div
+          className="segmented"
+          role="radiogroup"
+          aria-label="Theme"
+          style={{ justifySelf: 'start' }}
+        >
           {THEMES.map((theme) => (
-            <label key={theme} className="chip">
+            <label key={theme}>
               <input
                 type="radio"
                 name="theme"
@@ -66,8 +78,11 @@ export function SettingsPage({
       </section>
       <ProfileSettings active={active} profiles={profiles} onChanged={onProfilesChanged} />
       <BackupPanel onProfilesChanged={onProfilesChanged} />
-      <section className="section" aria-labelledby="shortcuts-heading">
-        <h2 id="shortcuts-heading">Keyboard shortcuts</h2>
+      <section className="panel settings-card" aria-labelledby="shortcuts-heading">
+        <div className="settings-card__intro">
+          <h2 id="shortcuts-heading">Keyboard shortcuts</h2>
+          <p>Press Ctrl+/ anywhere to see this list.</p>
+        </div>
         <ShortcutTable />
       </section>
       <AboutPanel />
@@ -77,14 +92,14 @@ export function SettingsPage({
 
 export function ShortcutTable() {
   return (
-    <table className="small" style={{ borderCollapse: 'collapse' }}>
+    <table className="shortcut-table">
       <tbody>
         {SHORTCUTS.map((s) => (
           <tr key={s.keys}>
-            <td style={{ padding: '4px 16px 4px 0' }}>
+            <td>
               {s.keys.split('+').map((k, i) => (
                 <span key={k}>
-                  {i > 0 && ' + '}
+                  {i > 0 && <span className="visually-hidden">+</span>}
                   <kbd>{k}</kbd>
                 </span>
               ))}

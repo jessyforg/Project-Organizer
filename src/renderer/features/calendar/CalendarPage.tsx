@@ -4,7 +4,7 @@ import type { Task } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
 import { useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
-import { ErrorNotice, Swatch } from '../../components/ui';
+import { ErrorNotice, PageHeader, Swatch } from '../../components/ui';
 import {
   dayOfMonth,
   formatFullDate,
@@ -75,22 +75,24 @@ export function CalendarPage() {
 
   return (
     <div className="page calendar-page">
-      <header className="page__header">
-        <h1>Calendar</h1>
-        <div className="view-switch" role="group" aria-label="Calendar view">
-          {VIEWS.map((v) => (
-            <button
-              key={v.view}
-              type="button"
-              className="chip"
-              aria-pressed={view === v.view}
-              onClick={() => setView(v.view)}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
-      </header>
+      <PageHeader
+        title="Calendar"
+        description="Tasks on their due dates. Select one to open it."
+        actions={
+          <div className="segmented" role="group" aria-label="Calendar view">
+            {VIEWS.map((v) => (
+              <button
+                key={v.view}
+                type="button"
+                aria-pressed={view === v.view}
+                onClick={() => setView(v.view)}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       <div className="calendar__toolbar">
         <div className="page__actions">
@@ -118,11 +120,10 @@ export function CalendarPage() {
           {viewTitle(view, anchor, firstDay)}
         </h2>
         <div className="calendar__filters">
-          <div className="field">
+          <div className="inline-field">
             <label htmlFor="calendar-project">Project</label>
             <select
               id="calendar-project"
-              className="select"
               value={projectId}
               onChange={(e) => setProjectId(e.target.value)}
             >

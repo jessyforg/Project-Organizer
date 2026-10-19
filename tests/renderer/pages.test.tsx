@@ -69,7 +69,7 @@ describe('DashboardPage', () => {
         }),
     });
     renderWithApp(<DashboardPage />);
-    expect(await screen.findByText(/1 open task, 0 completed/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 open task · 0 completed/)).toBeInTheDocument();
     expect(screen.getByText('Nothing is due in the next week.')).toBeInTheDocument();
     expect(screen.getByText('No active projects.')).toBeInTheDocument();
     expect(screen.getByText('Touched')).toBeInTheDocument();

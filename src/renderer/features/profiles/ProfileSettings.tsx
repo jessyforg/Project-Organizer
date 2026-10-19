@@ -39,12 +39,14 @@ export function ProfileSettings({
   };
 
   return (
-    <section className="section" aria-labelledby="profiles-heading">
-      <h2 id="profiles-heading">Profiles</h2>
-      <p className="muted small">
-        Each profile keeps its own projects and tasks in a separate file. Profiles are not
-        password-protected: anyone using your Windows account can open them.
-      </p>
+    <section className="panel settings-card" aria-labelledby="profiles-heading">
+      <div className="settings-card__intro">
+        <h2 id="profiles-heading">Profiles</h2>
+        <p>
+          Each profile keeps its own projects, tasks, and notes in a separate file. Profiles are not
+          password-protected: anyone using your Windows account can open them.
+        </p>
+      </div>
 
       <ProfileNameForm
         key={active.id}
@@ -89,10 +91,14 @@ export function ProfileSettings({
         onDone={onChanged}
       />
 
-      <div>
+      <div className="settings-row">
+        <div className="settings-row__text">
+          <h3>Remove this profile</h3>
+          <p>It moves to the trash below and can be restored for 30 days.</p>
+        </div>
         <button
           type="button"
-          className="btn btn--quiet"
+          className="btn btn--danger"
           onClick={() => setConfirm({ kind: 'trash', profile: active })}
         >
           Move this profile to trash

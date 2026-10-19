@@ -105,7 +105,8 @@ test('core workflow: projects, tasks, subtasks, filters, search, trash, archive,
 
   // Archive and unarchive the project.
   await nav(page).getByRole('button', { name: 'Website' }).click();
-  await page.getByRole('button', { name: 'Archive' }).click();
+  await page.getByRole('button', { name: 'More project actions' }).click();
+  await page.getByRole('menuitem', { name: 'Archive' }).click();
   await expect(page.getByText('This project is archived.')).toBeVisible();
   await expect(nav(page).getByRole('button', { name: 'Website' })).toBeHidden();
   await page.getByRole('button', { name: 'Unarchive' }).click();

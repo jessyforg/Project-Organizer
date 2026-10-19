@@ -1,90 +1,197 @@
 .shell {
+  position: relative;
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr) auto;
   height: 100%;
+  /* The window never scrolls as a whole; the sidebar, page, and details panel scroll on their own. */
+  overflow: hidden;
 }
 
-/* Sidebar */
+/* ---------- Sidebar ---------- */
 .sidebar {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  min-width: 0;
   min-height: 0;
-  padding: var(--space-4) var(--space-3);
+  padding: var(--space-4) var(--space-3) var(--space-3);
   border-right: 1px solid var(--line);
   background: var(--surface);
 }
 
-.wordmark {
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: 0 var(--space-2);
   font-size: var(--text-lg);
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
+.brand__mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.brand__mark svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* The search box shows its shortcut until it has text or focus. */
+.sidebar__search {
+  position: relative;
+}
+
+.sidebar__search kbd {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.sidebar__search .input:focus ~ kbd,
+.sidebar__search .input:not(:placeholder-shown) ~ kbd {
+  display: none;
+}
+
+.sidebar__new {
+  width: 100%;
+}
+
 .nav {
   display: grid;
-  gap: 2px;
+  gap: 1px;
 }
 
 .nav__item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: 34px;
+  gap: 10px;
+  min-width: 0;
+  min-height: 32px;
   padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-control);
   background: transparent;
-  text-align: left;
+  color: var(--ink-muted);
   font-size: var(--text-md);
+  text-align: left;
   cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
 .nav__item:hover {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
+  color: var(--ink);
 }
 
 .nav__item[aria-current='page'] {
   background: var(--accent-soft);
+  color: var(--ink);
   font-weight: 700;
 }
 
+.nav__item[aria-current='page'] svg {
+  color: var(--accent-text);
+}
+
 .nav__item svg {
-  width: 18px;
-  height: 18px;
-  color: var(--ink-muted);
+  flex: none;
+  width: 17px;
+  height: 17px;
+  color: var(--ink-faint);
+}
+
+.nav__item .swatch {
+  margin: 0 3px;
+}
+
+.nav__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nav__count {
+  flex: none;
   margin-left: auto;
   color: var(--ink-faint);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.nav__divider {
+  height: 1px;
+  margin: var(--space-1) var(--space-2);
+  background: var(--line);
 }
 
 .sidebar__projects {
   display: grid;
-  gap: 2px;
+  align-content: start;
+  gap: 1px;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  flex: 1;
 }
 
 .sidebar__group {
-  margin: var(--space-3) var(--space-2) var(--space-1);
+  margin: var(--space-2) var(--space-2) var(--space-1);
   color: var(--ink-faint);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .sidebar__footer {
-  margin-top: auto;
+  display: grid;
+  gap: 1px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+}
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
   padding: var(--space-2);
   color: var(--ink-muted);
   font-size: var(--text-sm);
 }
 
-/* Main area */
+.profile-chip__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+/* ---------- Main area ---------- */
 .main {
+  /* Contains absolutely positioned helpers (e.g. screen-reader-only text) inside the scroller. */
+  position: relative;
   min-width: 0;
   overflow-y: auto;
   container: main / inline-size;
@@ -92,44 +199,139 @@
 
 .page {
   display: grid;
+  align-content: start;
   gap: var(--space-5);
-  max-width: 980px;
+  max-width: var(--page-width);
+  margin: 0 auto;
   padding: var(--space-6) var(--space-6) var(--space-7);
 }
 
+.page--wide {
+  max-width: 1320px;
+}
+
+.page--narrow {
+  max-width: 820px;
+}
+
+/* PageHeader in components/ui.tsx */
 .page__header {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-3);
+  gap: var(--space-3) var(--space-4);
+}
+
+.page__heading {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.page__title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.page__title-row h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.page__title-row > .swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.page__eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.page__description {
+  color: var(--ink-muted);
 }
 
 .page__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }
 
 .section {
   display: grid;
+  align-content: start;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .section__header {
   display: flex;
-  align-items: baseline;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  min-height: var(--control-height);
+}
+
+.section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A white panel that groups related content on the page background. */
+.panel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.panel__header {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+.panel__body {
+  padding: var(--space-4);
+}
+
+/* A toolbar row: search, filters, and view controls. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toolbar__grow {
+  flex: 1 1 220px;
 }
 
 /* Details panel */
 .details {
+  position: relative;
   width: var(--details-width);
   min-height: 0;
   overflow-y: auto;
   border-left: 1px solid var(--line);
   background: var(--surface);
+  animation: fade-in var(--duration) var(--ease);
 }
 
 @media (max-width: 1180px) {
@@ -139,7 +341,21 @@
     right: 0;
     bottom: 0;
     z-index: 20;
+    max-width: 100vw;
     box-shadow: var(--shadow-overlay);
+  }
+}
+
+/* Smaller windows: a narrower sidebar and tighter page padding. */
+@media (max-width: 1100px) {
+  :root {
+    --sidebar-width: 212px;
+  }
+}
+
+@container main (max-width: 720px) {
+  .page {
+    padding: var(--space-5) var(--space-4) var(--space-6);
   }
 }
 
@@ -147,7 +363,7 @@
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(260px, 2fr);
-  gap: var(--space-6);
+  gap: var(--space-5);
   align-items: start;
 }
 
@@ -158,11 +374,79 @@
   }
 }
 
-/* Setup screen (no profile open) */
+/* ---------- Setup screen (no profile open) ---------- */
 .setup {
   display: grid;
+  min-height: 100%;
+  padding: var(--space-6) var(--space-4);
+  place-items: center;
+}
+
+.setup__card {
+  display: grid;
   gap: var(--space-4);
-  max-width: 520px;
-  margin: 12vh auto 0;
-  padding: 0 var(--space-5);
+  width: min(480px, 100%);
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-dialog);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.setup__card .brand {
+  padding: 0;
+}
+
+.setup__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.setup__divider::before,
+.setup__divider::after {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+  content: '';
+}
+
+.setup__privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+}
+
+.setup__privacy svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+/*
+ * One-column grids size their column to the available width, never to their widest child
+ * (a long title or excerpt would otherwise push the column past its container).
+ */
+.page,
+.section,
+.panel,
+.dash-section,
+.task-group,
+.filter-bar,
+.notes__list,
+.notes__filters,
+.notes__editor,
+.note-editor,
+.note-list,
+.mini-list,
+.status-list,
+.project-progress,
+.board__cards,
+.task-details {
+  grid-template-columns: minmax(0, 1fr);
 }

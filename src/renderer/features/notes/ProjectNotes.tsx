@@ -49,13 +49,17 @@ export function ProjectNotes({ project }: { project: Project }) {
         </div>
       </div>
       {notes.error && <ErrorNotice error={notes.error} onRetry={notes.reload} />}
-      {notes.data && list.length === 0 && <p className="muted">No notes in this project yet.</p>}
+      {notes.data && list.length === 0 && (
+        <p className="muted small">No notes in this project yet.</p>
+      )}
       {list.length > 0 && (
-        <NoteList
-          label={`Notes in ${project.name}`}
-          notes={list.slice(0, SHOWN)}
-          showProject={false}
-        />
+        <div className="panel" style={{ padding: 'var(--space-1)' }}>
+          <NoteList
+            label={`Notes in ${project.name}`}
+            notes={list.slice(0, SHOWN)}
+            showProject={false}
+          />
+        </div>
       )}
     </section>
   );
