@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { ProfileSummary } from '@shared/types';
-import { Dialog } from '../components/ui';
+import { Dialog, Loading } from '../components/ui';
 import { CalendarPage } from '../features/calendar/CalendarPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { NotesPage } from '../features/notes/NotesPage';
@@ -16,6 +16,13 @@ import { useNavigation, type Route } from './navigation';
 import { useQuickAdd } from './quick-add';
 import { useShortcuts } from './shortcuts';
 import { Sidebar } from './Sidebar';
+
+/** Development builds only (ADR-0012); production builds leave out the editor and its library. */
+const EditorLabPage = import.meta.env.DEV
+  ? lazy(async () => ({
+      default: (await import('../features/editor/EditorLabPage')).EditorLabPage,
+    }))
+  : null;
 
 const GO_TO: Record<1 | 2 | 3 | 4, Route> = {
   1: { name: 'dashboard' },
@@ -71,6 +78,11 @@ export function Shell({
         {route.name === 'notes' && <NotesPage noteId={route.noteId} projectId={route.projectId} />}
         {route.name === 'search' && <SearchPage text={route.text} />}
         {route.name === 'trash' && <TrashPage />}
+        {EditorLabPage && route.name === 'editor-lab' && (
+          <Suspense fallback={<Loading />}>
+            <EditorLabPage />
+          </Suspense>
+        )}
         {route.name === 'settings' && (
           <SettingsPage active={active} profiles={profiles} onProfilesChanged={onProfilesChanged} />
         )}

@@ -239,6 +239,16 @@
   outline: none;
 }
 
+/*
+ * The open list of a select takes its colours from the select. A transparent select (above)
+ * left the list white while the text followed the theme, so dark mode was white on white.
+ */
+select option,
+select optgroup {
+  background-color: var(--surface-raised);
+  color: var(--ink);
+}
+
 /* Native checkbox and radio colour */
 input[type='checkbox'],
 input[type='radio'] {

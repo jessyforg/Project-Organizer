@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
 import {
   CalendarDays,
+  FlaskConical,
   FolderKanban,
   Hammer,
   Inbox,
@@ -34,6 +35,10 @@ const PRIMARY: NavEntry[][] = [
 ];
 
 const SECONDARY: NavEntry[] = [
+  // The editor prototype is reachable only in development builds (ADR-0012).
+  ...(import.meta.env.DEV
+    ? [{ route: { name: 'editor-lab' }, label: 'Editor lab', icon: FlaskConical } as NavEntry]
+    : []),
   { route: { name: 'trash' }, label: 'Trash', icon: Trash2 },
   { route: { name: 'settings' }, label: 'Settings', icon: Settings },
 ];

@@ -152,3 +152,4 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0009](DECISIONS/0009-markdown-notes.md) | Markdown notes: storage, rendering, and saving |
 | [0010](DECISIONS/0010-kanban-and-calendar.md) | Kanban board and calendar |
 | [0011](DECISIONS/0011-interface-refresh.md) | Interface refresh and design system |
+| [0012](DECISIONS/0012-block-editor.md) | Block-based document editor (prototype) |

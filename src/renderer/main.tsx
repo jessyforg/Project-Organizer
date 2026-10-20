@@ -12,6 +12,7 @@ import './styles/tasks.css';
 import './styles/notes.css';
 import './styles/board.css';
 import './styles/calendar.css';
+import './styles/editor.css';
 import { App } from './app/App';
 
 const container = document.getElementById('root');

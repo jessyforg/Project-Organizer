@@ -2,6 +2,38 @@
 
 Newest entries first.
 
+## 2026-10-21 — Document editor prototype (Phase 1) and dropdown colour fix
+
+**Approval:** the product owner approved the plan and the dropdown fix ("approve all"). Decisions are recorded in [ADR-0012](DECISIONS/0012-block-editor.md).
+
+**Scope completed:**
+- **`DocumentEditor`:** a reusable block-based editor built on Tiptap 3.31.4.
+  - A title field above the body, and an accessible formatting toolbar.
+  - Formats: headings 1–3, bold, italic, bulleted and numbered lists, quotes, code blocks, undo and redo.
+  - Takes initial content and reports changes as JSON through `onChange`.
+  - The configuration lives in `editor-config.ts`, apart from the components.
+- **Editor lab:** a development-only screen for trying the editor. It is not in production builds, and neither is Tiptap (it is loaded with a dynamic import).
+- **Dropdown fix:** dark-mode dropdown lists were white text on white, because a transparent select gave the list no background. The options now use the theme's colours on every screen.
+
+**Not in this phase:** saving, connecting the editor to Notes, `/` commands, the note actions menu, and converting Markdown notes.
+
+**Verification (2026-10-21):**
+
+| Check | Result |
+|---|---|
+| `npm run check` (typecheck, lint, formatting, unit tests) | Passed — 254 of 254 (7 new editor tests) |
+| `npm run test:e2e` | Passed — 13 of 13, on the final production build |
+| `npm audit --omit=dev` | 0 vulnerabilities. The full audit lists 9 existing issues in build tools (`electron-builder`, `vite`), none from Tiptap. |
+| New packages | 51, all MIT, none with install scripts |
+| Hands-on check (scripted, development renderer) | Markdown shortcuts, nested lists, bold and italic, quotes, code blocks keeping indentation, undo, toolbar state following the cursor, Enter from title to body, toolbar reached by Tab. No page errors. Tiptap injected no `<style>` tag. No sideways scrolling at 1280 px or 420 px in light or dark. Dark dropdown options measured at `#222731` background with `#e6e9ee` text. |
+
+**Known limitations:**
+- The hands-on check ran under the development security policy. `injectCSS: false` was confirmed (no injected style tag), but the editor has not been run under the production policy, because the lab is not in production builds.
+- At narrow widths the sidebar does not collapse, which leaves little room for the editor. This existed before this phase.
+- No manual screen-reader pass. Nothing is committed.
+
+**Next step:** product owner review of the prototype in `npm run dev` (sidebar → Editor lab).
+
 ## 2026-10-20 — Interface refresh (UI/UX modernisation)
 
 **Request:** the product owner asked for a UI/UX modernisation that keeps the features, the local-only design, and the zero-cost constraints. Decisions are recorded in [ADR-0011](DECISIONS/0011-interface-refresh.md).

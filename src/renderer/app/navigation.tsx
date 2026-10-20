@@ -17,7 +17,9 @@ export type Route =
   | { name: 'calendar' }
   | { name: 'search'; text: string }
   | { name: 'trash' }
-  | { name: 'settings' };
+  | { name: 'settings' }
+  /** Development builds only (ADR-0012). */
+  | { name: 'editor-lab' };
 
 /** Runs before the route changes; resolves false to stay (for example, unsaved changes). */
 export type LeaveGuard = () => Promise<boolean>;
