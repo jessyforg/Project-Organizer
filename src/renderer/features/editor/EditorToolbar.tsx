@@ -1,19 +1,22 @@
-import { Fragment, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Bold,
+  Code,
   Heading1,
   Heading2,
   Heading3,
   Italic,
   List,
   ListOrdered,
+  ListTodo,
   Redo2,
   SquareCode,
+  Strikethrough,
   TextQuote,
   Undo2,
 } from 'lucide-react';
 import { useEditorState, type Editor } from '@tiptap/react';
-import { FORMAT_ACTIONS, formatState } from './editor-config';
+import { actionsFor, formatState } from './editor-config';
 
 const ICONS: Record<string, typeof Bold> = {
   undo: Undo2,
@@ -23,8 +26,11 @@ const ICONS: Record<string, typeof Bold> = {
   heading3: Heading3,
   bold: Bold,
   italic: Italic,
+  strike: Strikethrough,
+  code: Code,
   bulletList: List,
   orderedList: ListOrdered,
+  taskList: ListTodo,
   blockquote: TextQuote,
   codeBlock: SquareCode,
 };
@@ -35,12 +41,13 @@ const ICONS: Record<string, typeof Bold> = {
  * (aria-disabled) so keyboard users can still find them.
  */
 export function EditorToolbar({ editor, controls }: { editor: Editor; controls: string }) {
-  const state = useEditorState({ editor, selector: ({ editor: e }) => formatState(e) });
+  const actions = useMemo(() => actionsFor(editor), [editor]);
+  const state = useEditorState({ editor, selector: ({ editor: e }) => formatState(e, actions) });
   const [focusIndex, setFocusIndex] = useState(0);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 
   const moveFocus = (index: number) => {
-    const count = FORMAT_ACTIONS.length;
+    const count = actions.length;
     const next = (index + count) % count;
     setFocusIndex(next);
     buttons.current[next]?.focus();
@@ -51,7 +58,7 @@ export function EditorToolbar({ editor, controls }: { editor: Editor; controls: 
       ArrowRight: focusIndex + 1,
       ArrowLeft: focusIndex - 1,
       Home: 0,
-      End: FORMAT_ACTIONS.length - 1,
+      End: actions.length - 1,
     };
     const target = keys[event.key];
     if (target === undefined) return;
@@ -67,11 +74,11 @@ export function EditorToolbar({ editor, controls }: { editor: Editor; controls: 
       aria-controls={controls}
       onKeyDown={onKeyDown}
     >
-      {FORMAT_ACTIONS.map((action, index) => {
+      {actions.map((action, index) => {
         const Icon = ICONS[action.id] ?? Bold;
         const { active, available } = state[action.id] ?? { active: false, available: true };
         const toggles = action.isActive !== undefined;
-        const newGroup = index > 0 && FORMAT_ACTIONS[index - 1]!.group !== action.group;
+        const newGroup = index > 0 && actions[index - 1]!.group !== action.group;
         return (
           <Fragment key={action.id}>
             {newGroup && <span className="doc-toolbar__divider" aria-hidden="true" />}

@@ -160,10 +160,14 @@ for (const theme of ['light', 'dark'] as const) {
 
     await nav.getByRole('button', { name: 'Notes' }).click();
     await page.getByRole('list', { name: 'Notes' }).getByRole('button').first().click();
+    // The seeded note has a table, so it opens in Markdown mode.
     await expect(page.getByRole('heading', { name: 'Launch', level: 1 })).toBeVisible();
-    await expectNoViolations(page, 'Notes (preview)');
+    await expectNoViolations(page, 'Notes (Markdown preview)');
     await page.getByRole('button', { name: 'Write' }).click();
-    await expectNoViolations(page, 'Notes (write)');
+    await expectNoViolations(page, 'Notes (Markdown write)');
+    await page.getByRole('button', { name: 'New note' }).click();
+    await page.getByRole('textbox', { name: 'Note text' }).fill('A visual note');
+    await expectNoViolations(page, 'Notes (visual)');
 
     await nav.getByRole('button', { name: 'Trash' }).click();
     await expectNoViolations(page, 'Trash');

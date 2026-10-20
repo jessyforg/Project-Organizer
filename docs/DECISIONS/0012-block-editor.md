@@ -1,6 +1,6 @@
 # ADR-0012: Block-based document editor (Phase 1 prototype)
 
-- Status: Approved (prototype implemented on 2026-10-21 at the product owner's request; not yet used by any feature)
+- Status: Approved (prototype implemented on 2026-10-21 at the product owner's request; used by Notes since [ADR-0013](0013-visual-note-editing.md), which also extended the component)
 - Date: 2026-10-21
 
 ## Context

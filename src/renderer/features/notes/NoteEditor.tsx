@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { Eye, PenLine, Trash2 } from 'lucide-react';
+import { Eye, FileCode2, PenLine, Trash2, Type } from 'lucide-react';
+import type { Editor, JSONContent } from '@tiptap/react';
 import type { Note } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
 import { useInvalidate } from '../../app/data';
@@ -8,6 +9,9 @@ import { useToast } from '../../app/toasts';
 import { TagPicker } from '../../components/TagPicker';
 import { ConfirmDialog } from '../../components/ui';
 import { formatTimestamp } from '../../lib/format';
+import { DocumentEditor } from '../editor/DocumentEditor';
+import { noteExtensions } from '../editor/editor-config';
+import { createMarkdownCodec, type MarkdownCodec } from '../editor/markdown';
 import { useLookups } from '../tasks/useLookups';
 import { NoteMarkdown } from './NoteMarkdown';
 
@@ -24,6 +28,10 @@ const SAVE_LABEL: Record<SaveState, string> = {
   error: 'Not saved',
 };
 
+const MARKDOWN_ONLY =
+  'This note has formatting the visual editor cannot show yet, such as a table or an image, ' +
+  'so it opens as Markdown. Nothing in it has been changed.';
+
 interface Draft {
   title: string;
   body: string;
@@ -38,9 +46,18 @@ function same(a: Draft, b: Draft): boolean {
   return a.title === b.title && a.body === b.body;
 }
 
+let sharedCodec: MarkdownCodec | null = null;
+/** One converter for all notes; building the schema is the expensive part. */
+function noteCodec(): MarkdownCodec {
+  sharedCodec ??= createMarkdownCodec(noteExtensions());
+  return sharedCodec;
+}
+
 /**
- * Edits one note. Text saves itself after a pause; leaving the screen or closing the window
- * saves first, and asks before discarding changes that could not be saved (R26).
+ * Edits one note. The body is stored as Markdown (ADR-0009) and edited visually when that loses
+ * nothing, otherwise as Markdown text (ADR-0013). Text saves itself after a pause; leaving the
+ * screen or closing the window saves first, and asks before discarding changes that could not be
+ * saved (R26).
  */
 export function NoteEditor({ note }: { note: Note }) {
   const id = useId();
@@ -48,9 +65,19 @@ export function NoteEditor({ note }: { note: Note }) {
   const invalidate = useInvalidate();
   const toast = useToast();
   const { projectList } = useLookups();
+  const [opened] = useState(() => noteCodec().fromMarkdown(note.body));
+  const [mode, setMode] = useState<'visual' | 'markdown'>(opened.ok ? 'visual' : 'markdown');
+  const [visual, setVisual] = useState<{ key: number; content: JSONContent }>({
+    key: 0,
+    content: opened.ok ? opened.content : { type: 'doc', content: [] },
+  });
+  const [markdownView, setMarkdownView] = useState<'write' | 'preview'>(
+    note.body ? 'preview' : 'write',
+  );
+  const [notice, setNotice] = useState<string | null>(opened.ok ? null : MARKDOWN_ONLY);
   const [title, setTitle] = useState(note.title);
   const [body, setBody] = useState(note.body);
-  const [mode, setMode] = useState<'write' | 'preview'>(note.body ? 'preview' : 'write');
+  const [edits, setEdits] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>('saved');
   const [leavePrompt, setLeavePrompt] = useState<{ resolve: (leave: boolean) => void } | null>(
     null,
@@ -59,12 +86,27 @@ export function NoteEditor({ note }: { note: Note }) {
   const draft = useRef<Draft>({ title: note.title, body: note.body });
   const saved = useRef<Draft>({ title: note.title, body: note.body });
   const inFlight = useRef<Promise<boolean> | null>(null);
+  const editor = useRef<Editor | null>(null);
+  /** The visual editor has changes not yet converted into `draft.body`. */
+  const editorChanged = useRef(false);
 
-  const isDirty = useCallback(() => !same(normalize(draft.current), saved.current), []);
+  /** Converts visual edits to Markdown. Done only when needed, because long notes take time. */
+  const flushEditor = useCallback(() => {
+    if (!editorChanged.current || !editor.current) return;
+    draft.current = { ...draft.current, body: noteCodec().toMarkdown(editor.current.getJSON()) };
+    editorChanged.current = false;
+  }, []);
+
+  const isDirty = useCallback(
+    () => editorChanged.current || !same(normalize(draft.current), saved.current),
+    [],
+  );
 
   /** Saves the current text; resolves false if the save failed. Saves never overlap. */
   const save = useCallback(async (): Promise<boolean> => {
+    flushEditor();
     while (inFlight.current) await inFlight.current;
+    flushEditor();
     const next = normalize(draft.current);
     if (same(next, saved.current)) {
       setSaveState('saved');
@@ -89,7 +131,7 @@ export function NoteEditor({ note }: { note: Note }) {
     } finally {
       inFlight.current = null;
     }
-  }, [note.id, toast, invalidate, isDirty]);
+  }, [note.id, toast, invalidate, isDirty, flushEditor]);
 
   const edit = (next: Partial<Draft>) => {
     draft.current = { ...draft.current, ...next };
@@ -98,12 +140,37 @@ export function NoteEditor({ note }: { note: Note }) {
     setSaveState(isDirty() ? 'pending' : 'saved');
   };
 
+  const onVisualEdit = useCallback(() => {
+    editorChanged.current = true;
+    setSaveState('pending');
+    setEdits((n) => n + 1);
+  }, []);
+
+  const onEditorReady = useCallback((instance: Editor) => {
+    editor.current = instance;
+  }, []);
+
+  const showMarkdown = () => {
+    flushEditor();
+    setBody(draft.current.body);
+    setMarkdownView('write');
+    setMode('markdown');
+  };
+
+  const showVisual = () => {
+    const result = noteCodec().fromMarkdown(draft.current.body);
+    if (!result.ok) return setNotice(MARKDOWN_ONLY);
+    setNotice(null);
+    setVisual((v) => ({ key: v.key + 1, content: result.content }));
+    setMode('visual');
+  };
+
   // Autosave after a pause in typing.
   useEffect(() => {
     if (!isDirty()) return;
     const timer = setTimeout(() => void save(), AUTOSAVE_MS);
     return () => clearTimeout(timer);
-  }, [title, body, isDirty, save]);
+  }, [title, body, edits, isDirty, save]);
 
   // Leaving the screen saves first; if saving fails, ask before discarding.
   useEffect(() => {
@@ -200,7 +267,10 @@ export function NoteEditor({ note }: { note: Note }) {
           placeholder={UNTITLED}
           onChange={(e) => edit({ title: e.target.value.replace(/\n/g, ' ') })}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') e.preventDefault();
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            // Enter moves on to the visual body, as in most document editors.
+            if (mode === 'visual') editor.current?.commands.focus('start');
           }}
         />
         <span className={`save-state save-state--${saveState}`} data-testid="note-save-state">
@@ -233,24 +303,57 @@ export function NoteEditor({ note }: { note: Note }) {
       </div>
 
       <div className="note-editor__modes">
-        <div className="segmented" role="group" aria-label="Editor mode">
-          <button type="button" aria-pressed={mode === 'write'} onClick={() => setMode('write')}>
-            <PenLine aria-hidden /> Write
+        <div className="segmented" role="group" aria-label="Editor">
+          <button type="button" aria-pressed={mode === 'visual'} onClick={showVisual}>
+            <Type aria-hidden /> Visual
           </button>
-          <button
-            type="button"
-            aria-pressed={mode === 'preview'}
-            onClick={() => setMode('preview')}
-          >
-            <Eye aria-hidden /> Preview
+          <button type="button" aria-pressed={mode === 'markdown'} onClick={showMarkdown}>
+            <FileCode2 aria-hidden /> Markdown
           </button>
         </div>
-        <span className="muted small">
-          Markdown: # heading, **bold**, - list, [link](https://…)
-        </span>
+        {mode === 'markdown' && (
+          <>
+            <div className="segmented" role="group" aria-label="Markdown view">
+              <button
+                type="button"
+                aria-pressed={markdownView === 'write'}
+                onClick={() => setMarkdownView('write')}
+              >
+                <PenLine aria-hidden /> Write
+              </button>
+              <button
+                type="button"
+                aria-pressed={markdownView === 'preview'}
+                onClick={() => setMarkdownView('preview')}
+              >
+                <Eye aria-hidden /> Preview
+              </button>
+            </div>
+            <span className="muted small">
+              Markdown: # heading, **bold**, - list, [link](https://…)
+            </span>
+          </>
+        )}
+        {mode === 'visual' && <span className="muted small">Ctrl+click a link to open it.</span>}
       </div>
 
-      {mode === 'write' ? (
+      {notice && (
+        <p className="notice" role="status">
+          {notice}
+        </p>
+      )}
+
+      {mode === 'visual' ? (
+        <DocumentEditor
+          key={visual.key}
+          className="note-editor__doc"
+          label="Note text"
+          extensions={noteExtensions()}
+          initialContent={visual.content}
+          onEdit={onVisualEdit}
+          onReady={onEditorReady}
+        />
+      ) : markdownView === 'write' ? (
         <>
           <label className="visually-hidden" htmlFor={`${id}-body`}>
             Note text (Markdown)

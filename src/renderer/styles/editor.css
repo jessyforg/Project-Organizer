@@ -164,6 +164,73 @@
   font-size: var(--text-sm);
 }
 
+.doc-editor__body a {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.doc-editor__body code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.doc-editor__body pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+.doc-editor__body hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid var(--line-strong);
+}
+
+.doc-editor__body hr.ProseMirror-selectednode {
+  border-top-color: var(--focus);
+}
+
+/* Task lists: a checkbox beside each item's text. */
+.doc-editor__body ul[data-type='taskList'] {
+  padding-left: 0;
+  list-style: none;
+}
+
+.doc-editor__body ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.doc-editor__body ul[data-type='taskList'] li > label {
+  flex: none;
+  padding-top: 0.25em;
+}
+
+.doc-editor__body ul[data-type='taskList'] li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.doc-editor__body ul[data-type='taskList'] li[data-checked='true'] > div {
+  color: var(--ink-muted);
+  text-decoration: line-through;
+}
+
+/* Inside a note, the editor sits in the note's panel rather than its own. */
+.note-editor__doc {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.note-editor__doc .doc-editor__body {
+  min-height: 360px;
+}
+
 /*
  * ProseMirror's required base styles. Tiptap normally injects these as a <style> tag, which the
  * Content Security Policy blocks, so they live here: adapted from @tiptap/core 3.31.4, with the

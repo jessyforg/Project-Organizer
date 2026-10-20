@@ -154,6 +154,7 @@ test('notes: write Markdown, autosave, preview, search, leave safely, trash and 
   await expect(page.getByText('No notes yet. Create one to start.')).toBeVisible();
   await page.getByRole('button', { name: 'New note' }).click();
   await page.getByLabel('Note title').fill('Meeting notes');
+  await page.getByRole('button', { name: 'Markdown', exact: true }).click();
   await page
     .getByLabel('Note text (Markdown)')
     .fill('# Agenda\n\n- Budget **review**\n\n<b>not bold</b>');
@@ -198,13 +199,54 @@ test('notes: write Markdown, autosave, preview, search, leave safely, trash and 
   await app.close();
 });
 
+test('notes: the visual editor saves Markdown that survives closing and reopening', async () => {
+  let { app, page } = await launch(dataDir);
+  await page.getByLabel('Profile name').fill('Visual');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('button', { name: 'New note' }).click();
+  await page.getByLabel('Note title').fill('Release plan');
+
+  // Markdown-style typing and a keyboard shortcut, in the visual editor.
+  const body = page.getByRole('textbox', { name: 'Note text' });
+  await body.click();
+  await page.keyboard.type('## Steps');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('- Build the ');
+  await page.keyboard.press('Control+b');
+  await page.keyboard.type('installer');
+  await page.keyboard.press('Control+b');
+  await expect(page.getByTestId('note-save-state')).toHaveText('Saved');
+
+  // Leave and come back: the note reopens in the visual editor with its formatting.
+  await nav(page).getByRole('button', { name: 'Today' }).click();
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('list', { name: 'Notes' }).getByRole('button').click();
+  await expect(body.getByRole('heading', { name: 'Steps', level: 2 })).toBeVisible();
+  await app.close();
+
+  // After a restart, the stored text is the Markdown that was typed.
+  ({ app, page } = await launch(dataDir));
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('list', { name: 'Notes' }).getByRole('button').click();
+  const reopened = page.getByRole('textbox', { name: 'Note text' });
+  await expect(reopened.getByRole('listitem')).toHaveText('Build the installer');
+  await expect(reopened.locator('strong')).toHaveText('installer');
+  await page.getByRole('button', { name: 'Markdown', exact: true }).click();
+  await expect(page.getByLabel('Note text (Markdown)')).toHaveValue(
+    '## Steps\n\n- Build the **installer**\n',
+  );
+  await expect(page.getByTestId('note-save-state')).toHaveText('Saved');
+  await app.close();
+});
+
 test('notes: closing the window while typing saves the note first', async () => {
   let { app, page } = await launch(dataDir);
   await page.getByLabel('Profile name').fill('Close');
   await page.getByRole('button', { name: 'Create profile' }).click();
   await nav(page).getByRole('button', { name: 'Notes' }).click();
   await page.getByRole('button', { name: 'New note' }).click();
-  await page.getByLabel('Note text (Markdown)').fill('Typed just before closing');
+  await page.getByRole('textbox', { name: 'Note text' }).fill('Typed just before closing');
   // Close at once, before the autosave pause ends: the page saves as the window closes
   // (removing its beforeunload handler makes this test fail). Electron shows no
   // beforeunload dialog; the listener stops Playwright from trying to dismiss one.

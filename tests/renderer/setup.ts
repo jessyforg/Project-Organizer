@@ -14,6 +14,11 @@ if (!Range.prototype.getClientRects) {
     return new DOMRect();
   };
 }
+// For the same reason, a click cannot be mapped to a position; ProseMirror then keeps the
+// current selection.
+if (!('elementFromPoint' in document)) {
+  Object.assign(document, { elementFromPoint: () => null });
+}
 
 // jsdom does not implement <dialog> modality; emulate the parts the app relies on.
 if (!HTMLDialogElement.prototype.showModal) {

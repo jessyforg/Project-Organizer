@@ -2,6 +2,44 @@
 
 Newest entries first.
 
+## 2026-10-21 — Notes editor integration (editor track, Phase 1), awaiting review
+
+**Approval:** the product owner approved the plan and its recommended options ("go ahead with the recommended options"):
+- notes with tables open in Markdown mode;
+- Preview stays inside Markdown mode only.
+
+Decisions are recorded in [ADR-0013](DECISIONS/0013-visual-note-editing.md).
+
+**Scope completed:**
+- **Visual editing:** notes are edited in the document editor and still stored as Markdown. No schema, IPC, or service changes.
+- **Safety check:** before a note opens visually, it is converted and compared as a Markdown syntax tree. If anything would be lost (tables, images, raw HTML, reference links), the note opens in Markdown mode with a notice and is not rewritten. Opening a note never saves it.
+- **Modes:** Visual and Markdown (Write/Preview). Switching carries unsaved text across.
+- **Saving:** visual edits are converted to Markdown only when saving. Autosave, Ctrl+S, and the leave and close guards are unchanged.
+- **Formats:** strikethrough, inline code, checklists, dividers, links (Ctrl+click opens web and mail links), and headings 1–6.
+
+**Defects found and fixed during the work:**
+- Saved notes gained trailing blank lines from the editor's trailing empty paragraph. They are now trimmed; a unit test and the new end-to-end test cover it.
+- One planned test expected `file:` links to keep a note in Markdown mode. Checking Tiptap showed it renders such links with an empty `href`, so they are inert and the text is kept. The test now asserts that instead.
+
+**Verification (2026-10-21):**
+
+| Check | Result |
+|---|---|
+| `npm run check` (typecheck, lint, formatting, unit tests) | Passed — 277 of 277: 19 new codec tests, 9 visual editor tests replacing 5 Markdown-only ones |
+| `npm run test:e2e` | Passed — 14 of 14, including a new visual workflow (Markdown shortcuts and Ctrl+B → autosave → leave and reopen → restart → stored Markdown checked) and an accessibility scan of the visual editor in both themes |
+| `npm audit --omit=dev` | 0 vulnerabilities |
+| New packages | 2 (`@tiptap/markdown`, `marked`), both MIT, no install scripts |
+| Hands-on check (scripted, production build and production security policy) | Rich note opens in Visual mode. Ticking a checkbox and typing both save, and the stored Markdown is correct. The table note opens in Markdown mode with the notice. No injected style tag. No page errors. No sideways scrolling at 1280 px or 760 px in light or dark. |
+
+**Known limitations:**
+- Tables and images cannot be edited visually.
+- `snake_case` typed visually is stored as `snake\_case`, which is visible in Markdown mode.
+- Links can be created only by typing or pasting a URL; there is no link dialog.
+- The production renderer bundle grew from 1.43 MB to 2.42 MB.
+- No manual screen-reader pass. Nothing is committed.
+
+**Next step:** product owner review. Phase 2 (note actions menu) waits for approval.
+
 ## 2026-10-21 — Document editor prototype (Phase 1) and dropdown colour fix
 
 **Approval:** the product owner approved the plan and the dropdown fix ("approve all"). Decisions are recorded in [ADR-0012](DECISIONS/0012-block-editor.md).

@@ -82,15 +82,16 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 5. Trash and restore a task hierarchy.
 6. Export encrypted backup → restore into new profile → contents match.
 7. Archive and unarchive a project.
-8. Notes (L1.5): write Markdown → autosave → preview → leave the screen while typing (saved first) → global search finds the body → trash and restore → restart → note persists.
-9. Notes: close the window right after typing → restart → the text was saved. (Removing the editor's `beforeunload` handler makes this test fail.) The retry and the "could not be saved" dialog in the main process, used when a save is still running or fails, are not automated; they were reviewed in code only.
+8. Notes (L1.5): write Markdown in Markdown mode → autosave → preview → leave the screen while typing (saved first) → global search finds the body → trash and restore → restart → note persists.
+9. Visual note editing (ADR-0013): type with Markdown shortcuts and Ctrl+B in the visual editor → autosave → leave and reopen → restart → the formatting is shown and the stored text is the expected Markdown.
+10. Notes: close the window right after typing in the visual editor → restart → the text was saved. (Removing the editor's `beforeunload` handler makes this test fail.) The retry and the "could not be saved" dialog in the main process, used when a save is still running or fails, are not automated; they were reviewed in code only.
 
 ### Status of the end-to-end workflows
 
-10. Kanban: move cards with the Move dialog and by real drag and drop → order and status persist across a restart → Done completes the task.
-11. Calendar: a task appears on its due date → open it from the calendar → change the due date → the entry moves at once → completed tasks hidden unless shown.
+11. Kanban: move cards with the Move dialog and by real drag and drop → order and status persist across a restart → Done completes the task.
+12. Calendar: a task appears on its due date → open it from the calendar → change the due date → the entry moves at once → completed tasks hidden unless shown.
 
-All eleven workflows are automated: 1–5 and 7–11 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
+All twelve workflows are automated: 1–5 and 7–12 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
 
 Component tests use the real preload `createApi` over a scripted fake backend (`tests/renderer/harness.tsx`), so they exercise the exact API shape the app uses.
 
@@ -130,7 +131,7 @@ A full manual pass with a screen reader is still recommended before public relea
 
 ### Accessibility scan
 
-`tests/e2e/accessibility.spec.ts` runs axe-core (WCAG 2.2 A/AA rules) on the start screen, Today, My tasks, a project with the task details panel open, the project board and its Move dialog, Projects, Notes (preview and write modes, with headings, a task list, a table, a link, code, and an image reference), Calendar (month, week, and day views), Trash, Settings, and the new-task dialog, in light and dark themes. It uses axe's legacy mode because Electron cannot open the helper page axe otherwise needs. The scanner was confirmed to report injected violations.
+`tests/e2e/accessibility.spec.ts` runs axe-core (WCAG 2.2 A/AA rules) on the start screen, Today, My tasks, a project with the task details panel open, the project board and its Move dialog, Projects, Notes (a note with a table in Markdown preview and write modes, with headings, a task list, a link, code, and an image reference; and a note in the visual editor), Calendar (month, week, and day views), Trash, Settings, and the new-task dialog, in light and dark themes. It uses axe's legacy mode because Electron cannot open the helper page axe otherwise needs. The scanner was confirmed to report injected violations.
 
 ### Upgrade fixtures
 

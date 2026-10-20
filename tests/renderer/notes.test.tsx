@@ -1,9 +1,10 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { Editor } from '@tiptap/react';
 import { describe, expect, it } from 'vitest';
 import type { Note } from '../../src/shared/domain';
 import { useNavigation } from '../../src/renderer/app/navigation';
-import { NoteEditor } from '../../src/renderer/features/notes/NoteEditor';
+import { AUTOSAVE_MS, NoteEditor } from '../../src/renderer/features/notes/NoteEditor';
 import { NoteMarkdown } from '../../src/renderer/features/notes/NoteMarkdown';
 import { fail, installApi, ok, renderWithApp } from './harness';
 
@@ -90,20 +91,51 @@ describe('NoteMarkdown (safe preview)', () => {
   });
 });
 
+/** The visual editor's body, and a way to drive it as a user's typing would. */
+function visualBody() {
+  const body = screen.getByRole('textbox', { name: 'Note text' });
+  const editor = (body as HTMLElement & { editor: Editor }).editor;
+  return {
+    body,
+    /** Types at the end of the document, through the editor's own input handling. */
+    type: (text: string) => act(() => void editor.chain().focus('end').insertContent(text).run()),
+    editor,
+  };
+}
+
+/** Waits past the autosave pause. */
+const pastAutosave = () => new Promise((resolve) => setTimeout(resolve, AUTOSAVE_MS + 300));
+
 describe('NoteEditor', () => {
-  it('saves automatically after a pause in typing', async () => {
+  it('saves visual edits as Markdown after a pause in typing', async () => {
     const note = makeNote();
     const backend = installApi({ 'notes:update': saving(note) });
     renderWithApp(<NoteEditor note={note} />);
-    await userEvent.type(screen.getByLabelText('Note text (Markdown)'), 'Hello');
+    expect(screen.getByRole('button', { name: 'Visual' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.type(visualBody().body, 'Hello');
     expect(screen.getByTestId('note-save-state')).toHaveTextContent('Unsaved changes');
     expect(backend.callsTo('notes:update')).toEqual([]);
     await waitFor(() => expect(screen.getByTestId('note-save-state')).toHaveTextContent('Saved'), {
       timeout: 3000,
     });
     expect(backend.callsTo('notes:update')).toEqual([
-      { id: note.id, title: 'Plan', body: 'Hello' },
+      { id: note.id, title: 'Plan', body: 'Hello\n' },
     ]);
+  });
+
+  it('saves toolbar formatting as Markdown', async () => {
+    const note = makeNote({ body: 'Ship it\n' });
+    const backend = installApi({ 'notes:update': saving(note) });
+    renderWithApp(<NoteEditor note={note} />);
+    const { editor } = visualBody();
+    act(() => void editor.commands.selectAll());
+    await userEvent.click(screen.getByRole('button', { name: /^Bold/ }));
+    await userEvent.keyboard('{Control>}s{/Control}');
+    await waitFor(() =>
+      expect(backend.callsTo('notes:update')).toEqual([
+        { id: note.id, title: 'Plan', body: '**Ship it**\n' },
+      ]),
+    );
   });
 
   it('saves a blank title as "Untitled note"', async () => {
@@ -119,11 +151,75 @@ describe('NoteEditor', () => {
     );
   });
 
-  it('opens existing notes in preview', () => {
+  it('opens existing notes in the visual editor without rewriting them', async () => {
+    // "*" bullets would be written back as "-"; opening alone must not save that.
+    const note = makeNote({ body: '## Agenda\n\n* first\n* second\n' });
+    const backend = installApi({ 'notes:update': saving(note) });
+    renderWithApp(<NoteEditor note={note} />);
+    const { body } = visualBody();
+    expect(within(body).getByRole('heading', { level: 2, name: 'Agenda' })).toBeInTheDocument();
+    expect(within(body).getAllByRole('listitem')).toHaveLength(2);
+    await pastAutosave();
+    expect(backend.callsTo('notes:update')).toEqual([]);
+    expect(screen.getByTestId('note-save-state')).toHaveTextContent('Saved');
+  });
+
+  it('keeps notes the visual editor cannot show in Markdown mode, unchanged', async () => {
+    const table = '| a | b |\n|---|---|\n| 1 | 2 |\n';
+    const note = makeNote({ body: table });
+    const backend = installApi({ 'notes:update': saving(note) });
+    renderWithApp(<NoteEditor note={note} />);
+    expect(screen.getByText(/so it opens as Markdown/)).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('button', { name: 'Markdown' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('table')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Visual' }));
+    expect(screen.getByRole('button', { name: 'Markdown' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.queryByRole('textbox', { name: 'Note text' })).toBeNull();
+    await pastAutosave();
+    expect(backend.callsTo('notes:update')).toEqual([]);
+  });
+
+  it('carries text across when switching between Visual and Markdown', async () => {
+    const note = makeNote({ body: 'First\n' });
+    const backend = installApi({ 'notes:update': saving(note) });
+    renderWithApp(<NoteEditor note={note} />);
+    visualBody().type(' line');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Markdown' }));
+    const source = screen.getByLabelText('Note text (Markdown)');
+    expect(source).toHaveValue('First line\n');
+    await userEvent.type(source, '{End}- item');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Visual' }));
+    const { body } = visualBody();
+    expect(body).toHaveTextContent('First line');
+    expect(within(body).getByRole('listitem')).toHaveTextContent('item');
+    await waitFor(() => expect(screen.getByTestId('note-save-state')).toHaveTextContent('Saved'), {
+      timeout: 3000,
+    });
+    expect(backend.callsTo('notes:update').at(-1)).toEqual({
+      id: note.id,
+      title: 'Plan',
+      body: 'First line\n- item',
+    });
+  });
+
+  it('shows links the app will not open as inert', () => {
     installApi();
-    renderWithApp(<NoteEditor note={makeNote({ body: '## Agenda' })} />);
-    expect(screen.getByRole('heading', { level: 2, name: 'Agenda' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Preview' })).toHaveAttribute('aria-pressed', 'true');
+    const note = makeNote({
+      body: '[site](https://example.com) [bad](javascript:alert(1)) [local](file:///C:/x)\n',
+    });
+    renderWithApp(<NoteEditor note={note} />);
+    const { body } = visualBody();
+    const hrefs = Array.from(body.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(['https://example.com', '', '']);
   });
 
   it('saves before leaving the screen', async () => {
@@ -135,11 +231,11 @@ describe('NoteEditor', () => {
         <NoteEditor note={note} />
       </>,
     );
-    await userEvent.type(screen.getByLabelText('Note text (Markdown)'), 'Draft');
+    visualBody().type('Draft');
     await userEvent.click(screen.getByRole('button', { name: 'Go to trash' }));
     await waitFor(() => expect(screen.getByTestId('route')).toHaveTextContent('trash'));
     expect(backend.callsTo('notes:update')).toEqual([
-      { id: note.id, title: 'Plan', body: 'Draft' },
+      { id: note.id, title: 'Plan', body: 'Draft\n' },
     ]);
   });
 
@@ -152,12 +248,12 @@ describe('NoteEditor', () => {
         <NoteEditor note={note} />
       </>,
     );
-    await userEvent.type(screen.getByLabelText('Note text (Markdown)'), 'Important');
+    visualBody().type('Important');
     await userEvent.click(screen.getByRole('button', { name: 'Go to trash' }));
     await screen.findByRole('heading', { name: 'Leave without saving?' });
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByTestId('route')).toHaveTextContent('dashboard');
-    expect(screen.getByLabelText('Note text (Markdown)')).toHaveValue('Important');
+    expect(visualBody().body).toHaveTextContent('Important');
 
     await userEvent.click(screen.getByRole('button', { name: 'Go to trash' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Leave without saving' }));

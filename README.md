@@ -14,7 +14,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 - Today dashboard, task lists with filters, sorting, and search, and a task details panel.
 - Kanban board for each project (drag and drop, or the Move button from the keyboard).
 - Calendar of due dates by month, week, or day.
-- Markdown notes in projects, with a safe preview, tags, and search.
+- Markdown notes in projects, edited visually or as Markdown, with a safe preview, tags, and search.
 - Trash for tasks and projects with 30-day recovery.
 - Password-encrypted backups with a test restore, automatic daily copies, and JSON export.
 - Light and dark themes and keyboard shortcuts (press Ctrl+/ in the app to see them).
