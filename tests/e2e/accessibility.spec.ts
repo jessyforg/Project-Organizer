@@ -83,8 +83,10 @@ async function seed(page: Page) {
     });
     await api.tasks.create({ title: 'Call the bank', priority: 'low' });
     if (late.ok) await api.tasks.create({ title: 'Reproduce', parentTaskId: late.data.id });
+    const noteFolder = await api.noteFolders.create({ name: 'Plans' });
     await api.notes.create({
       title: 'Launch plan',
+      folderId: noteFolder.ok ? noteFolder.data.id : null,
       projectId: project.data.id,
       body: [
         '# Launch',
@@ -168,6 +170,9 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByRole('button', { name: 'New note' }).click();
     await page.getByRole('textbox', { name: 'Note text' }).fill('A visual note');
     await expectNoViolations(page, 'Notes (visual)');
+    await page.getByRole('button', { name: 'Note actions' }).click();
+    await expectNoViolations(page, 'Notes (actions menu)');
+    await page.keyboard.press('Escape');
 
     await nav.getByRole('button', { name: 'Trash' }).click();
     await expectNoViolations(page, 'Trash');

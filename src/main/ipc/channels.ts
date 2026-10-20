@@ -1,9 +1,11 @@
 import path from 'node:path';
+import { markdownFileName } from '@shared/markdown-file';
 import type { AppInfo } from '@shared/types';
 import type { BackupService } from '../backup/backup-service';
 import { buildJsonExport, writeJsonExport } from '../backup/json-export';
 import { localIsoDate } from '../domain/dates';
 import { AppError } from '../errors';
+import { writeNoteMarkdown } from '../notes/markdown-files';
 import type { FileTokens } from './file-tokens';
 import type { ProfileService } from '../profiles/profile-service';
 import type { ProfileServices } from '../services';
@@ -24,11 +26,14 @@ export interface ChannelDeps {
     ): Promise<string | null>;
     openFile(filter: { name: string; extension: string }): Promise<string | null>;
   };
+  /** The system clipboard (Electron's, in the main process; ADR-0014). */
+  clipboard: { writeText(text: string): void };
   clock: () => Date;
 }
 
 const BACKUP_FILTER = { name: 'ProjectForge backup', extension: 'pfbackup' };
 const JSON_FILTER = { name: 'JSON export', extension: 'json' };
+const MARKDOWN_FILTER = { name: 'Markdown', extension: 'md' };
 
 /** A default file name that is safe on Windows. */
 function fileNameFor(profileName: string, date: string, extension: string): string {
@@ -43,7 +48,7 @@ function fileNameFor(profileName: string, date: string, extension: string): stri
 
 /** One implementation per channel; the mapped type makes a missing channel a compile error. */
 export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
-  const { appInfo, profiles, services: s, backups, fileTokens, dialogs, clock } = deps;
+  const { appInfo, profiles, services: s, backups, fileTokens, dialogs, clipboard, clock } = deps;
   const requireActive = () => {
     const active = profiles.getActive();
     if (!active) throw new AppError('NOT_FOUND', 'No profile is open.');
@@ -163,6 +168,25 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'notes:create': (input) => s().notes.create(input),
     'notes:update': (input) => s().notes.update(input),
     'notes:move': (input) => s().notes.move(input),
+    'notes:setFolder': (input) => s().notes.setFolder(input),
+    'notes:duplicate': ({ id }) => s().notes.duplicate(id),
+    'notes:import': (input) => s().notes.import(input),
+    // The saved body goes to the clipboard from here, so the renderer needs no clipboard access.
+    'notes:copyMarkdown': ({ id }) => {
+      clipboard.writeText(s().notes.get(id).body);
+      return null;
+    },
+    'notes:exportMarkdown': async ({ id }) => {
+      const note = s().notes.get(id);
+      const destination = await dialogs.saveFile(markdownFileName(note.title), MARKDOWN_FILTER);
+      if (!destination) return { saved: false };
+      writeNoteMarkdown(note, destination);
+      return { saved: true, fileName: path.basename(destination) };
+    },
+    'noteFolders:list': () => s().noteFolders.list(),
+    'noteFolders:create': (input) => s().noteFolders.create(input),
+    'noteFolders:rename': (input) => s().noteFolders.rename(input),
+    'noteFolders:delete': ({ id }) => (s().noteFolders.delete(id), null),
 
     'dependencies:list': ({ taskId }) => ({
       prerequisites: s().dependencies.prerequisites(taskId),

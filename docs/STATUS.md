@@ -2,6 +2,47 @@
 
 Newest entries first.
 
+## 2026-10-21 — Note actions, Markdown import, and note folders (version 0.3.0), awaiting merge approval
+
+**Approval:** the product owner approved the actions-menu plan with its recommended options:
+- the menu sits at the top of the open note only;
+- exports put the title as a heading, then the body.
+
+They added Markdown import and note folders, and approved "everything … up until you commit and have a new build". The merge waits for their approval, so the work is on the branch `feature/note-actions-import-folders`. Decisions are recorded in [ADR-0014](DECISIONS/0014-note-actions-import-and-folders.md).
+
+**Scope completed:**
+- **Note actions menu:** Rename, Duplicate, Copy as Markdown, Export as Markdown…, and Move to trash… (now asks first). Each action saves pending edits first.
+- **Markdown import:** from the Import Markdown button, by dropping files on the Notes screen, or by pasting copied files. One validated channel creates all the notes or none.
+- **Note folders:**
+  - schema v4 (`note_folders` and `notes.folder_id`);
+  - folder filters with counts, plus folder rename and delete on the Notes screen;
+  - a Folder field on each note;
+  - new and imported notes go to the folder being viewed;
+  - included in backups and JSON exports.
+- **Shared folder dialog:** the folder name dialog is shared by project folders and note folders.
+- **Version 0.3.0** and a CHANGELOG entry. The entry also covers the interface refresh, visual note editing, and the dropdown fix since 0.2.0.
+
+**Defects found and fixed during the work:**
+- **Long folder names** widened the folder list under the note panel at 1280 px, hiding the counts (found in screenshot review). They now end with an ellipsis.
+- **Invisible character:** a literal byte-order-mark character was written into source code instead of an escape. Lint caught it; the code now uses `String.fromCharCode(0xfeff)`.
+
+**Verification (2026-10-21):**
+
+| Check | Result |
+|---|---|
+| `npm run check` (typecheck, lint, formatting, unit tests) | Passed — 313 of 313 (36 new: 11 service tests, 2 upgrade tests from a new committed `profile-v3.db` fixture, 9 Markdown file tests, and 14 component tests for actions, folders, and import) |
+| `npm run test:e2e` | Passed — 15 of 15. A new test covers: folder → import two files (one with Windows line endings) → duplicate → copy (system clipboard read back) → export (file content checked) → trash with confirmation → restart → delete folder (notes kept). The accessibility scan now includes a note folder and the open actions menu, in both themes. |
+| `npm audit --omit=dev` | 0 vulnerabilities; no new packages |
+| Screenshots (production build) | Actions menu and folders at 1280 px and 760 px in light and dark; no sideways scrolling; no page errors |
+
+**Known limitations:**
+- Folders cannot be nested or reordered.
+- Imported notes are copies, not linked to their files.
+- Images in imported Markdown are kept as text and the note opens in Markdown mode.
+- No manual screen-reader pass.
+
+**Next step:** the product owner reviews the installer and approves the merge into `main`. Phase 3 (slash commands) waits for approval.
+
 ## 2026-10-21 — Notes editor integration (editor track, Phase 1), awaiting review
 
 **Approval:** the product owner approved the plan and its recommended options ("go ahead with the recommended options"):

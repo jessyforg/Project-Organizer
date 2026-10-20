@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased — interface refresh
+## 0.3.0 — Visual note editing, note actions, import, and folders (2026-10-21, not yet publicly released)
+
+### Notes
+
+- **Visual editing:** notes open in a visual editor with a formatting toolbar and Markdown shortcuts (for example `# ` for a heading, `- ` for a list). They are still saved as Markdown. Notes with formatting the editor cannot show yet, such as tables or images, open in Markdown mode unchanged. Visual and Markdown modes can be switched at any time; Write and Preview are inside Markdown mode.
+- **More formatting:** strikethrough, inline code, checklists, dividers, and headings 1–6. Ctrl+click opens web and mail links.
+- **Note actions menu (⋯):** Rename, Duplicate, Copy as Markdown, Export as Markdown, and Move to trash, which now asks first.
+- **Import Markdown:** pick `.md` files, drop them on the Notes screen, or paste them after copying them in File Explorer. A leading `# Heading` becomes the title. Files that cannot be imported are listed with the reason.
+- **Note folders:** create, rename, and delete folders on the Notes screen; filter by folder; move a note with its Folder field. Deleting a folder keeps its notes.
+- Encrypted backups and JSON exports include note folders. Profile data schema version 4; existing profiles upgrade automatically after a verified snapshot.
+
+### Interface refresh
 
 - **Sidebar:** grouped by purpose (planning views, projects and notes, the projects list, then Trash, Settings, and your profile). The search box shows its shortcut, and long project names no longer break the list.
 - **Every screen:** a consistent page header, lists on clean panels, compact filter toolbars, and helpful empty states.
@@ -9,7 +20,7 @@
 - **First run:** a welcome card.
 - **Behaviour and accessibility:** subtle motion that respects "reduce motion"; text contrast re-checked in both themes.
 - **Fixed:** the whole window could scroll and leave a blank strip under the sidebar.
-- No features, data, or settings changed.
+- **Fixed:** dropdown lists were white on white in dark mode.
 
 ## 0.2.0 — Notes, Kanban board, and calendar (2026-10-20, not yet publicly released)
 

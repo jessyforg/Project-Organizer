@@ -67,6 +67,26 @@ if (process.env['REGENERATE_FIXTURES']) {
       s.trash.trashTask(s.tasks.create({ title: 'Old idea', projectId: project.id }).id);
       s.settings.update({ theme: 'dark' });
     });
+    // Released in 0.2.0. Filled with SQL because today's services expect later columns.
+    await build(path.join(DIR, 'profile-v3.db'), profileMigrations.slice(0, 3), (db) => {
+      ensureInbox({ db, clock, newId: randomUUID });
+      const inbox = db.prepare('SELECT id FROM projects WHERE is_inbox = 1').get() as {
+        id: string;
+      };
+      db.prepare(
+        `INSERT INTO tags (id, name, name_key, color, created_at, updated_at)
+         VALUES ('3c0d5b2a-1f4e-4a7b-9c8d-0e1f2a3b4c5d', 'Idea', 'idea', 'blue', 'x', 'x')`,
+      ).run();
+      db.prepare(
+        `INSERT INTO notes (id, project_id, title, body, created_at, updated_at)
+         VALUES ('9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d', ?, 'Roadmap',
+                 '# Roadmap\n\n- [ ] Ship folders', 'x', 'x')`,
+      ).run(inbox.id);
+      db.prepare(
+        `INSERT INTO note_tags (note_id, tag_id)
+         VALUES ('9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d', '3c0d5b2a-1f4e-4a7b-9c8d-0e1f2a3b4c5d')`,
+      ).run();
+    });
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -80,6 +100,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['app-v1.db', appMigrations],
       ['profile-v1.db', profileMigrations],
       ['profile-v2.db', profileMigrations],
+      ['profile-v3.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -123,6 +144,30 @@ if (process.env['REGENERATE_FIXTURES']) {
       // Schema v3: notes work on an upgraded profile and are searchable.
       s.notes.create({ title: 'After upgrade', projectId: website.id, body: 'Launch checklist' });
       expect(s.search.search('checklist').notes.map((n) => n.title)).toEqual(['After upgrade']);
+      db.close();
+    });
+
+    it('keeps profile v3 notes and tags, and adds note folders (schema v4)', async () => {
+      const db = openDatabase(copy('profile-v3.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      const s = createProfileServices({ db, clock, newId: randomUUID });
+      const [roadmap] = s.notes.list();
+      expect(roadmap).toMatchObject({
+        title: 'Roadmap',
+        folderId: null,
+        tagIds: [expect.any(String)],
+      });
+      expect(s.notes.get(roadmap!.id).body).toBe('# Roadmap\n\n- [ ] Ship folders');
+      const folder = s.noteFolders.create({ name: 'Plans' });
+      s.notes.setFolder({ id: roadmap!.id, folderId: folder.id });
+      expect(s.noteFolders.list()).toEqual([expect.objectContaining({ noteCount: 1 })]);
+      expect(s.search.search('folders').notes.map((n) => n.title)).toEqual(['Roadmap']);
       db.close();
     });
 

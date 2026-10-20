@@ -15,6 +15,7 @@ export const COUNTED_TABLES = [
   'task_tags',
   'project_tags',
   'task_dependencies',
+  'note_folders',
   'notes',
   'note_tags',
   'settings',
@@ -40,7 +41,7 @@ export const INCLUDES = [
   'Projects, folders, and workflow statuses',
   'Tasks and subtasks, including items in the trash',
   'Tags and dependencies',
-  'Notes, including notes in the trash',
+  'Notes and note folders, including notes in the trash',
   'Profile settings',
 ];
 export const OMITS = ['The profile’s automatic snapshots', 'App-wide settings outside the profile'];

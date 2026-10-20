@@ -1,6 +1,6 @@
 # ADR-0009: Markdown notes — storage, rendering, and saving
 
-- Status: Approved (implemented on 2026-10-20; the product owner accepted these choices the same day). Notes are edited visually since [ADR-0013](0013-visual-note-editing.md); storage, the preview's rendering rules, and saving here still apply.
+- Status: Approved (implemented on 2026-10-20; the product owner accepted these choices the same day). Notes are edited visually since [ADR-0013](0013-visual-note-editing.md), and have their own folders since [ADR-0014](0014-note-actions-import-and-folders.md); storage, the preview's rendering rules, and saving here still apply.
 - Date: 2026-10-20
 
 ## Context

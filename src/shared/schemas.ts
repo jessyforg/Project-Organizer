@@ -16,6 +16,8 @@ export const LIMITS = {
   description: 1_000_000,
   searchText: 200,
   listPageSize: 20_000,
+  /** Markdown files imported as notes at once (ADR-0014). */
+  importFiles: 50,
 } as const;
 
 function isRealDate(value: string): boolean {
@@ -152,8 +154,19 @@ const noteBody = z.string().max(LIMITS.description, 'This note is too long.');
 export const createNoteSchema = z.strictObject({
   title,
   projectId: id.optional(),
+  folderId: id.nullable().optional(),
   body: noteBody.optional(),
   tagIds: idList.optional(),
+});
+export const setNoteFolderSchema = z.strictObject({ id, folderId: id.nullable() });
+/** Notes read from Markdown files in the renderer (ADR-0014); created all or nothing. */
+export const importNotesSchema = z.strictObject({
+  projectId: id.optional(),
+  folderId: id.nullable().optional(),
+  notes: z
+    .array(z.strictObject({ title, body: noteBody }))
+    .min(1)
+    .max(LIMITS.importFiles, `Import at most ${LIMITS.importFiles} files at a time.`),
 });
 export const updateNoteSchema = z.strictObject({
   id,
@@ -164,6 +177,8 @@ export const moveNoteSchema = z.strictObject({ id, projectId: id });
 export const setNoteTagsSchema = z.strictObject({ noteId: id, tagIds: idList });
 export const noteListQuerySchema = z.strictObject({
   projectId: id.optional(),
+  /** A folder's notes, or with null, notes in no folder. */
+  folderId: id.nullable().optional(),
   tagIds: idList.optional(),
   text: z.string().max(LIMITS.searchText).optional(),
   includeArchived: z.boolean().optional(),
@@ -202,3 +217,5 @@ export type CreateNoteInput = z.output<typeof createNoteSchema>;
 export type UpdateNoteInput = z.output<typeof updateNoteSchema>;
 export type MoveNoteInput = z.output<typeof moveNoteSchema>;
 export type NoteListQuery = z.output<typeof noteListQuerySchema>;
+export type SetNoteFolderInput = z.output<typeof setNoteFolderSchema>;
+export type ImportNotesInput = z.output<typeof importNotesSchema>;

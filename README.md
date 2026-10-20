@@ -4,7 +4,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 
 ## Status
 
-**Version 0.2.0 (MVP plus notes, Kanban board, and calendar), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
+**Version 0.3.0 (MVP plus notes with visual editing and folders, Kanban board, and calendar), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
 
 ## Features
 
@@ -14,7 +14,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 - Today dashboard, task lists with filters, sorting, and search, and a task details panel.
 - Kanban board for each project (drag and drop, or the Move button from the keyboard).
 - Calendar of due dates by month, week, or day.
-- Markdown notes in projects, edited visually or as Markdown, with a safe preview, tags, and search.
+- Markdown notes in projects and folders, edited visually or as Markdown, with a safe preview, tags, and search. Notes can be duplicated, copied, exported as `.md` files, and imported from them.
 - Trash for tasks and projects with 30-day recovery.
 - Password-encrypted backups with a test restore, automatic daily copies, and JSON export.
 - Light and dark themes and keyboard shortcuts (press Ctrl+/ in the app to see them).

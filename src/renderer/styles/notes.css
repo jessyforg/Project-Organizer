@@ -27,6 +27,71 @@
   container: note / inline-size;
 }
 
+/* Note folders (ADR-0014): a short list above the filters. */
+.note-folders {
+  display: grid;
+  gap: 1px;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+
+.note-folders__row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* min-width: 0 lets a long folder name shrink to an ellipsis instead of widening the list. */
+.note-folders__row > .nav__item {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Folder actions stay out of the way until the row is hovered or focused. */
+.note-folders__row .menu-anchor {
+  opacity: 0;
+}
+
+.note-folders__row:hover .menu-anchor,
+.note-folders__row:focus-within .menu-anchor {
+  opacity: 1;
+}
+
+.note-folders .nav__item[aria-current='true'] {
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.note-folders .nav__item[aria-current='true'] svg {
+  color: var(--accent-text);
+}
+
+.note-folders__new {
+  justify-self: start;
+}
+
+/* Dropping Markdown files anywhere on the Notes screen imports them. */
+.notes {
+  position: relative;
+}
+
+.notes__drop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--accent-text);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  pointer-events: none;
+}
+
 .notes__filters {
   display: grid;
   gap: var(--space-2);
@@ -130,6 +195,11 @@
   grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
+}
+
+.note-editor__places {
+  display: grid;
+  gap: var(--space-3);
 }
 
 @container note (max-width: 600px) {

@@ -154,3 +154,4 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0011](DECISIONS/0011-interface-refresh.md) | Interface refresh and design system |
 | [0012](DECISIONS/0012-block-editor.md) | Block-based document editor (prototype) |
 | [0013](DECISIONS/0013-visual-note-editing.md) | Visual editing of Markdown notes |
+| [0014](DECISIONS/0014-note-actions-import-and-folders.md) | Note actions, Markdown import, and note folders |

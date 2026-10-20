@@ -228,4 +228,20 @@ export const profileMigrations: readonly Migration[] = [
       END;
     `,
   },
+  {
+    // Note folders (ADR-0014). Deleting a folder keeps its notes, outside any folder.
+    version: 4,
+    name: 'note_folders',
+    sql: `
+      CREATE TABLE note_folders (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        name_key TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+      ALTER TABLE notes ADD COLUMN folder_id TEXT REFERENCES note_folders (id) ON DELETE SET NULL;
+      CREATE INDEX notes_folder ON notes (folder_id, deleted_at);
+    `,
+  },
 ];

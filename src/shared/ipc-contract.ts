@@ -3,6 +3,7 @@ import type {
   Dashboard,
   Folder,
   Note,
+  NoteFolder,
   NoteSummary,
   ProfileSettings,
   Project,
@@ -129,6 +130,15 @@ export const ipcContract = {
   'notes:create': s.createNoteSchema,
   'notes:update': s.updateNoteSchema,
   'notes:move': s.moveNoteSchema,
+  'notes:setFolder': s.setNoteFolderSchema,
+  'notes:duplicate': s.idSchema,
+  'notes:import': s.importNotesSchema,
+  'notes:copyMarkdown': s.idSchema,
+  'notes:exportMarkdown': s.idSchema,
+  'noteFolders:list': s.emptySchema,
+  'noteFolders:create': s.createFolderSchema,
+  'noteFolders:rename': s.renameFolderSchema,
+  'noteFolders:delete': s.idSchema,
   'dependencies:list': s.taskIdSchema,
   'dependencies:add': s.dependencySchema,
   'dependencies:remove': s.dependencySchema,
@@ -210,6 +220,15 @@ export interface IpcResponses {
   'notes:create': Note;
   'notes:update': Note;
   'notes:move': Note;
+  'notes:setFolder': Note;
+  'notes:duplicate': Note;
+  'notes:import': Note[];
+  'notes:copyMarkdown': null;
+  'notes:exportMarkdown': SaveResult;
+  'noteFolders:list': NoteFolder[];
+  'noteFolders:create': NoteFolder;
+  'noteFolders:rename': NoteFolder;
+  'noteFolders:delete': null;
   'dependencies:list': TaskRelations;
   'dependencies:add': null;
   'dependencies:remove': null;

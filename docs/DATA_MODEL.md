@@ -112,14 +112,25 @@ Done and cancelled prerequisites count as satisfied. Unfinished prerequisites pr
 |---|---|---|
 | id | TEXT PK | |
 | project_id | TEXT NOT NULL → projects(id) ON DELETE CASCADE | Every note belongs to a project; notes created without one go to the Inbox |
+| folder_id | TEXT NULL → note_folders(id) ON DELETE SET NULL | Schema v4 ([ADR-0014](DECISIONS/0014-note-actions-import-and-folders.md)). The note's folder on the Notes screen, independent of its project; null means no folder |
 | title | TEXT NOT NULL CHECK(length(trim(title)) > 0) | A blank title is saved as "Untitled note" |
 | body | TEXT NOT NULL DEFAULT '' | Markdown source as typed, up to 1,000,000 characters (Zod limit); never stored or rendered as HTML |
-| created_at, updated_at | TEXT NOT NULL | `updated_at` changes only when the title, body, project, or tags change |
+| created_at, updated_at | TEXT NOT NULL | `updated_at` changes only when the title, body, project, folder, or tags change |
 | deleted_at, deletion_batch_id | TEXT NULL | Same trash model as tasks |
 
 Notes cannot be created in, or moved into, an archived project; notes already in one stay readable and editable.
 
 **note_tags** — (`note_id` → notes ON DELETE CASCADE, `tag_id` → tags ON DELETE CASCADE), PK (note_id, tag_id).
+
+**note_folders** (schema v4, [ADR-0014](DECISIONS/0014-note-actions-import-and-folders.md))
+| Column | Type | Notes |
+|---|---|---|
+| id | TEXT PK | |
+| name | TEXT NOT NULL CHECK(length(trim(name)) > 0) | |
+| name_key | TEXT NOT NULL UNIQUE | Case-insensitive uniqueness |
+| created_at, updated_at | TEXT NOT NULL | |
+
+Note folders are flat and listed by name. Like project folders, they are not trashed: deleting one is immediate and only moves its notes, including notes in the trash, to "no folder".
 
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
@@ -138,7 +149,7 @@ Only top-level tasks move between projects; their subtasks (including trashed on
 - `tasks(project_id, deleted_at)`, `tasks(parent_task_id)`, `tasks(status_id)`, `tasks(due_date) WHERE deleted_at IS NULL`, `tasks(updated_at)`, `tasks(deletion_batch_id)`.
 - `projects(deleted_at, archived_at)`, `projects(folder_id)`, `projects(deletion_batch_id)`.
 - `task_dependencies(depends_on_task_id)`, `task_tags(tag_id)`, `project_tags(tag_id)`, `note_tags(tag_id)`.
-- `notes(project_id, deleted_at)`, `notes(updated_at)`, `notes(deletion_batch_id)`. Note lists read only the first 600 characters of each body (for the excerpt).
+- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(updated_at)`, `notes(deletion_batch_id)`. Note lists read only the first 600 characters of each body (for the excerpt).
 - Full-text search: FTS5 tables `tasks_fts` (title, description), `projects_fts` (name, description), and `notes_fts` (title, body) with the `unicode61 remove_diacritics 2` tokenizer, so "cafe" finds "Café". Each keeps its own copy keyed by ID rather than rowid, so it stays correct even if SQLite renumbers rowids; triggers keep it in sync. User input is converted to quoted prefix terms, so search text is never interpreted as query syntax.
 - Measured in Phase 3 with 6,250 tasks: list, filter, and search queries 3–38 ms; progress for 20 projects 21 ms.
 

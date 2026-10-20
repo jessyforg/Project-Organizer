@@ -39,6 +39,16 @@ export interface Folder {
   updatedAt: string;
 }
 
+/** A folder on the Notes screen (ADR-0014), separate from project folders. */
+export interface NoteFolder {
+  id: string;
+  name: string;
+  /** Notes in the folder that are not in the trash. */
+  noteCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Tag {
   id: string;
   name: string;
@@ -149,6 +159,8 @@ export interface RestoreResult {
 export interface NoteSummary {
   id: string;
   projectId: string;
+  /** The note's folder (ADR-0014); null when it is in no folder. */
+  folderId: string | null;
   title: string;
   excerpt: string;
   tagIds: string[];
@@ -160,6 +172,7 @@ export interface NoteSummary {
 export interface Note {
   id: string;
   projectId: string;
+  folderId: string | null;
   title: string;
   body: string;
   tagIds: string[];

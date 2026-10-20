@@ -4,9 +4,9 @@ import type { Folder, ProjectListItem } from '@shared/domain';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
+import { FolderNameDialog } from '../../components/FolderNameDialog';
 import {
   ConfirmDialog,
-  Dialog,
   EmptyState,
   ErrorNotice,
   Loading,
@@ -130,7 +130,15 @@ export function ProjectsPage() {
           ),
         )}
       <ProjectDialog open={creating} onClose={() => setCreating(false)} />
-      <FolderDialog state={folderDialog} onClose={() => setFolderDialog(null)} />
+      <FolderNameDialog
+        state={folderDialog && { name: folderDialog.folder?.name }}
+        onSave={(name) =>
+          folderDialog?.folder
+            ? window.api.folders.rename({ id: folderDialog.folder.id, name })
+            : window.api.folders.create({ name })
+        }
+        onClose={() => setFolderDialog(null)}
+      />
       <ConfirmDialog
         open={deleting !== null}
         title={`Delete the folder “${deleting?.name ?? ''}”?`}
@@ -174,74 +182,5 @@ function ProjectRows({ projects }: { projects: ProjectListItem[] }) {
         </li>
       ))}
     </ul>
-  );
-}
-
-function FolderDialog({
-  state,
-  onClose,
-}: {
-  state: { folder?: Folder } | null;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog
-      open={state !== null}
-      onClose={onClose}
-      label={state?.folder ? 'Rename folder' : 'New folder'}
-    >
-      {state && <FolderForm folder={state.folder} onDone={onClose} />}
-    </Dialog>
-  );
-}
-
-function FolderForm({ folder, onDone }: { folder: Folder | undefined; onDone: () => void }) {
-  const [name, setName] = useState(folder?.name ?? '');
-  const [error, setError] = useState<string | null>(null);
-  const invalidate = useInvalidate();
-  return (
-    <form
-      className="dialog__form"
-      noValidate
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!name.trim()) return setError('Enter a folder name.');
-        void (async () => {
-          const result = folder
-            ? await window.api.folders.rename({ id: folder.id, name })
-            : await window.api.folders.create({ name });
-          if (!result.ok) return setError(result.error.message);
-          invalidate();
-          onDone();
-        })();
-      }}
-    >
-      <h2>{folder ? 'Rename folder' : 'New folder'}</h2>
-      <div className="field">
-        <label htmlFor="folder-name">Folder name</label>
-        <input
-          id="folder-name"
-          className="input"
-          value={name}
-          maxLength={200}
-          autoFocus
-          aria-invalid={error !== null}
-          onChange={(e) => setName(e.target.value)}
-        />
-        {error && (
-          <p className="field__error" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
-      <div className="dialog__actions">
-        <button type="button" className="btn" onClick={onDone}>
-          Cancel
-        </button>
-        <button type="submit" className="btn btn--primary">
-          {folder ? 'Rename folder' : 'Create folder'}
-        </button>
-      </div>
-    </form>
   );
 }

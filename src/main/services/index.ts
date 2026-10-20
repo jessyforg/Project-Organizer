@@ -4,6 +4,7 @@ import type { ServiceContext } from './context';
 import { DashboardService } from './dashboard';
 import { DependencyService } from './dependencies';
 import { FolderService } from './folders';
+import { NoteFolderService } from './note-folders';
 import { NoteService } from './notes';
 import { ensureInbox, ProjectService } from './projects';
 import { SearchService } from './search';
@@ -22,6 +23,7 @@ export interface ProfileServices {
   statuses: StatusService;
   tasks: TaskService;
   notes: NoteService;
+  noteFolders: NoteFolderService;
   dependencies: DependencyService;
   trash: TrashService;
   search: SearchService;
@@ -37,6 +39,7 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
     statuses: new StatusService(ctx),
     tasks: new TaskService(ctx),
     notes: new NoteService(ctx),
+    noteFolders: new NoteFolderService(ctx),
     dependencies: new DependencyService(ctx),
     trash: new TrashService(ctx),
     search: new SearchService(ctx),

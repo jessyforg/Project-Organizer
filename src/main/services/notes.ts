@@ -1,9 +1,12 @@
 import type { Note, NoteSummary } from '@shared/domain';
-import type {
-  CreateNoteInput,
-  MoveNoteInput,
-  NoteListQuery,
-  UpdateNoteInput,
+import {
+  LIMITS,
+  type CreateNoteInput,
+  type ImportNotesInput,
+  type MoveNoteInput,
+  type NoteListQuery,
+  type SetNoteFolderInput,
+  type UpdateNoteInput,
 } from '@shared/schemas';
 import { toFtsQuery } from '../domain/fts';
 import { AppError } from '../errors';
@@ -12,6 +15,15 @@ import { ensureInbox, requireLiveProject } from './projects';
 import { NOTE_SELECT, NOTE_SUMMARY_SELECT, toNote, toNoteSummary, type NoteRow } from './rows';
 
 const DEFAULT_PAGE_SIZE = 500;
+const COPY_SUFFIX = ' (copy)';
+
+interface NewNote {
+  projectId: string | undefined;
+  folderId: string | null | undefined;
+  title: string;
+  body: string;
+  tagIds: string[];
+}
 
 /** Markdown notes (R26 / L1.5). Each note belongs to a project; the Inbox holds loose notes. */
 export class NoteService {
@@ -35,6 +47,8 @@ export class NoteService {
     };
     if (!query.includeArchived) add('p.archived_at IS NULL');
     if (query.projectId) add('n.project_id = ?', query.projectId);
+    if (query.folderId === null) add('n.folder_id IS NULL');
+    else if (query.folderId) add('n.folder_id = ?', query.folderId);
     if (query.tagIds?.length) {
       add(
         `EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id
@@ -55,23 +69,48 @@ export class NoteService {
   }
 
   create(input: CreateNoteInput): Note {
-    const { db } = this.ctx;
-    const id = this.ctx.newId();
-    db.transaction(() => {
-      const projectId = input.projectId ?? ensureInbox(this.ctx);
-      this.requireOpenProject(projectId, 'Unarchive the project before adding notes to it.');
-      const now = nowIso(this.ctx);
-      db.prepare(
-        `INSERT INTO notes (id, project_id, title, body, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(id, projectId, input.title, input.body ?? '', now, now);
-      const insert = db.prepare('INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)');
-      for (const tagId of new Set(input.tagIds ?? [])) {
-        if (!db.prepare('SELECT 1 FROM tags WHERE id = ?').get(tagId)) throw notFound('Tag');
-        insert.run(id, tagId);
-      }
-    })();
+    const id = this.ctx.db.transaction(() =>
+      this.insert({
+        projectId: input.projectId,
+        folderId: input.folderId,
+        title: input.title,
+        body: input.body ?? '',
+        tagIds: input.tagIds ?? [],
+      }),
+    )();
     return this.get(id);
+  }
+
+  /** A copy with the same body, project, folder, and tags, titled "… (copy)" (ADR-0014). */
+  duplicate(id: string): Note {
+    const source = this.get(id);
+    const title = source.title.slice(0, LIMITS.title - COPY_SUFFIX.length) + COPY_SUFFIX;
+    const copyId = this.ctx.db.transaction(() =>
+      this.insert({ ...source, title }, 'Unarchive the project before duplicating its notes.'),
+    )();
+    return this.get(copyId);
+  }
+
+  /** Creates notes read from Markdown files, all or none (ADR-0014). */
+  import(input: ImportNotesInput): Note[] {
+    const ids = this.ctx.db.transaction(() => {
+      const projectId = input.projectId ?? ensureInbox(this.ctx);
+      return input.notes.map((note) =>
+        this.insert({ ...note, projectId, folderId: input.folderId, tagIds: [] }),
+      );
+    })();
+    return ids.map((id) => this.get(id));
+  }
+
+  /** Puts the note in a folder, or with null, in no folder. */
+  setFolder(input: SetNoteFolderInput): Note {
+    const current = this.get(input.id);
+    if (current.folderId === input.folderId) return current;
+    if (input.folderId !== null) this.requireFolder(input.folderId);
+    this.ctx.db
+      .prepare('UPDATE notes SET folder_id = ?, updated_at = ? WHERE id = ?')
+      .run(input.folderId, nowIso(this.ctx), input.id);
+    return this.get(input.id);
   }
 
   /** Saves the title and/or body. An unchanged note keeps its `updated_at`. */
@@ -94,6 +133,35 @@ export class NoteService {
       .prepare('UPDATE notes SET project_id = ?, updated_at = ? WHERE id = ?')
       .run(input.projectId, nowIso(this.ctx), input.id);
     return this.get(input.id);
+  }
+
+  /** Inserts one note and its tags; call inside a transaction. */
+  private insert(
+    note: NewNote,
+    archivedMessage = 'Unarchive the project before adding notes to it.',
+  ): string {
+    const { db } = this.ctx;
+    const id = this.ctx.newId();
+    const projectId = note.projectId ?? ensureInbox(this.ctx);
+    this.requireOpenProject(projectId, archivedMessage);
+    if (note.folderId) this.requireFolder(note.folderId);
+    const now = nowIso(this.ctx);
+    db.prepare(
+      `INSERT INTO notes (id, project_id, folder_id, title, body, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    ).run(id, projectId, note.folderId ?? null, note.title, note.body, now, now);
+    const insertTag = db.prepare('INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)');
+    for (const tagId of new Set(note.tagIds)) {
+      if (!db.prepare('SELECT 1 FROM tags WHERE id = ?').get(tagId)) throw notFound('Tag');
+      insertTag.run(id, tagId);
+    }
+    return id;
+  }
+
+  private requireFolder(folderId: string): void {
+    if (!this.ctx.db.prepare('SELECT 1 FROM note_folders WHERE id = ?').get(folderId)) {
+      throw notFound('Note folder');
+    }
   }
 
   private requireOpenProject(projectId: string, archivedMessage: string): void {

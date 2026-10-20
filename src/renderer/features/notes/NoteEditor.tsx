@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { Eye, FileCode2, PenLine, Trash2, Type } from 'lucide-react';
+import {
+  ClipboardCopy,
+  CopyPlus,
+  Download,
+  Eye,
+  FileCode2,
+  PenLine,
+  Pencil,
+  Trash2,
+  Type,
+} from 'lucide-react';
 import type { Editor, JSONContent } from '@tiptap/react';
-import type { Note } from '@shared/domain';
+import { TRASH_RETENTION_DAYS, type Note } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
-import { useInvalidate } from '../../app/data';
+import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
 import { TagPicker } from '../../components/TagPicker';
-import { ConfirmDialog } from '../../components/ui';
+import { ConfirmDialog, MenuButton } from '../../components/ui';
 import { formatTimestamp } from '../../lib/format';
 import { DocumentEditor } from '../editor/DocumentEditor';
 import { noteExtensions } from '../editor/editor-config';
@@ -82,6 +92,9 @@ export function NoteEditor({ note }: { note: Note }) {
   const [leavePrompt, setLeavePrompt] = useState<{ resolve: (leave: boolean) => void } | null>(
     null,
   );
+  const [confirmTrash, setConfirmTrash] = useState(false);
+  const titleField = useRef<HTMLTextAreaElement>(null);
+  const folders = useQuery('note-folders', () => window.api.noteFolders.list());
 
   const draft = useRef<Draft>({ title: note.title, body: note.body });
   const saved = useRef<Draft>({ title: note.title, body: note.body });
@@ -212,6 +225,42 @@ export function NoteEditor({ note }: { note: Note }) {
     toast({ message: 'Note moved.' });
   };
 
+  const setFolder = async (folderId: string | null) => {
+    const result = await window.api.notes.setFolder({ id: note.id, folderId });
+    invalidate();
+    if (!result.ok) toast({ message: result.error.message, tone: 'error' });
+  };
+
+  /** Note actions work on what is on screen, so they save first (ADR-0014). */
+  const afterSave = (action: () => Promise<void>) => async () => {
+    if (await save()) await action();
+  };
+
+  const rename = () => {
+    titleField.current?.focus();
+    titleField.current?.select();
+  };
+
+  const duplicate = afterSave(async () => {
+    const result = await window.api.notes.duplicate({ id: note.id });
+    invalidate();
+    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
+    navigate({ name: 'notes', noteId: result.data.id });
+    toast({ message: `Created “${result.data.title}”.` });
+  });
+
+  const copyMarkdown = afterSave(async () => {
+    const result = await window.api.notes.copyMarkdown({ id: note.id });
+    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
+    toast({ message: 'Copied the note as Markdown.' });
+  });
+
+  const exportMarkdown = afterSave(async () => {
+    const result = await window.api.notes.exportMarkdown({ id: note.id });
+    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
+    if (result.data.saved) toast({ message: `Saved “${result.data.fileName}”.` });
+  });
+
   const setTags = async (tagIds: string[]) => {
     const result = await window.api.tags.setNoteTags({ noteId: note.id, tagIds });
     if (!result.ok) toast({ message: result.error.message, tone: 'error' });
@@ -259,6 +308,7 @@ export function NoteEditor({ note }: { note: Note }) {
         </label>
         {/* A one-line field that wraps long titles instead of hiding them. */}
         <textarea
+          ref={titleField}
           id={`${id}-title`}
           className="note-editor__title"
           rows={1}
@@ -281,23 +331,65 @@ export function NoteEditor({ note }: { note: Note }) {
             Try again
           </button>
         )}
+        <MenuButton
+          label="Note actions"
+          items={[
+            { label: 'Rename', icon: Pencil, onSelect: rename },
+            { label: 'Duplicate', icon: CopyPlus, onSelect: () => void duplicate() },
+            {
+              label: 'Copy as Markdown',
+              icon: ClipboardCopy,
+              onSelect: () => void copyMarkdown(),
+            },
+            {
+              label: 'Export as Markdown…',
+              icon: Download,
+              onSelect: () => void exportMarkdown(),
+            },
+            {
+              label: 'Move to trash…',
+              icon: Trash2,
+              danger: true,
+              separated: true,
+              onSelect: () => setConfirmTrash(true),
+            },
+          ]}
+        />
       </div>
 
       <div className="note-editor__meta">
-        <div className="field">
-          <label htmlFor={`${id}-project`}>Project</label>
-          <select
-            id={`${id}-project`}
-            className="select"
-            value={note.projectId}
-            onChange={(e) => void move(e.target.value)}
-          >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+        <div className="note-editor__places">
+          <div className="field">
+            <label htmlFor={`${id}-project`}>Project</label>
+            <select
+              id={`${id}-project`}
+              className="select"
+              value={note.projectId}
+              onChange={(e) => void move(e.target.value)}
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor={`${id}-folder`}>Folder</label>
+            <select
+              id={`${id}-folder`}
+              className="select"
+              value={note.folderId ?? ''}
+              onChange={(e) => void setFolder(e.target.value || null)}
+            >
+              <option value="">No folder</option>
+              {(folders.data ?? []).map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <TagPicker selected={note.tagIds} onChange={setTags} />
       </div>
@@ -372,16 +464,22 @@ export function NoteEditor({ note }: { note: Note }) {
         <p className="muted">Nothing to preview yet. Choose Write to add text.</p>
       )}
 
-      <div className="section">
-        <p className="stamp">
-          Created {formatTimestamp(note.createdAt)}. Updated {formatTimestamp(note.updatedAt)}.
-        </p>
-        <div>
-          <button type="button" className="btn btn--danger" onClick={() => void trash()}>
-            <Trash2 aria-hidden /> Move to trash
-          </button>
-        </div>
-      </div>
+      <p className="stamp">
+        Created {formatTimestamp(note.createdAt)}. Updated {formatTimestamp(note.updatedAt)}.
+      </p>
+
+      <ConfirmDialog
+        open={confirmTrash}
+        title={`Move “${title.trim() || UNTITLED}” to the trash?`}
+        body={`You can restore it from Trash for ${TRASH_RETENTION_DAYS} days.`}
+        confirmLabel="Move to trash"
+        danger
+        onCancel={() => setConfirmTrash(false)}
+        onConfirm={() => {
+          setConfirmTrash(false);
+          void trash();
+        }}
+      />
 
       <ConfirmDialog
         open={leavePrompt !== null}

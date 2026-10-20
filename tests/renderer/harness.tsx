@@ -22,6 +22,8 @@ const DEFAULTS: Partial<Record<IpcChannel, unknown>> = {
   'projects:list': [],
   'tags:list': [],
   'folders:list': [],
+  'noteFolders:list': [],
+  'notes:list': [],
   'tasks:list': [],
   'trash:list': [],
   'dependencies:list': { prerequisites: [], dependents: [] },

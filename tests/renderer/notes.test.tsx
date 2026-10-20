@@ -14,6 +14,7 @@ function makeNote(overrides: Partial<Note> = {}): Note {
   return {
     id: '7a1d2c3b-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
     projectId: 'p1',
+    folderId: null,
     title: 'Plan',
     body: '',
     tagIds: [],

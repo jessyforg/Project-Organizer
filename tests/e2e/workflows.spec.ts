@@ -182,8 +182,10 @@ test('notes: write Markdown, autosave, preview, search, leave safely, trash and 
   await expect(page.getByTestId('note-save-state')).toHaveText('Saved');
   await expect(editor).toContainText('Decide date.');
 
-  // Trash the note, then restore it from the trash.
-  await editor.getByRole('button', { name: 'Move to trash' }).click();
+  // Trash the note (the menu asks first), then restore it from the trash.
+  await editor.getByRole('button', { name: 'Note actions' }).click();
+  await page.getByRole('menuitem', { name: 'Move to trash…' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Move to trash' }).click();
   await expect(page.getByText('No notes yet. Create one to start.')).toBeVisible();
   await page.keyboard.press('Control+4');
   await expect(page.getByRole('list', { name: 'Items in trash' })).toContainText('Note');
