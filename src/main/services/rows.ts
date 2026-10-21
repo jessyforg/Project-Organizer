@@ -189,6 +189,7 @@ export interface NoteRow {
   id: string;
   project_id: string;
   folder_id: string | null;
+  archived_at: string | null;
   title: string;
   /** The full body for `NOTE_SELECT`, only its start for `NOTE_SUMMARY_SELECT`. */
   body: string;
@@ -197,7 +198,7 @@ export interface NoteRow {
   tag_ids: string;
 }
 
-const NOTE_COLUMNS = `n.id, n.project_id, n.folder_id, n.title, n.created_at, n.updated_at,
+const NOTE_COLUMNS = `n.id, n.project_id, n.folder_id, n.archived_at, n.title, n.created_at, n.updated_at,
   (SELECT json_group_array(tag_id) FROM note_tags WHERE note_id = n.id) AS tag_ids`;
 
 export const NOTE_SELECT = `SELECT ${NOTE_COLUMNS}, n.body FROM notes n JOIN projects p ON p.id = n.project_id`;
@@ -211,6 +212,7 @@ export function toNote(row: NoteRow): Note {
     id: row.id,
     projectId: row.project_id,
     folderId: row.folder_id,
+    archivedAt: row.archived_at,
     title: row.title,
     body: row.body,
     tagIds: idList(row.tag_ids),
@@ -224,6 +226,7 @@ export function toNoteSummary(row: NoteRow): NoteSummary {
     id: row.id,
     projectId: row.project_id,
     folderId: row.folder_id,
+    archivedAt: row.archived_at,
     title: row.title,
     excerpt: markdownExcerpt(row.body),
     tagIds: idList(row.tag_ids),
@@ -240,10 +243,10 @@ export interface NoteFolderRow {
   updated_at: string;
 }
 
-/** Counts the notes the Notes list would show: live, in a live, unarchived project. */
+/** Counts the notes the Notes list shows: live, unarchived, in a live, unarchived project. */
 export const NOTE_FOLDER_SELECT = `SELECT f.id, f.name, f.created_at, f.updated_at,
   (SELECT count(*) FROM notes n JOIN projects p ON p.id = n.project_id
-   WHERE n.folder_id = f.id AND n.deleted_at IS NULL
+   WHERE n.folder_id = f.id AND n.deleted_at IS NULL AND n.archived_at IS NULL
      AND p.deleted_at IS NULL AND p.archived_at IS NULL) AS note_count
   FROM note_folders f`;
 

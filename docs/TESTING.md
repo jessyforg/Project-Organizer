@@ -85,14 +85,18 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 8. Notes (L1.5): write Markdown in Markdown mode → autosave → preview → leave the screen while typing (saved first) → global search finds the body → trash and restore → restart → note persists.
 9. Visual note editing (ADR-0013): type with Markdown shortcuts and Ctrl+B in the visual editor → autosave → leave and reopen → restart → the formatting is shown and the stored text is the expected Markdown.
 10. Note actions, import, and folders (ADR-0014): create a folder → import two `.md` files into it → duplicate → copy as Markdown (system clipboard checked) → export (file checked) → trash with confirmation → restart → delete the folder; its notes remain.
-11. Notes: close the window right after typing in the visual editor → restart → the text was saved. (Removing the editor's `beforeunload` handler makes this test fail.) The retry and the "could not be saved" dialog in the main process, used when a save is still running or fails, are not automated; they were reviewed in code only.
+11. Notes library and views (ADR-0015): right-click a note → Archive → it leaves the library → Archived filter → opens read-only → Unarchive → editable → Ctrl+Shift+F hides the sidebar → Escape inside the editor restores it.
+12. Colours and tags (ADR-0015): choose teal and warm → a tag is deleted after a confirmation naming where it was used → restart → the colours persist and the note kept, without the tag.
+13. Notes: close the window right after typing in the visual editor → restart → the text was saved. (Removing the editor's `beforeunload` handler makes this test fail.) The retry and the "could not be saved" dialog in the main process, used when a save is still running or fails, are not automated; they were reviewed in code only.
 
 ### Status of the end-to-end workflows
 
-12. Kanban: move cards with the Move dialog and by real drag and drop → order and status persist across a restart → Done completes the task.
-13. Calendar: a task appears on its due date → open it from the calendar → change the due date → the entry moves at once → completed tasks hidden unless shown.
+14. Kanban: move cards with the Move dialog and by real drag and drop → order and status persist across a restart → Done completes the task.
+15. Calendar: a task appears on its due date → open it from the calendar → change the due date → the entry moves at once → completed tasks hidden unless shown.
 
-All thirteen workflows are automated: 1–5, 7–9, and 11–13 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, and 10 in `tests/e2e/notes.spec.ts`. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
+All fifteen workflows are automated: 1–5, 7–9, and 12–15 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, and 10–11 in `tests/e2e/notes.spec.ts`.
+
+Some editor behaviour can only be tested end to end: jsdom does not reproduce ProseMirror marking Escape as handled, so the focus-mode Escape check lives in workflow 11, not in a component test. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
 
 Component tests use the real preload `createApi` over a scripted fake backend (`tests/renderer/harness.tsx`), so they exercise the exact API shape the app uses.
 
@@ -132,11 +136,11 @@ A full manual pass with a screen reader is still recommended before public relea
 
 ### Accessibility scan
 
-`tests/e2e/accessibility.spec.ts` runs axe-core (WCAG 2.2 A/AA rules) on the start screen, Today, My tasks, a project with the task details panel open, the project board and its Move dialog, Projects, Notes (a note with a table in Markdown preview and write modes, with headings, a task list, a link, code, and an image reference; and a note in the visual editor, in a note folder, with its actions menu open), Calendar (month, week, and day views), Trash, Settings, and the new-task dialog, in light and dark themes. It uses axe's legacy mode because Electron cannot open the helper page axe otherwise needs. The scanner was confirmed to report injected violations.
+`tests/e2e/accessibility.spec.ts` runs axe-core (WCAG 2.2 A/AA rules) on the start screen, Today, My tasks, a project with the task details panel open, the project board and its Move dialog, Projects, Notes (a note with a table in Markdown preview and write modes, with headings, a task list, a link, code, and an image reference; and a note in the visual editor, in a note folder, with its actions menu open), the notes library and its right-click menu, focus mode, Calendar (month, week, and day views), Trash, Settings (also with the violet and warm palette), and the new-task dialog, in light and dark themes. It uses axe's legacy mode because Electron cannot open the helper page axe otherwise needs. The scanner was confirmed to report injected violations.
 
 ### Upgrade fixtures
 
-`tests/fixtures/` holds committed databases from each released schema version (app v1, profile v1, profile v2, and profile v3, the notes schema in the 0.2.0 installer). The v3 fixture is filled with SQL rather than services, because today's services expect columns added later; its test upgrades to v4 and checks that notes, tags, search, and note folders work. `tests/unit/fixtures.test.ts` upgrades copies to the current schema and checks data and relationships. When a version is released with a new migration, add its fixture with `REGENERATE_FIXTURES=1 npx vitest run tests/unit/fixtures.test.ts` (after extending the generator).
+`tests/fixtures/` holds committed databases from each released schema version (app v1, profile v1, profile v2, profile v3 from the 0.2.0 installer, and profile v4 from the 0.3.0 installer). The v3 fixture is filled with SQL rather than services, because today's services expect columns added later; its test upgrades to v4 and checks that notes, tags, search, and note folders work. `tests/unit/fixtures.test.ts` upgrades copies to the current schema and checks data and relationships. When a version is released with a new migration, add its fixture with `REGENERATE_FIXTURES=1 npx vitest run tests/unit/fixtures.test.ts` (after extending the generator).
 
 ### Performance
 

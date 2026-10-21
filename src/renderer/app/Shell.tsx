@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import type { ProfileSettings } from '@shared/domain';
 import type { ProfileSummary } from '@shared/types';
 import { Dialog, Loading } from '../components/ui';
 import { CalendarPage } from '../features/calendar/CalendarPage';
@@ -11,7 +12,9 @@ import { SettingsPage, ShortcutTable } from '../features/settings/SettingsPage';
 import { MyTasksPage } from '../features/tasks/MyTasksPage';
 import { TaskDetails } from '../features/tasks/TaskDetails';
 import { TrashPage } from '../features/trash/TrashPage';
+import { applyPalette } from '../theme/palettes';
 import { useQuery } from './data';
+import { useFocusMode } from './focus';
 import { useNavigation, type Route } from './navigation';
 import { useQuickAdd } from './quick-add';
 import { useShortcuts } from './shortcuts';
@@ -45,6 +48,7 @@ export function Shell({
   const searchRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { focused } = useFocusMode();
   useTheme();
 
   const handlers = useMemo(
@@ -67,8 +71,8 @@ export function Shell({
   }, [routeKey, route.name]);
 
   return (
-    <div className="shell">
-      <Sidebar ref={searchRef} profile={active} />
+    <div className={focused ? 'shell shell--focus' : 'shell'}>
+      {!focused && <Sidebar ref={searchRef} profile={active} />}
       <main className="main" ref={mainRef} tabIndex={-1} style={{ outline: 'none' }}>
         {route.name === 'dashboard' && <DashboardPage />}
         {route.name === 'tasks' && <MyTasksPage />}
@@ -103,13 +107,28 @@ export function Shell({
   );
 }
 
-/** Applies the profile's theme preference to the document. */
+/** Applies the profile's theme and colours, following Windows when the theme is "system". */
 function useTheme(): void {
   const settings = useQuery('settings', () => window.api.settings.get());
-  const theme = settings.data?.theme;
+  const theme = settings.data?.theme ?? 'system';
+  const accent = settings.data?.accent ?? 'blue';
+  const surface = settings.data?.surface ?? 'cool';
   useEffect(() => {
-    applyTheme(theme ?? 'system');
-  }, [theme]);
+    const apply = () => applyAppearance({ theme, accent, surface });
+    apply();
+    const media = window.matchMedia?.('(prefers-color-scheme: dark)');
+    media?.addEventListener('change', apply);
+    return () => media?.removeEventListener('change', apply);
+  }, [theme, accent, surface]);
+}
+
+/** The theme and colour palette together (ADR-0015). */
+export function applyAppearance({ theme, accent, surface }: ProfileSettings): void {
+  applyTheme(theme);
+  const dark =
+    theme === 'dark' ||
+    (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches === true);
+  applyPalette(accent, surface, dark ? 'dark' : 'light');
 }
 
 export function applyTheme(theme: 'system' | 'light' | 'dark'): void {

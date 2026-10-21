@@ -2,6 +2,58 @@
 
 Newest entries first.
 
+## 2026-10-21 — Notes library and views, archiving, colour themes, tag management, right-click menus (version 0.4.0), awaiting merge approval
+
+**Approval:** the product owner approved all recommended options ("do all of the recommended"):
+- the secondary colour is the background tone;
+- archived notes are read-only;
+- right-click menus are on Notes only;
+- 0.3.0 is merged first.
+
+0.3.0 was fast-forwarded into `main`, which is not pushed. This work is on `feature/notes-views-archive-theme`. Decisions are recorded in [ADR-0015](DECISIONS/0015-notes-views-archive-colours-menus.md).
+
+**Scope completed:**
+- **Notes library and note view:** sort, an Archived filter, and richer rows. The note view adds focus mode (Ctrl+Shift+F, Escape).
+- **Archived notes:** schema v5 (`notes.archived_at`). They are read-only with an Unarchive banner, hidden from lists and counts, and still found by search. Archive and Unarchive can be undone.
+- **Colour themes:** six primary colours and three background tones per profile. The palette data and contrast test live in `src/shared/palettes.ts`.
+- **Settings → Tags:** usage counts, edit, and delete with a confirmation naming where the tag is used.
+- **Right-click menus:** note rows and folders, also opened with Shift+F10 or the Menu key. The new `useContextMenu` and `MenuList` are shared with the ⋯ menus, and `useNoteActions` is shared by the list and the editor.
+- **Version 0.4.0**, with a CHANGELOG entry, a committed `profile-v4.db` fixture, and an upgrade test.
+
+**Defects found and fixed during the work:**
+- **Wrong note after Duplicate (data risk):** the note view reused the previous note's data while the next loaded. After Duplicate it showed the original's text under the copy's address, and edits would have saved there.
+  - Found by the end-to-end duplicate test.
+  - The view is now keyed by note.
+  - A component test fails without the fix.
+- **Unarchiving re-saved the note:** Tiptap's `setEditable` reports an update by default, so the note was reformatted and saved.
+  - Found by the end-to-end archive test (the close was held for an unexpected save).
+  - Fixed with `setEditable(…, false)`.
+  - A component test fails without the fix.
+- **Escape did not leave focus mode from inside the editor:** ProseMirror marks Escape as handled, and the handler ignored handled events.
+  - Found end to end. jsdom does not reproduce it, so the end-to-end test guards it.
+- **Palette left on the profile screen:** a palette left from a profile could be for the other mode, giving light text on light surfaces. Found in screenshot review; the profile screen now resets it.
+- **Note details still shown in focus mode:** a `hidden` attribute lost to `display: grid`. They are no longer rendered in focus mode.
+- **Archived banner icon** stretched by `.notice`'s first-child rule.
+- **Refs in render:** a lint rule (refs read during render) led to `MenuButton` building its items when it opens.
+
+**Verification (2026-10-21):**
+
+| Check | Result |
+|---|---|
+| `npm run check` (typecheck, lint, formatting, unit tests) | Passed — 378 of 378 (65 new, including 38 palette contrast and drift tests, archive, sort, tag-usage, and settings service tests, a v4 upgrade test, and component tests for the views, focus mode, archived notes, right-click menus, Tags, and Appearance) |
+| `npm run test:e2e` | Passed — 17 of 17, including two new workflows and accessibility scans of the library, its right-click menu, focus mode, and Settings with a non-default palette, in both themes |
+| Contrast | All 36 palette combinations ≥ 4.5:1 for every text token on every surface (lowest 4.93:1); the test was confirmed to fail on an unreadable colour |
+| `npm audit --omit=dev` | 0 vulnerabilities; no new packages |
+| Screenshots (production build) | Library with right-click menu, note view, focus mode, archived note, Settings (teal/warm dark, violet/warm light), library at 760 px; no page errors, no sideways scrolling |
+
+**Known limitations:**
+- Right-click menus exist only on Notes.
+- Palettes are presets.
+- Folders are flat.
+- No manual screen-reader pass.
+
+**Next step:** the product owner reviews the 0.4.0 installer and approves the merge into `main`. Phase 3 (slash commands) waits for approval.
+
 ## 2026-10-21 — Note actions, Markdown import, and note folders (version 0.3.0), awaiting merge approval
 
 **Approval:** the product owner approved the actions-menu plan with its recommended options:

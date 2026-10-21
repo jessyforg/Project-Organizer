@@ -3,8 +3,10 @@ import type { ProfileSummary } from '@shared/types';
 import { ErrorNotice, Loading } from '../components/ui';
 import { ProfileSetup } from '../features/profiles/ProfileSetup';
 import { DataProvider } from './data';
+import { FocusModeProvider } from './focus';
 import { NavigationProvider } from './navigation';
 import { QuickAddProvider } from './quick-add';
+import { resetPalette } from '../theme/palettes';
 import { applyTheme, Shell } from './Shell';
 import { ToastProvider } from './toasts';
 
@@ -63,9 +65,15 @@ export function App() {
         // Remount everything when the profile changes so no data from another profile lingers.
         <DataProvider key={state.active.id}>
           <NavigationProvider>
-            <QuickAddProvider>
-              <Shell active={state.active} profiles={state.profiles} onProfilesChanged={refresh} />
-            </QuickAddProvider>
+            <FocusModeProvider>
+              <QuickAddProvider>
+                <Shell
+                  active={state.active}
+                  profiles={state.profiles}
+                  onProfilesChanged={refresh}
+                />
+              </QuickAddProvider>
+            </FocusModeProvider>
           </NavigationProvider>
         </DataProvider>
       )}
@@ -74,6 +82,10 @@ export function App() {
 }
 
 function ProfileGate(props: { profiles: ProfileSummary[]; onChanged: () => Promise<void> }) {
-  useEffect(() => applyTheme('system'), []);
+  // No profile is open: the default theme and colours, without any profile's palette.
+  useEffect(() => {
+    applyTheme('system');
+    resetPalette();
+  }, []);
   return <ProfileSetup {...props} />;
 }

@@ -1,4 +1,4 @@
-import type { Tag } from '@shared/domain';
+import type { Tag, TagUsage } from '@shared/domain';
 import type { CreateTagInput, UpdateTagInput } from '@shared/schemas';
 import { nameKey } from '../domain/text';
 import { notFound, nowIso, placeholders, withUniqueName, type ServiceContext } from './context';
@@ -43,6 +43,25 @@ export class TagService {
         .run(name, nameKey(name), color, nowIso(this.ctx), input.id),
     );
     return this.get(input.id);
+  }
+
+  /** How many live tasks, projects, and notes use each tag. */
+  usage(): Record<string, TagUsage> {
+    const rows = this.ctx.db
+      .prepare(
+        `SELECT t.id,
+           (SELECT count(*) FROM task_tags l JOIN tasks x ON x.id = l.task_id
+            WHERE l.tag_id = t.id AND x.deleted_at IS NULL) AS tasks,
+           (SELECT count(*) FROM project_tags l JOIN projects x ON x.id = l.project_id
+            WHERE l.tag_id = t.id AND x.deleted_at IS NULL) AS projects,
+           (SELECT count(*) FROM note_tags l JOIN notes x ON x.id = l.note_id
+            WHERE l.tag_id = t.id AND x.deleted_at IS NULL) AS notes
+         FROM tags t`,
+      )
+      .all() as ({ id: string } & TagUsage)[];
+    return Object.fromEntries(
+      rows.map(({ id, tasks, projects, notes }) => [id, { tasks, projects, notes }]),
+    );
   }
 
   /** Removes the tag from every task, project, and note. */

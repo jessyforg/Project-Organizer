@@ -87,6 +87,22 @@ if (process.env['REGENERATE_FIXTURES']) {
          VALUES ('9b8a7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d', '3c0d5b2a-1f4e-4a7b-9c8d-0e1f2a3b4c5d')`,
       ).run();
     });
+    // Released in the 0.3.0 installer: note folders.
+    await build(path.join(DIR, 'profile-v4.db'), profileMigrations.slice(0, 4), (db) => {
+      ensureInbox({ db, clock, newId: randomUUID });
+      const inbox = db.prepare('SELECT id FROM projects WHERE is_inbox = 1').get() as {
+        id: string;
+      };
+      db.prepare(
+        `INSERT INTO note_folders (id, name, name_key, created_at, updated_at)
+         VALUES ('4e3d2c1b-0a9f-4e8d-9c7b-6a5f4e3d2c1b', 'Plans', 'plans', 'x', 'x')`,
+      ).run();
+      db.prepare(
+        `INSERT INTO notes (id, project_id, folder_id, title, body, created_at, updated_at)
+         VALUES ('8a7b6c5d-4e3f-4a2b-9c1d-0e9f8a7b6c5d', ?, '4e3d2c1b-0a9f-4e8d-9c7b-6a5f4e3d2c1b',
+                 'Retro', 'What went well', 'x', 'x')`,
+      ).run(inbox.id);
+    });
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -101,6 +117,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['profile-v1.db', profileMigrations],
       ['profile-v2.db', profileMigrations],
       ['profile-v3.db', profileMigrations],
+      ['profile-v4.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -168,6 +185,27 @@ if (process.env['REGENERATE_FIXTURES']) {
       s.notes.setFolder({ id: roadmap!.id, folderId: folder.id });
       expect(s.noteFolders.list()).toEqual([expect.objectContaining({ noteCount: 1 })]);
       expect(s.search.search('folders').notes.map((n) => n.title)).toEqual(['Roadmap']);
+      db.close();
+    });
+
+    it('keeps profile v4 note folders, and adds note archiving (schema v5)', async () => {
+      const db = openDatabase(copy('profile-v4.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      const s = createProfileServices({ db, clock, newId: randomUUID });
+      const [retro] = s.notes.list();
+      expect(retro).toMatchObject({ title: 'Retro', archivedAt: null });
+      expect(s.noteFolders.list()).toEqual([
+        expect.objectContaining({ name: 'Plans', noteCount: 1 }),
+      ]);
+      s.notes.archive(retro!.id);
+      expect(s.notes.list()).toEqual([]);
+      expect(s.noteFolders.list()[0]!.noteCount).toBe(0);
       db.close();
     });
 

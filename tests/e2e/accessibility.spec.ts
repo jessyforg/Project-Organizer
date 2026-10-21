@@ -161,17 +161,30 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoViolations(page, 'Projects');
 
     await nav.getByRole('button', { name: 'Notes' }).click();
+    await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
+    await expectNoViolations(page, 'Notes (library)');
+    await page
+      .getByRole('list', { name: 'Notes' })
+      .getByRole('button')
+      .first()
+      .click({ button: 'right' });
+    await expectNoViolations(page, 'Notes (right-click menu)');
+    await page.keyboard.press('Escape');
     await page.getByRole('list', { name: 'Notes' }).getByRole('button').first().click();
     // The seeded note has a table, so it opens in Markdown mode.
     await expect(page.getByRole('heading', { name: 'Launch', level: 1 })).toBeVisible();
     await expectNoViolations(page, 'Notes (Markdown preview)');
     await page.getByRole('button', { name: 'Write' }).click();
     await expectNoViolations(page, 'Notes (Markdown write)');
+    await page.getByRole('button', { name: 'All notes' }).click();
     await page.getByRole('button', { name: 'New note' }).click();
     await page.getByRole('textbox', { name: 'Note text' }).fill('A visual note');
     await expectNoViolations(page, 'Notes (visual)');
     await page.getByRole('button', { name: 'Note actions' }).click();
     await expectNoViolations(page, 'Notes (actions menu)');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Focus' }).click();
+    await expectNoViolations(page, 'Notes (focus mode)');
     await page.keyboard.press('Escape');
 
     await nav.getByRole('button', { name: 'Trash' }).click();
@@ -179,6 +192,13 @@ for (const theme of ['light', 'dark'] as const) {
 
     await nav.getByRole('button', { name: 'Settings' }).click();
     await expectNoViolations(page, 'Settings');
+    // A non-default palette: the contrast unit test checks every combination; this checks one
+    // in the running app, with every other rule too.
+    await page.getByRole('radio', { name: 'Violet' }).check();
+    await page.getByRole('radio', { name: 'Warm' }).check();
+    await expectNoViolations(page, 'Settings (violet, warm)');
+    await page.getByRole('radio', { name: 'Blue' }).check();
+    await page.getByRole('radio', { name: 'Cool grey' }).check();
 
     await page.keyboard.press('Control+n');
     await expect(page.getByRole('dialog', { name: 'New task' })).toBeVisible();

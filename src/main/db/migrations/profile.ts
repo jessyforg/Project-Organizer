@@ -244,4 +244,13 @@ export const profileMigrations: readonly Migration[] = [
       CREATE INDEX notes_folder ON notes (folder_id, deleted_at);
     `,
   },
+  {
+    // Archived notes (ADR-0015): hidden from lists, read-only until unarchived.
+    version: 5,
+    name: 'note_archiving',
+    sql: `
+      ALTER TABLE notes ADD COLUMN archived_at TEXT;
+      CREATE INDEX notes_archived ON notes (archived_at) WHERE archived_at IS NOT NULL;
+    `,
+  },
 ];

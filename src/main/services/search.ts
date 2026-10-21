@@ -34,7 +34,12 @@ export class SearchService {
     return {
       projects: projects.map(toProject),
       tasks: this.tasks.list({ text, includeArchived: true, limit: TASK_LIMIT }),
-      notes: this.notes.list({ text, includeArchived: true, limit: NOTE_LIMIT }),
+      notes: this.notes.list({
+        text,
+        includeArchived: true,
+        archived: 'include',
+        limit: NOTE_LIMIT,
+      }),
     };
   }
 }

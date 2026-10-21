@@ -14,6 +14,7 @@ function makeNote(overrides: Partial<Note> = {}): Note {
     id: '7a1d2c3b-4e5f-4a6b-8c7d-9e0f1a2b3c4d',
     projectId: 'p1',
     folderId: null,
+    archivedAt: null,
     title: 'Plan',
     body: 'Ship it\n',
     tagIds: [],
@@ -47,7 +48,7 @@ const channelsCalled = (backend: ReturnType<typeof installApi>) =>
     .filter((c) => c.startsWith('notes:') || c.startsWith('trash:'));
 
 describe('Note actions menu', () => {
-  it('offers rename, duplicate, copy, export, and trash, in that order', async () => {
+  it('offers rename, duplicate, move, archive, copy, export, and trash, in that order', async () => {
     installApi();
     renderWithApp(<NoteEditor note={makeNote()} />);
     const menu = await openMenu();
@@ -55,7 +56,15 @@ describe('Note actions menu', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((i) => i.textContent),
-    ).toEqual(['Rename', 'Duplicate', 'Copy as Markdown', 'Export as Markdown…', 'Move to trash…']);
+    ).toEqual([
+      'Rename',
+      'Duplicate',
+      'Move to folder…',
+      'Archive',
+      'Copy as Markdown',
+      'Export as Markdown…',
+      'Move to trash…',
+    ]);
   });
 
   it('Rename puts the cursor in the title with the text selected', async () => {

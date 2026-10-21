@@ -1,8 +1,12 @@
 import { useDeferredValue, useEffect, useRef, useState, type DragEvent } from 'react';
 import {
+  Archive,
+  ArrowLeft,
   Folder as FolderIcon,
   FolderPlus,
   Inbox,
+  Maximize2,
+  Minimize2,
   NotebookPen,
   Pencil,
   Plus,
@@ -11,17 +15,20 @@ import {
   Upload,
 } from 'lucide-react';
 import type { NoteFolder } from '@shared/domain';
+import type { NoteSort } from '@shared/schemas';
 import { useInvalidate, useQuery } from '../../app/data';
+import { useFocusMode } from '../../app/focus';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
 import { FolderNameDialog } from '../../components/FolderNameDialog';
 import {
   ConfirmDialog,
-  EmptyState,
   ErrorNotice,
   Loading,
   MenuButton,
   PageHeader,
+  useContextMenu,
+  type MenuItem,
 } from '../../components/ui';
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
 import { useLookups } from '../tasks/useLookups';
@@ -29,12 +36,18 @@ import { importSummary, readMarkdownFiles } from './import';
 import { NoteEditor, UNTITLED } from './NoteEditor';
 import { NoteList } from './NoteList';
 
-/** Which notes the list shows: all, those in no folder, or one folder's (ADR-0014). */
-type FolderFilter = 'all' | 'none' | { id: string };
+/** Which notes the library shows (ADR-0014, ADR-0015). */
+type FolderFilter = 'all' | 'none' | 'archived' | { id: string };
 
 const folderIdOf = (filter: FolderFilter) => (typeof filter === 'object' ? filter.id : null);
 const sameFilter = (a: FolderFilter, b: FolderFilter) =>
   typeof a === 'object' && typeof b === 'object' ? a.id === b.id : a === b;
+
+const SORT_LABEL: Record<NoteSort, string> = {
+  updated: 'Last updated',
+  created: 'Newest',
+  title: 'Title (A–Z)',
+};
 
 /** Whether a paste lands where the user is typing, so it is not an import. */
 function isEditable(target: EventTarget | null): boolean {
@@ -44,7 +57,10 @@ function isEditable(target: EventTarget | null): boolean {
   );
 }
 
-/** Markdown notes (R26 / L1.5): folders and a filterable list beside the open note. */
+/**
+ * Notes (R26 / L1.5, ADR-0015): a library for finding notes, and a separate view for reading or
+ * writing one. The page stays mounted between the two, so the library keeps its filters.
+ */
 export function NotesPage({
   noteId,
   projectId,
@@ -52,24 +68,56 @@ export function NotesPage({
   noteId: string | null;
   projectId?: string | undefined;
 }) {
+  const [filters, setFilters] = useState<LibraryFilters>({
+    text: '',
+    project: projectId ?? '',
+    tag: '',
+    folder: 'all',
+    sort: 'updated',
+  });
+  // Keyed by the note, so each note gets fresh data: reusing the previous note's data while
+  // the next one loads would show, and then save, the wrong text.
+  return noteId ? (
+    <NoteView key={noteId} noteId={noteId} />
+  ) : (
+    <NotesLibrary filters={filters} setFilters={setFilters} />
+  );
+}
+
+interface LibraryFilters {
+  text: string;
+  project: string;
+  tag: string;
+  folder: FolderFilter;
+  sort: NoteSort;
+}
+
+function NotesLibrary({
+  filters,
+  setFilters,
+}: {
+  filters: LibraryFilters;
+  setFilters: (update: (current: LibraryFilters) => LibraryFilters) => void;
+}) {
   const lookups = useLookups();
   const { navigate } = useNavigation();
   const invalidate = useInvalidate();
   const toast = useToast();
-  const [text, setText] = useState('');
-  const [project, setProject] = useState(projectId ?? '');
-  const [tag, setTag] = useState('');
-  const [folder, setFolder] = useState<FolderFilter>('all');
+  const { text, project, tag, folder, sort } = filters;
+  const set = (patch: Partial<LibraryFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [folderDialog, setFolderDialog] = useState<{ folder?: NoteFolder } | null>(null);
   const [deleting, setDeleting] = useState<NoteFolder | null>(null);
   const [dragging, setDragging] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
+  const folderMenu = useContextMenu();
   const query = useDeferredValue({
     text: text || undefined,
     projectId: project || undefined,
     tagIds: tag ? [tag] : undefined,
-    folderId: folder === 'all' ? undefined : folderIdOf(folder),
+    folderId: folder === 'all' || folder === 'archived' ? undefined : folderIdOf(folder),
+    archived: folder === 'archived' ? ('only' as const) : undefined,
+    sort,
     limit,
   });
   const notes = useQuery(`notes:${JSON.stringify(query)}`, () => window.api.notes.list(query));
@@ -138,16 +186,27 @@ export function NotesPage({
     if (!deleting) return;
     const result = await window.api.noteFolders.delete({ id: deleting.id });
     setDeleting(null);
-    if (folderIdOf(folder) === deleting.id) setFolder('all');
+    if (folderIdOf(folder) === deleting.id) set({ folder: 'all' });
     invalidate();
     if (!result.ok) toast({ message: result.error.message, tone: 'error' });
   };
+
+  const folderItems = (f: NoteFolder): MenuItem[] => [
+    { label: 'Rename folder', icon: Pencil, onSelect: () => setFolderDialog({ folder: f }) },
+    {
+      label: 'Delete folder',
+      icon: Trash2,
+      danger: true,
+      separated: true,
+      onSelect: () => setDeleting(f),
+    },
+  ];
 
   const folderButton = (
     filter: FolderFilter,
     label: string,
     icon: typeof Inbox,
-    count?: number,
+    extra: { count?: number; menu?: { label: string; items: MenuItem[] } } = {},
   ) => {
     const Icon = icon;
     return (
@@ -155,11 +214,12 @@ export function NotesPage({
         type="button"
         className="nav__item"
         aria-current={sameFilter(folder, filter) ? 'true' : undefined}
-        onClick={() => setFolder(filter)}
+        onClick={() => set({ folder: filter })}
+        {...(extra.menu ? folderMenu.bind(extra.menu.label, extra.menu.items) : {})}
       >
         <Icon aria-hidden />
         <span className="nav__label">{label}</span>
-        {count !== undefined && <span className="nav__count">{count}</span>}
+        {extra.count !== undefined && <span className="nav__count">{extra.count}</span>}
       </button>
     );
   };
@@ -194,7 +254,7 @@ export function NotesPage({
         }}
       />
       <div
-        className={dragging ? 'notes notes--dragging' : 'notes'}
+        className={dragging ? 'notes-library notes-library--dragging' : 'notes-library'}
         onDragOver={onDragOver}
         onDragLeave={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
@@ -206,41 +266,33 @@ export function NotesPage({
             Drop Markdown files to import them
           </div>
         )}
-        <section className="notes__list" aria-label="All notes">
-          <nav className="note-folders" aria-label="Note folders">
-            {folderButton('all', 'All notes', NotebookPen)}
-            {(folders.data ?? []).map((f) => (
+        <nav className="note-folders" aria-label="Note folders">
+          {folderButton('all', 'All notes', NotebookPen)}
+          {(folders.data ?? []).map((f) => {
+            const label = `Actions for folder ${f.name}`;
+            return (
               <div key={f.id} className="note-folders__row">
-                {folderButton({ id: f.id }, f.name, FolderIcon, f.noteCount)}
-                <MenuButton
-                  label={`Actions for folder ${f.name}`}
-                  items={[
-                    {
-                      label: 'Rename folder',
-                      icon: Pencil,
-                      onSelect: () => setFolderDialog({ folder: f }),
-                    },
-                    {
-                      label: 'Delete folder',
-                      icon: Trash2,
-                      danger: true,
-                      separated: true,
-                      onSelect: () => setDeleting(f),
-                    },
-                  ]}
-                />
+                {folderButton({ id: f.id }, f.name, FolderIcon, {
+                  count: f.noteCount,
+                  menu: { label, items: folderItems(f) },
+                })}
+                <MenuButton label={label} items={folderItems(f)} />
               </div>
-            ))}
-            {(folders.data ?? []).length > 0 && folderButton('none', 'No folder', Inbox)}
-            <button
-              type="button"
-              className="btn btn--quiet note-folders__new"
-              onClick={() => setFolderDialog({})}
-            >
-              <FolderPlus aria-hidden /> New folder
-            </button>
-          </nav>
-          <div className="notes__filters">
+            );
+          })}
+          {(folders.data ?? []).length > 0 && folderButton('none', 'No folder', Inbox)}
+          {folderButton('archived', 'Archived', Archive)}
+          <button
+            type="button"
+            className="btn btn--quiet note-folders__new"
+            onClick={() => setFolderDialog({})}
+          >
+            <FolderPlus aria-hidden /> New folder
+          </button>
+          {folderMenu.menu}
+        </nav>
+        <section className="notes-library__list" aria-label="All notes">
+          <div className="toolbar notes-library__toolbar">
             <div className="search-field">
               <label htmlFor="notes-search" className="visually-hidden">
                 Search notes
@@ -253,7 +305,7 @@ export function NotesPage({
                 value={text}
                 maxLength={200}
                 placeholder="Search notes"
-                onChange={(e) => setText(e.target.value)}
+                onChange={(e) => set({ text: e.target.value })}
               />
             </div>
             <div className="inline-field">
@@ -261,7 +313,7 @@ export function NotesPage({
               <select
                 id="notes-project"
                 value={project}
-                onChange={(e) => setProject(e.target.value)}
+                onChange={(e) => set({ project: e.target.value })}
               >
                 <option value="">All projects</option>
                 {open.map((p) => (
@@ -274,7 +326,7 @@ export function NotesPage({
             {lookups.tagList.length > 0 && (
               <div className="inline-field">
                 <label htmlFor="notes-tag">Tag</label>
-                <select id="notes-tag" value={tag} onChange={(e) => setTag(e.target.value)}>
+                <select id="notes-tag" value={tag} onChange={(e) => set({ tag: e.target.value })}>
                   <option value="">Any tag</option>
                   {lookups.tagList.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -284,17 +336,37 @@ export function NotesPage({
                 </select>
               </div>
             )}
+            <div className="inline-field">
+              <label htmlFor="notes-sort">Sort</label>
+              <select
+                id="notes-sort"
+                value={sort}
+                onChange={(e) => set({ sort: e.target.value as NoteSort })}
+              >
+                {(Object.keys(SORT_LABEL) as NoteSort[]).map((s) => (
+                  <option key={s} value={s}>
+                    {SORT_LABEL[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           {notes.error && <ErrorNotice error={notes.error} onRetry={notes.reload} />}
           {folders.error && <ErrorNotice error={folders.error} onRetry={folders.reload} />}
           {notes.loading && !notes.data && <Loading />}
           {notes.data && notes.data.length === 0 && (
             <p className="muted">
-              {filtered ? 'No notes match these filters.' : 'No notes yet. Create one to start.'}
+              {folder === 'archived'
+                ? 'No archived notes.'
+                : filtered
+                  ? 'No notes match these filters.'
+                  : 'No notes yet. Create one to start.'}
             </p>
           )}
           {notes.data && notes.data.length > 0 && (
-            <NoteList label="Notes" notes={notes.data} selectedId={noteId} />
+            <div className="panel">
+              <NoteList label="Notes" notes={notes.data} variant="library" />
+            </div>
           )}
           {notes.data && (
             <LoadMore
@@ -304,18 +376,9 @@ export function NotesPage({
               onMore={() => setLimit((l) => l + PAGE_SIZE)}
             />
           )}
-          <p className="muted small">Tip: drop or paste .md files here to import them.</p>
-        </section>
-        <section className="notes__editor" aria-label="Open note">
-          {noteId ? (
-            <NoteLoader key={noteId} noteId={noteId} />
-          ) : (
-            <div className="panel">
-              <EmptyState icon={NotebookPen} title="No note open">
-                Choose a note from the list, or create a new one.
-              </EmptyState>
-            </div>
-          )}
+          <p className="muted small">
+            Tip: right-click a note for its actions, or drop or paste .md files here to import them.
+          </p>
         </section>
       </div>
       <FolderNameDialog
@@ -340,9 +403,75 @@ export function NotesPage({
   );
 }
 
-function NoteLoader({ noteId }: { noteId: string }) {
+/** One note at a comfortable reading width, with a way back and focus mode (ADR-0015). */
+function NoteView({ noteId }: { noteId: string }) {
+  const { navigate } = useNavigation();
+  const { focused, setFocused } = useFocusMode();
   const note = useQuery(`note:${noteId}`, () => window.api.notes.get({ id: noteId }));
-  if (note.error) return <ErrorNotice error={note.error} onRetry={note.reload} />;
-  if (!note.data) return <Loading />;
-  return <NoteEditor note={note.data} />;
+  const folders = useQuery('note-folders', () => window.api.noteFolders.list());
+  const folder = folders.data?.find((f) => f.id === note.data?.folderId);
+
+  // Ctrl+Shift+F toggles focus mode; Escape leaves it, except in a dialog or menu. The editor
+  // marks Escape as handled (ProseMirror selects the parent block), so defaultPrevented cannot
+  // be used to tell; open menus stop Escape from reaching the window themselves.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        setFocused(!focused);
+      } else if (event.key === 'Escape' && focused) {
+        const inDialog = (event.target as Element | null)?.closest?.('dialog, [role="menu"]');
+        if (!inDialog) setFocused(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [focused, setFocused]);
+
+  // Leaving the note leaves focus mode.
+  useEffect(() => () => setFocused(false), [setFocused]);
+
+  return (
+    <div className={focused ? 'page note-page note-page--focused' : 'page note-page'}>
+      <div className="note-page__bar">
+        <button
+          type="button"
+          className="btn btn--quiet"
+          onClick={() => navigate({ name: 'notes', noteId: null })}
+        >
+          <ArrowLeft aria-hidden /> All notes
+        </button>
+        <nav className="note-page__crumbs" aria-label="Breadcrumb">
+          <span>Notes</span>
+          {folder && (
+            <>
+              <span aria-hidden="true">/</span>
+              <span>{folder.name}</span>
+            </>
+          )}
+          {note.data?.archivedAt && (
+            <>
+              <span aria-hidden="true">/</span>
+              <span>Archived</span>
+            </>
+          )}
+        </nav>
+        <button
+          type="button"
+          className="btn btn--quiet"
+          aria-pressed={focused}
+          title="Focus mode (Ctrl+Shift+F)"
+          onClick={() => setFocused(!focused)}
+        >
+          {focused ? <Minimize2 aria-hidden /> : <Maximize2 aria-hidden />}
+          {focused ? 'Exit focus' : 'Focus'}
+        </button>
+      </div>
+      <section className="note-page__editor" aria-label="Open note">
+        {note.error && <ErrorNotice error={note.error} onRetry={note.reload} />}
+        {!note.error && note.data?.id !== noteId && <Loading />}
+        {note.data?.id === noteId && <NoteEditor note={note.data} />}
+      </section>
+    </div>
+  );
 }

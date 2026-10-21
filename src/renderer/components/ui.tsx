@@ -1,11 +1,15 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ComponentType,
+  type CSSProperties,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
+  type Ref,
 } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import type { ColorToken, Priority, Progress } from '@shared/domain';
@@ -144,33 +148,34 @@ export interface MenuItem {
 }
 
 /**
- * A button that opens a menu of actions (WAI-ARIA menu button pattern): Enter, Space, or
- * Arrow Down opens it on the first item; arrows, Home, and End move; Escape closes it and
- * returns focus to the button; Tab or a click elsewhere closes it.
+ * The items of a menu (WAI-ARIA menu pattern), shared by MenuButton and context menus. It focuses
+ * the first item when it appears; arrows, Home, and End move; Escape closes it and asks for focus
+ * to return; Tab or choosing an item closes it.
  */
-export function MenuButton({ label, items }: { label: string; items: MenuItem[] }) {
-  const id = useId();
-  const [open, setOpen] = useState(false);
-  const anchor = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
+function MenuList({
+  id,
+  label,
+  items,
+  onClose,
+  className = 'menu',
+  style,
+  listRef,
+}: {
+  id: string;
+  label: string;
+  items: MenuItem[];
+  onClose: (refocus: boolean) => void;
+  className?: string;
+  style?: CSSProperties;
+  listRef?: Ref<HTMLDivElement>;
+}) {
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
-    if (!open) return;
     itemRefs.current[0]?.focus();
-    const onPointerDown = (event: PointerEvent) => {
-      if (!anchor.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [open]);
+  }, []);
 
-  const close = (refocus: boolean) => {
-    setOpen(false);
-    if (refocus) button.current?.focus();
-  };
-
-  const onMenuKeyDown = (event: KeyboardEvent) => {
+  const onKeyDown = (event: KeyboardEvent) => {
     const buttons = itemRefs.current.filter((b): b is HTMLButtonElement => b !== null);
     const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
     const focusAt = (i: number) => buttons[(i + buttons.length) % buttons.length]?.focus();
@@ -181,10 +186,77 @@ export function MenuButton({ label, items }: { label: string; items: MenuItem[] 
     else if (event.key === 'Escape') {
       // Keep Escape from also closing a surrounding panel.
       event.stopPropagation();
-      close(true);
-    } else if (event.key === 'Tab') close(false);
+      onClose(true);
+    } else if (event.key === 'Tab') onClose(false);
     else return;
     if (event.key !== 'Tab') event.preventDefault();
+  };
+
+  return (
+    <div
+      ref={listRef}
+      id={id}
+      className={className}
+      style={style}
+      role="menu"
+      aria-label={label}
+      onKeyDown={onKeyDown}
+    >
+      {items.map((item, index) => (
+        <div key={item.label} role="none">
+          {item.separated && <div className="menu__separator" role="separator" />}
+          <button
+            ref={(el) => {
+              itemRefs.current[index] = el;
+            }}
+            type="button"
+            role="menuitem"
+            tabIndex={-1}
+            className={`menu__item${item.danger ? ' menu__item--danger' : ''}`}
+            onClick={() => {
+              onClose(true);
+              item.onSelect();
+            }}
+          >
+            {item.icon && <item.icon aria-hidden />}
+            {item.label}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A button that opens a menu of actions (WAI-ARIA menu button pattern): Enter, Space, or
+ * Arrow Down opens it on the first item; the menu then behaves as MenuList describes, and a
+ * click elsewhere closes it. `items` may be a function, called when the menu opens.
+ */
+export function MenuButton({
+  label,
+  items,
+}: {
+  label: string;
+  items: MenuItem[] | (() => MenuItem[]);
+}) {
+  const id = useId();
+  const [open, setOpen] = useState<MenuItem[] | null>(null);
+  const resolve = () => (typeof items === 'function' ? items() : items);
+  const anchor = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!anchor.current?.contains(event.target as Node)) setOpen(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [open]);
+
+  const close = (refocus: boolean) => {
+    setOpen(null);
+    if (refocus) button.current?.focus();
   };
 
   return (
@@ -196,51 +268,107 @@ export function MenuButton({ label, items }: { label: string; items: MenuItem[] 
         aria-label={label}
         title={label}
         aria-haspopup="menu"
-        aria-expanded={open}
+        aria-expanded={open !== null}
         aria-controls={open ? `${id}-menu` : undefined}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen((o) => (o ? null : resolve()))}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {
             event.preventDefault();
-            setOpen(true);
+            setOpen(resolve());
           }
         }}
       >
         <MoreHorizontal aria-hidden />
       </button>
-      {open && (
-        <div
-          id={`${id}-menu`}
-          className="menu"
-          role="menu"
-          aria-label={label}
-          onKeyDown={onMenuKeyDown}
-        >
-          {items.map((item, index) => (
-            <div key={item.label} role="none">
-              {item.separated && <div className="menu__separator" role="separator" />}
-              <button
-                ref={(el) => {
-                  itemRefs.current[index] = el;
-                }}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                className={`menu__item${item.danger ? ' menu__item--danger' : ''}`}
-                onClick={() => {
-                  close(true);
-                  item.onSelect();
-                }}
-              >
-                {item.icon && <item.icon aria-hidden />}
-                {item.label}
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      {open && <MenuList id={`${id}-menu`} label={label} items={open} onClose={close} />}
     </div>
   );
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  label: string;
+  items: MenuItem[];
+  /** Where focus goes back to when the menu closes. */
+  origin: HTMLElement;
+}
+
+/**
+ * Right-click menus (ADR-0015). `bind(label, items)` returns the handlers for an element: a
+ * right-click opens the menu at the pointer; Shift+F10 or the Menu key opens it below the
+ * element. Render `menu` once in the component. The menu stays inside the window and closes on
+ * a click elsewhere, scrolling, or resizing.
+ */
+export function useContextMenu() {
+  const id = useId();
+  const [state, setState] = useState<ContextMenuState | null>(null);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const list = useRef<HTMLDivElement>(null);
+
+  // Measure the menu while it is hidden, then place it inside the window.
+  useLayoutEffect(() => {
+    if (!state || !list.current) return setPosition(null);
+    const { width, height } = list.current.getBoundingClientRect();
+    const margin = 8;
+    setPosition({
+      left: Math.max(margin, Math.min(state.x, window.innerWidth - width - margin)),
+      top: Math.max(margin, Math.min(state.y, window.innerHeight - height - margin)),
+    });
+  }, [state]);
+
+  useEffect(() => {
+    if (!state) return;
+    const close = () => setState(null);
+    const onPointerDown = (event: PointerEvent) => {
+      if (!list.current?.contains(event.target as Node)) close();
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('resize', close);
+    document.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('resize', close);
+      document.removeEventListener('scroll', close, true);
+    };
+  }, [state]);
+
+  const bind = (label: string, items: MenuItem[]) => ({
+    onContextMenu: (event: MouseEvent<HTMLElement>) => {
+      event.preventDefault();
+      setState({ x: event.clientX, y: event.clientY, label, items, origin: event.currentTarget });
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
+      event.preventDefault();
+      const rect = event.currentTarget.getBoundingClientRect();
+      setState({ x: rect.left + 16, y: rect.bottom, label, items, origin: event.currentTarget });
+    },
+  });
+
+  const close = (refocus: boolean) => {
+    const origin = state?.origin;
+    setState(null);
+    if (refocus) origin?.focus();
+  };
+
+  const menu = state ? (
+    <MenuList
+      id={`${id}-context`}
+      label={state.label}
+      items={state.items}
+      onClose={close}
+      className="menu menu--context"
+      listRef={list}
+      style={
+        position
+          ? { left: position.left, top: position.top }
+          : { left: state.x, top: state.y, visibility: 'hidden' }
+      }
+    />
+  ) : null;
+
+  return { bind, menu };
 }
 
 export function Loading() {

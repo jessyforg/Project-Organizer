@@ -31,7 +31,7 @@ Status: **Implemented through Phase 3** (2026-10-17): `app.db`, and profile sche
 
 **schema_migrations** — as above.
 
-**settings** — `key` PK, `value_json`, `updated_at`. Theme, default sort, and similar preferences.
+**settings** — `key` PK, `value_json`, `updated_at`. Theme, primary colour (`accent`) and background tone (`surface`) ([ADR-0015](DECISIONS/0015-notes-views-archive-colours-menus.md)), and similar preferences. Unknown or invalid stored values fall back to defaults.
 
 **folders**
 | Column | Type | Notes |
@@ -115,7 +115,8 @@ Done and cancelled prerequisites count as satisfied. Unfinished prerequisites pr
 | folder_id | TEXT NULL → note_folders(id) ON DELETE SET NULL | Schema v4 ([ADR-0014](DECISIONS/0014-note-actions-import-and-folders.md)). The note's folder on the Notes screen, independent of its project; null means no folder |
 | title | TEXT NOT NULL CHECK(length(trim(title)) > 0) | A blank title is saved as "Untitled note" |
 | body | TEXT NOT NULL DEFAULT '' | Markdown source as typed, up to 1,000,000 characters (Zod limit); never stored or rendered as HTML |
-| created_at, updated_at | TEXT NOT NULL | `updated_at` changes only when the title, body, project, folder, or tags change |
+| archived_at | TEXT NULL | Schema v5 ([ADR-0015](DECISIONS/0015-notes-views-archive-colours-menus.md)). Archived notes leave lists and folder counts and are read-only until unarchived; search still finds them |
+| created_at, updated_at | TEXT NOT NULL | `updated_at` changes only when the title, body, project, folder, tags, or archived state change |
 | deleted_at, deletion_batch_id | TEXT NULL | Same trash model as tasks |
 
 Notes cannot be created in, or moved into, an archived project; notes already in one stay readable and editable.
@@ -149,7 +150,7 @@ Only top-level tasks move between projects; their subtasks (including trashed on
 - `tasks(project_id, deleted_at)`, `tasks(parent_task_id)`, `tasks(status_id)`, `tasks(due_date) WHERE deleted_at IS NULL`, `tasks(updated_at)`, `tasks(deletion_batch_id)`.
 - `projects(deleted_at, archived_at)`, `projects(folder_id)`, `projects(deletion_batch_id)`.
 - `task_dependencies(depends_on_task_id)`, `task_tags(tag_id)`, `project_tags(tag_id)`, `note_tags(tag_id)`.
-- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(updated_at)`, `notes(deletion_batch_id)`. Note lists read only the first 600 characters of each body (for the excerpt).
+- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(archived_at)` (partial, archived only), `notes(updated_at)`, `notes(deletion_batch_id)`. Note lists read only the first 600 characters of each body (for the excerpt).
 - Full-text search: FTS5 tables `tasks_fts` (title, description), `projects_fts` (name, description), and `notes_fts` (title, body) with the `unicode61 remove_diacritics 2` tokenizer, so "cafe" finds "Café". Each keeps its own copy keyed by ID rather than rowid, so it stays correct even if SQLite renumbers rowids; triggers keep it in sync. User input is converted to quoted prefix terms, so search text is never interpreted as query syntax.
 - Measured in Phase 3 with 6,250 tasks: list, filter, and search queries 3–38 ms; progress for 20 projects 21 ms.
 

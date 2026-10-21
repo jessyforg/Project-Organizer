@@ -74,6 +74,7 @@ Implemented in Phase 5 (`src/main/backup/`); see [ADR-0006](DECISIONS/0006-backu
   - **Copy:** "Copy as Markdown" writes to the clipboard from the main process, given only a note ID. The renderer keeps all browser permissions denied.
   - **Export:** writes only to a path chosen in the main process's save dialog, with content read from the database.
   - **Import:** files are read in the renderer, and their parsed text reaches the main process through one zod-validated channel with limits of 50 notes, 1 MB per body, and 500 characters per title. The main process never opens a path supplied by the renderer.
+- Colour palettes ([ADR-0015](DECISIONS/0015-notes-views-archive-colours-menus.md)) are applied as CSS custom properties through the CSSOM (`style.setProperty`), which the Content Security Policy allows; no `<style>` element or `unsafe-inline` is needed. Palette names are validated (zod enums) before they are stored.
 - Input size limits (Zod, implemented): profile names 100 characters, names 200, titles 500, descriptions and note bodies 1,000,000 characters. Planned: import files size-checked before parsing.
 - Logs: event names, IDs, counts, error names/codes, and stack frames only. Error **messages are not logged** because they can contain user content (unit-tested). Never content, titles, profile names, passwords, or user file paths.
 

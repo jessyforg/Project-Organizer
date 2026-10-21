@@ -12,6 +12,7 @@ import type {
   RestoreResult,
   SearchResults,
   Tag,
+  TagUsage,
   Task,
   TaskRelations,
   TaskTrashPreview,
@@ -101,6 +102,7 @@ export const ipcContract = {
   'tags:create': s.createTagSchema,
   'tags:update': s.updateTagSchema,
   'tags:delete': s.idSchema,
+  'tags:usage': s.emptySchema,
   'tags:setTaskTags': s.setTaskTagsSchema,
   'tags:setProjectTags': s.setProjectTagsSchema,
   'tags:setNoteTags': s.setNoteTagsSchema,
@@ -132,6 +134,8 @@ export const ipcContract = {
   'notes:move': s.moveNoteSchema,
   'notes:setFolder': s.setNoteFolderSchema,
   'notes:duplicate': s.idSchema,
+  'notes:archive': s.idSchema,
+  'notes:unarchive': s.idSchema,
   'notes:import': s.importNotesSchema,
   'notes:copyMarkdown': s.idSchema,
   'notes:exportMarkdown': s.idSchema,
@@ -191,6 +195,7 @@ export interface IpcResponses {
   'tags:create': Tag;
   'tags:update': Tag;
   'tags:delete': null;
+  'tags:usage': Record<string, TagUsage>;
   'tags:setTaskTags': null;
   'tags:setProjectTags': null;
   'tags:setNoteTags': null;
@@ -222,6 +227,8 @@ export interface IpcResponses {
   'notes:move': Note;
   'notes:setFolder': Note;
   'notes:duplicate': Note;
+  'notes:archive': Note;
+  'notes:unarchive': Note;
   'notes:import': Note[];
   'notes:copyMarkdown': null;
   'notes:exportMarkdown': SaveResult;

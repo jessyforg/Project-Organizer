@@ -5,6 +5,7 @@ import {
   type ImportNotesInput,
   type MoveNoteInput,
   type NoteListQuery,
+  type NoteSort,
   type SetNoteFolderInput,
   type UpdateNoteInput,
 } from '@shared/schemas';
@@ -15,6 +16,11 @@ import { ensureInbox, requireLiveProject } from './projects';
 import { NOTE_SELECT, NOTE_SUMMARY_SELECT, toNote, toNoteSummary, type NoteRow } from './rows';
 
 const DEFAULT_PAGE_SIZE = 500;
+const ORDER: Record<NoteSort, string> = {
+  updated: 'n.updated_at DESC, n.id',
+  created: 'n.created_at DESC, n.id',
+  title: 'n.title COLLATE NOCASE, n.id',
+};
 const COPY_SUFFIX = ' (copy)';
 
 interface NewNote {
@@ -37,7 +43,7 @@ export class NoteService {
     return toNote(row);
   }
 
-  /** Most recently updated first. Text search covers titles and bodies. */
+  /** Most recently updated first unless sorted otherwise. Text search covers titles and bodies. */
   list(query: NoteListQuery = {}): NoteSummary[] {
     const where = ['n.deleted_at IS NULL', 'p.deleted_at IS NULL'];
     const params: unknown[] = [];
@@ -46,6 +52,9 @@ export class NoteService {
       params.push(...values);
     };
     if (!query.includeArchived) add('p.archived_at IS NULL');
+    const archived = query.archived ?? 'exclude';
+    if (archived === 'exclude') add('n.archived_at IS NULL');
+    else if (archived === 'only') add('n.archived_at IS NOT NULL');
     if (query.projectId) add('n.project_id = ?', query.projectId);
     if (query.folderId === null) add('n.folder_id IS NULL');
     else if (query.folderId) add('n.folder_id = ?', query.folderId);
@@ -62,7 +71,7 @@ export class NoteService {
     const rows = this.ctx.db
       .prepare(
         `${NOTE_SUMMARY_SELECT} WHERE ${where.join(' AND ')}
-         ORDER BY n.updated_at DESC, n.id LIMIT ?`,
+         ORDER BY ${ORDER[query.sort ?? 'updated']} LIMIT ?`,
       )
       .all(...params, query.limit ?? DEFAULT_PAGE_SIZE) as NoteRow[];
     return rows.map(toNoteSummary);
@@ -102,6 +111,26 @@ export class NoteService {
     return ids.map((id) => this.get(id));
   }
 
+  /** Hides the note from lists and makes it read-only (ADR-0015). */
+  archive(id: string): Note {
+    const current = this.get(id);
+    if (current.archivedAt !== null) return current;
+    const now = nowIso(this.ctx);
+    this.ctx.db
+      .prepare('UPDATE notes SET archived_at = ?, updated_at = ? WHERE id = ?')
+      .run(now, now, id);
+    return this.get(id);
+  }
+
+  unarchive(id: string): Note {
+    const current = this.get(id);
+    if (current.archivedAt === null) return current;
+    this.ctx.db
+      .prepare('UPDATE notes SET archived_at = NULL, updated_at = ? WHERE id = ?')
+      .run(nowIso(this.ctx), id);
+    return this.get(id);
+  }
+
   /** Puts the note in a folder, or with null, in no folder. */
   setFolder(input: SetNoteFolderInput): Note {
     const current = this.get(input.id);
@@ -116,6 +145,9 @@ export class NoteService {
   /** Saves the title and/or body. An unchanged note keeps its `updated_at`. */
   update(input: UpdateNoteInput): Note {
     const current = this.get(input.id);
+    if (current.archivedAt !== null) {
+      throw new AppError('CONFLICT', 'Unarchive the note before editing it.');
+    }
     const title = input.title ?? current.title;
     const body = input.body ?? current.body;
     if (title === current.title && body === current.body) return current;

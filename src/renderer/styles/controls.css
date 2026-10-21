@@ -556,6 +556,13 @@ input[type='radio'] {
   display: inline-flex;
 }
 
+/* Right-click menus are placed at the pointer (useContextMenu sets left and top). */
+.menu.menu--context {
+  position: fixed;
+  right: auto;
+  z-index: 40;
+}
+
 .menu {
   position: absolute;
   top: calc(100% + 4px);

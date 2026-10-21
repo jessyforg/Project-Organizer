@@ -1,38 +1,102 @@
-/* Notes screen: list beside the open note; stacked when the main area is narrow. */
+/*
+ * Notes screen (ADR-0015): the library (folders beside a full-width list) and the note view (one
+ * note at a reading width). Stacked when the main area is narrow.
+ */
 .notes-page {
   max-width: 1320px;
 }
 
-.notes {
+.notes-library {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(200px, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(180px, 240px) minmax(0, 1fr);
   gap: var(--space-5);
   align-items: start;
 }
 
-@container main (max-width: 640px) {
-  .notes {
+@container main (max-width: 720px) {
+  .notes-library {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-.notes__list,
-.notes__editor {
+.notes-library__list {
   display: grid;
   gap: var(--space-3);
   min-width: 0;
 }
 
-.notes__editor {
+.notes-library__list > .panel {
+  padding: var(--space-1);
+}
+
+/* The note view */
+.note-page {
+  max-width: 980px;
+}
+
+.note-page--focused {
+  max-width: 860px;
+}
+
+.note-page__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.note-page__crumbs {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-faint);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.note-page__editor {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
   container: note / inline-size;
 }
 
-/* Note folders (ADR-0014): a short list above the filters. */
+/* Focus mode: the note sits on the page itself, without a panel. */
+.note-page--focused .note-editor {
+  border-color: transparent;
+  background: transparent;
+}
+
+.note-editor__archived {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.note-editor__archived > span {
+  flex: 1;
+}
+
+/* .notice stretches its first child (.notice > :first-child); here that is the icon, which
+   keeps its size. Both classes are needed to outrank that rule. */
+.notice.note-editor__archived > svg {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  min-width: 0;
+}
+
+/* Note folders (ADR-0014): a column beside the list, or above it when narrow. */
 .note-folders {
+  position: sticky;
+  top: 0;
   display: grid;
   gap: 1px;
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--line);
+  min-width: 0;
 }
 
 .note-folders__row {
@@ -72,11 +136,7 @@
   justify-self: start;
 }
 
-/* Dropping Markdown files anywhere on the Notes screen imports them. */
-.notes {
-  position: relative;
-}
-
+/* Dropping Markdown files anywhere on the Notes library imports them. */
 .notes__drop {
   position: absolute;
   inset: 0;
@@ -92,17 +152,27 @@
   pointer-events: none;
 }
 
-.notes__filters {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.notes__filters .inline-field > select {
-  flex: 1;
-  max-width: none;
-}
-
 /* Note rows */
+.note-list--library > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.note-list--library .note-row {
+  padding: var(--space-3);
+}
+
+.note-row__badge {
+  margin-left: var(--space-2);
+  vertical-align: 1px;
+}
+
+.note-row__badge svg,
+.note-row__folder svg {
+  width: 12px;
+  height: 12px;
+  vertical-align: -1px;
+}
+
 .note-list {
   display: grid;
   gap: 2px;

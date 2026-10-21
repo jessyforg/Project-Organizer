@@ -27,6 +27,8 @@ export interface DocumentEditorProps {
   titlePlaceholder?: string;
   /** The accessible name of the body. */
   label?: string;
+  /** False shows the document read-only, without the toolbar. */
+  editable?: boolean;
   className?: string;
 }
 
@@ -44,6 +46,7 @@ export function DocumentEditor({
   onReady,
   titlePlaceholder = 'Untitled',
   label = 'Document body',
+  editable = true,
   className,
 }: DocumentEditorProps) {
   const id = useId();
@@ -53,6 +56,7 @@ export function DocumentEditor({
   const editor = useEditor({
     extensions: loaded,
     content: initialContent ?? '',
+    editable,
     // The production Content Security Policy blocks injected <style> tags; editor.css has the
     // base styles instead.
     injectCSS: false,
@@ -65,6 +69,7 @@ export function DocumentEditor({
         role: 'textbox',
         'aria-multiline': 'true',
         'aria-label': label,
+        'aria-readonly': String(!editable),
       },
       // Ctrl+click opens a web or mail link; the main process checks the address again.
       handleClick: (_view, _pos, event) => {
@@ -84,6 +89,11 @@ export function DocumentEditor({
   useEffect(() => {
     if (editor) onReady?.(editor);
   }, [editor, onReady]);
+
+  useEffect(() => {
+    // false: Tiptap would otherwise report this as an edit, and the caller would save.
+    if (editor && editor.isEditable !== editable) editor.setEditable(editable, false);
+  }, [editor, editable]);
 
   return (
     <div className={className ? `doc-editor ${className}` : 'doc-editor'}>
@@ -111,7 +121,7 @@ export function DocumentEditor({
           />
         </>
       )}
-      {editor && <EditorToolbar editor={editor} controls={bodyId} />}
+      {editor && editable && <EditorToolbar editor={editor} controls={bodyId} />}
       <EditorContent editor={editor} className="doc-editor__content" />
     </div>
   );

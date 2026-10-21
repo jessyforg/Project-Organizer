@@ -438,9 +438,8 @@
 .dash-section,
 .task-group,
 .filter-bar,
-.notes__list,
-.notes__filters,
-.notes__editor,
+.notes-library__list,
+.note-page__editor,
 .note-editor,
 .note-list,
 .mini-list,
@@ -449,4 +448,9 @@
 .board__cards,
 .task-details {
   grid-template-columns: minmax(0, 1fr);
+}
+
+/* Focus mode (ADR-0015): the sidebar is hidden while writing a note. */
+.shell--focus {
+  grid-template-columns: minmax(0, 1fr) auto;
 }

@@ -11,6 +11,8 @@ export const SHORTCUTS = [
   { keys: 'Ctrl+,', description: 'Open settings' },
   { keys: 'Ctrl+/', description: 'Show keyboard shortcuts' },
   { keys: 'Ctrl+S', description: 'Save the open note now (notes also save automatically)' },
+  { keys: 'Ctrl+Shift+F', description: 'Focus mode for the open note (Esc leaves it)' },
+  { keys: 'Shift+F10', description: 'Open the menu for the selected note or folder' },
   { keys: 'Esc', description: 'Close task details' },
 ] as const;
 

@@ -1,19 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import {
-  ClipboardCopy,
-  CopyPlus,
-  Download,
-  Eye,
-  FileCode2,
-  PenLine,
-  Pencil,
-  Trash2,
-  Type,
-} from 'lucide-react';
+import { Archive, Eye, FileCode2, PenLine, Type } from 'lucide-react';
 import type { Editor, JSONContent } from '@tiptap/react';
-import { TRASH_RETENTION_DAYS, type Note } from '@shared/domain';
+import type { Note } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
 import { useInvalidate, useQuery } from '../../app/data';
+import { useFocusMode } from '../../app/focus';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
 import { TagPicker } from '../../components/TagPicker';
@@ -24,6 +15,7 @@ import { noteExtensions } from '../editor/editor-config';
 import { createMarkdownCodec, type MarkdownCodec } from '../editor/markdown';
 import { useLookups } from '../tasks/useLookups';
 import { NoteMarkdown } from './NoteMarkdown';
+import { useNoteActions } from './useNoteActions';
 
 export const UNTITLED = 'Untitled note';
 /** Typing pauses this long before the note saves itself. */
@@ -71,7 +63,7 @@ function noteCodec(): MarkdownCodec {
  */
 export function NoteEditor({ note }: { note: Note }) {
   const id = useId();
-  const { navigate, setLeaveGuard } = useNavigation();
+  const { setLeaveGuard } = useNavigation();
   const invalidate = useInvalidate();
   const toast = useToast();
   const { projectList } = useLookups();
@@ -92,8 +84,12 @@ export function NoteEditor({ note }: { note: Note }) {
   const [leavePrompt, setLeavePrompt] = useState<{ resolve: (leave: boolean) => void } | null>(
     null,
   );
-  const [confirmTrash, setConfirmTrash] = useState(false);
-  const titleField = useRef<HTMLTextAreaElement>(null);
+  const actions = useNoteActions();
+  const { focused } = useFocusMode();
+  /** Archived notes are read-only until unarchived (ADR-0015). */
+  const readOnly = note.archivedAt !== null;
+  // Held in state, not a ref: the actions menu receives `rename` during render.
+  const [titleField, setTitleField] = useState<HTMLTextAreaElement | null>(null);
   const folders = useQuery('note-folders', () => window.api.noteFolders.list());
 
   const draft = useRef<Draft>({ title: note.title, body: note.body });
@@ -231,64 +227,21 @@ export function NoteEditor({ note }: { note: Note }) {
     if (!result.ok) toast({ message: result.error.message, tone: 'error' });
   };
 
-  /** Note actions work on what is on screen, so they save first (ADR-0014). */
-  const afterSave = (action: () => Promise<void>) => async () => {
-    if (await save()) await action();
-  };
-
   const rename = () => {
-    titleField.current?.focus();
-    titleField.current?.select();
+    titleField?.focus();
+    titleField?.select();
   };
 
-  const duplicate = afterSave(async () => {
-    const result = await window.api.notes.duplicate({ id: note.id });
+  const unarchive = async () => {
+    const result = await window.api.notes.unarchive({ id: note.id });
     invalidate();
-    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
-    navigate({ name: 'notes', noteId: result.data.id });
-    toast({ message: `Created “${result.data.title}”.` });
-  });
-
-  const copyMarkdown = afterSave(async () => {
-    const result = await window.api.notes.copyMarkdown({ id: note.id });
-    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
-    toast({ message: 'Copied the note as Markdown.' });
-  });
-
-  const exportMarkdown = afterSave(async () => {
-    const result = await window.api.notes.exportMarkdown({ id: note.id });
-    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
-    if (result.data.saved) toast({ message: `Saved “${result.data.fileName}”.` });
-  });
+    if (!result.ok) toast({ message: result.error.message, tone: 'error' });
+  };
 
   const setTags = async (tagIds: string[]) => {
     const result = await window.api.tags.setNoteTags({ noteId: note.id, tagIds });
     if (!result.ok) toast({ message: result.error.message, tone: 'error' });
     invalidate();
-  };
-
-  const trash = async () => {
-    if (!(await save())) return;
-    const result = await window.api.trash.trashNote({ id: note.id });
-    invalidate();
-    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
-    setLeaveGuard(null);
-    navigate({ name: 'notes', noteId: null });
-    const { batchId } = result.data;
-    toast({
-      message: `“${saved.current.title}” moved to trash.`,
-      actions: [
-        {
-          label: 'Undo',
-          run: async () => {
-            const restored = await window.api.trash.restore({ batchId });
-            invalidate();
-            if (!restored.ok) return toast({ message: restored.error.message, tone: 'error' });
-            navigate({ name: 'notes', noteId: note.id });
-          },
-        },
-      ],
-    });
   };
 
   const onKeyDown = (event: KeyboardEvent) => {
@@ -308,13 +261,14 @@ export function NoteEditor({ note }: { note: Note }) {
         </label>
         {/* A one-line field that wraps long titles instead of hiding them. */}
         <textarea
-          ref={titleField}
+          ref={setTitleField}
           id={`${id}-title`}
           className="note-editor__title"
           rows={1}
           value={title}
           maxLength={LIMITS.title}
           placeholder={UNTITLED}
+          readOnly={readOnly}
           onChange={(e) => edit({ title: e.target.value.replace(/\n/g, ' ') })}
           onKeyDown={(e) => {
             if (e.key !== 'Enter') return;
@@ -333,66 +287,74 @@ export function NoteEditor({ note }: { note: Note }) {
         )}
         <MenuButton
           label="Note actions"
-          items={[
-            { label: 'Rename', icon: Pencil, onSelect: rename },
-            { label: 'Duplicate', icon: CopyPlus, onSelect: () => void duplicate() },
-            {
-              label: 'Copy as Markdown',
-              icon: ClipboardCopy,
-              onSelect: () => void copyMarkdown(),
-            },
-            {
-              label: 'Export as Markdown…',
-              icon: Download,
-              onSelect: () => void exportMarkdown(),
-            },
-            {
-              label: 'Move to trash…',
-              icon: Trash2,
-              danger: true,
-              separated: true,
-              onSelect: () => setConfirmTrash(true),
-            },
-          ]}
+          items={() =>
+            actions.itemsFor(
+              {
+                id: note.id,
+                title: title.trim() || UNTITLED,
+                folderId: note.folderId,
+                archivedAt: note.archivedAt,
+              },
+              {
+                // Actions work on what is on screen, so they save first (ADR-0014).
+                beforeAction: save,
+                onRename: rename,
+                onTrashed: () => setLeaveGuard(null),
+              },
+            )
+          }
         />
       </div>
 
-      <div className="note-editor__meta">
-        <div className="note-editor__places">
-          <div className="field">
-            <label htmlFor={`${id}-project`}>Project</label>
-            <select
-              id={`${id}-project`}
-              className="select"
-              value={note.projectId}
-              onChange={(e) => void move(e.target.value)}
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label htmlFor={`${id}-folder`}>Folder</label>
-            <select
-              id={`${id}-folder`}
-              className="select"
-              value={note.folderId ?? ''}
-              onChange={(e) => void setFolder(e.target.value || null)}
-            >
-              <option value="">No folder</option>
-              {(folders.data ?? []).map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      {readOnly && (
+        <div className="notice note-editor__archived" role="status">
+          <Archive aria-hidden />
+          <span>This note is archived, so it cannot be edited.</span>
+          <button type="button" className="btn" onClick={() => void unarchive()}>
+            Unarchive
+          </button>
         </div>
-        <TagPicker selected={note.tagIds} onChange={setTags} />
-      </div>
+      )}
+
+      {/* Focus mode leaves out the details (a hidden attribute would lose to display: grid). */}
+      {!focused && (
+        <div className="note-editor__meta">
+          <div className="note-editor__places">
+            <div className="field">
+              <label htmlFor={`${id}-project`}>Project</label>
+              <select
+                id={`${id}-project`}
+                className="select"
+                value={note.projectId}
+                onChange={(e) => void move(e.target.value)}
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor={`${id}-folder`}>Folder</label>
+              <select
+                id={`${id}-folder`}
+                className="select"
+                value={note.folderId ?? ''}
+                onChange={(e) => void setFolder(e.target.value || null)}
+              >
+                <option value="">No folder</option>
+                {(folders.data ?? []).map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <TagPicker selected={note.tagIds} onChange={setTags} />
+        </div>
+      )}
 
       <div className="note-editor__modes">
         <div className="segmented" role="group" aria-label="Editor">
@@ -441,6 +403,7 @@ export function NoteEditor({ note }: { note: Note }) {
           className="note-editor__doc"
           label="Note text"
           extensions={noteExtensions()}
+          editable={!readOnly}
           initialContent={visual.content}
           onEdit={onVisualEdit}
           onReady={onEditorReady}
@@ -454,6 +417,7 @@ export function NoteEditor({ note }: { note: Note }) {
             id={`${id}-body`}
             className="textarea note-editor__body"
             value={body}
+            readOnly={readOnly}
             maxLength={LIMITS.description}
             onChange={(e) => edit({ body: e.target.value })}
           />
@@ -468,18 +432,7 @@ export function NoteEditor({ note }: { note: Note }) {
         Created {formatTimestamp(note.createdAt)}. Updated {formatTimestamp(note.updatedAt)}.
       </p>
 
-      <ConfirmDialog
-        open={confirmTrash}
-        title={`Move “${title.trim() || UNTITLED}” to the trash?`}
-        body={`You can restore it from Trash for ${TRASH_RETENTION_DAYS} days.`}
-        confirmLabel="Move to trash"
-        danger
-        onCancel={() => setConfirmTrash(false)}
-        onConfirm={() => {
-          setConfirmTrash(false);
-          void trash();
-        }}
-      />
+      {actions.dialogs}
 
       <ConfirmDialog
         open={leavePrompt !== null}

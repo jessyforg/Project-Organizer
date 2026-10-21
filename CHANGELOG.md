@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — Notes library, archiving, colour themes, and right-click menus (2026-10-21, not yet publicly released)
+
+- **Notes library and note view:** Notes opens on a library (folders beside a full-width list with search, project, tag, and sort filters). Opening a note shows it on its own, with "← All notes" and a breadcrumb.
+- **Focus mode:** Ctrl+Shift+F (or the Focus button) hides the sidebar and the note's details while you write; Escape leaves it.
+- **Archive notes:** archived notes leave the library and folder counts, appear under Archived, stay searchable, and are read-only until you unarchive them. Archive and Unarchive can be undone.
+- **Right-click menus:** right-click a note (or press Shift+F10) for Open, Rename, Duplicate, Move to folder, Archive, Copy, Export, and Move to trash; right-click a folder to rename or delete it.
+- **Colour themes:** in Settings → Appearance, choose a primary colour (blue, teal, green, violet, rose, amber) and a background tone (cool grey, neutral grey, warm). Every combination is checked for readable contrast in light and dark.
+- **Manage tags:** Settings → Tags lists each tag and where it is used; rename, recolour, or delete tags. Deleting a tag keeps the items that used it.
+- Profile data schema version 5; existing profiles upgrade automatically after a verified snapshot.
+
 ## 0.3.0 — Visual note editing, note actions, import, and folders (2026-10-21, not yet publicly released)
 
 ### Notes

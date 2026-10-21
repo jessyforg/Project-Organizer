@@ -607,6 +607,103 @@
   font-size: var(--text-sm);
 }
 
+/* Appearance choices (ADR-0015): a labelled group per setting. */
+.settings-choice {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.settings-choice > legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.accent-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Like segmented options: the radio stays a real control, invisible over its label. */
+.accent-choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 12px 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.accent-choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.accent-choice:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.accent-choice:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.accent-choice__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 15%);
+}
+
+/* Settings → Tags */
+.tag-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 6px 0;
+}
+
+.tag-list__row + .tag-list__row {
+  border-top: 1px solid var(--line);
+}
+
+.tag-list__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .settings-row {
   display: flex;
   flex-wrap: wrap;

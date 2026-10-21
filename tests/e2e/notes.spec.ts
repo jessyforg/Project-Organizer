@@ -65,6 +65,8 @@ test('notes: folders, Markdown import, duplicate, copy, export, and trash with c
   fs.writeFileSync(ideas, 'Loose thoughts\n');
   await page.getByTestId('import-markdown-input').setInputFiles([roadmap, ideas]);
   await expect(page.getByText('Imported 2 notes.')).toBeVisible();
+  // Importing opens the first note; the library shows the rest.
+  await page.getByRole('button', { name: 'All notes' }).click();
   await expect(folders(page).getByRole('button', { name: /^Work/ })).toContainText('2');
   const list = page.getByRole('list', { name: 'Notes' });
   await expect(list.getByRole('button')).toHaveCount(2);
@@ -76,7 +78,7 @@ test('notes: folders, Markdown import, duplicate, copy, export, and trash with c
   await expect(page.getByLabel('Folder', { exact: true }).locator('option:checked')).toHaveText(
     'Work',
   );
-  await expect(folders(page).getByRole('button', { name: /^Work/ })).toContainText('3');
+  await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Work');
 
   // Copy as Markdown puts the saved body on the system clipboard.
   await noteAction(page, 'Copy as Markdown');
@@ -112,4 +114,40 @@ test('notes: folders, Markdown import, duplicate, copy, export, and trash with c
   await expect(folders(page).getByRole('button', { name: /^Work/ })).toHaveCount(0);
   await expect(page.getByRole('list', { name: 'Notes' }).getByRole('button')).toHaveCount(2);
   await app.close();
+});
+
+test('notes: library, right-click archive, read-only archived notes, and focus mode', async () => {
+  const { page } = await launch();
+  await page.getByLabel('Profile name').fill('Library');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await page.evaluate(async () => {
+    await window.api.notes.create({ title: 'Old plan', body: 'Done already' });
+    await window.api.notes.create({ title: 'Current plan', body: 'In progress' });
+  });
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  const list = page.getByRole('list', { name: 'Notes' });
+  await expect(list.getByRole('button')).toHaveCount(2);
+
+  // Right-click → Archive hides the note from the library.
+  await list.getByRole('button', { name: /Old plan/ }).click({ button: 'right' });
+  await page.getByRole('menu').getByRole('menuitem', { name: 'Archive' }).click();
+  await expect(page.getByText('Archived “Old plan”.')).toBeVisible();
+  await expect(list.getByRole('button')).toHaveCount(1);
+
+  // The Archived filter shows it; it opens read-only, and Unarchive makes it editable.
+  await folders(page).getByRole('button', { name: 'Archived' }).click();
+  await list.getByRole('button', { name: /Old plan/ }).click();
+  await expect(page.getByText('This note is archived, so it cannot be edited.')).toBeVisible();
+  await expect(page.getByLabel('Note title')).toHaveAttribute('readonly', '');
+  await page.getByRole('button', { name: 'Unarchive' }).click();
+  await expect(page.getByLabel('Note title')).not.toHaveAttribute('readonly');
+
+  // Focus mode hides the app sidebar; Escape brings it back.
+  await expect(nav(page)).toBeVisible();
+  await page.keyboard.press('Control+Shift+F');
+  await expect(nav(page)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Exit focus' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Note text' }).click();
+  await page.keyboard.press('Escape');
+  await expect(nav(page)).toBeVisible();
 });

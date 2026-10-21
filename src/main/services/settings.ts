@@ -1,10 +1,12 @@
 import { z } from 'zod';
-import { THEMES, type ProfileSettings } from '@shared/domain';
+import { ACCENTS, SURFACES, THEMES, type ProfileSettings } from '@shared/domain';
 import { nowIso, type ServiceContext } from './context';
 
 /** Each setting has a schema and a default; invalid or unknown stored values fall back to defaults. */
 const SETTINGS = {
   theme: { schema: z.enum(THEMES), fallback: 'system' },
+  accent: { schema: z.enum(ACCENTS), fallback: 'blue' },
+  surface: { schema: z.enum(SURFACES), fallback: 'cool' },
 } as const satisfies Record<keyof ProfileSettings, { schema: z.ZodType; fallback: unknown }>;
 
 type Key = keyof ProfileSettings;
@@ -18,17 +20,20 @@ export class SettingsService {
       value_json: string;
     }[];
     const stored = new Map(rows.map((r) => [r.key, r.value_json]));
+    // Each key's schema and fallback produce that key's type; TypeScript cannot follow the
+    // correlation through the generic index, hence the casts.
     const read = <K extends Key>(key: K): ProfileSettings[K] => {
+      const fallback = SETTINGS[key].fallback as ProfileSettings[K];
       const raw = stored.get(key);
-      if (raw === undefined) return SETTINGS[key].fallback;
+      if (raw === undefined) return fallback;
       try {
         const parsed = SETTINGS[key].schema.safeParse(JSON.parse(raw));
-        return parsed.success ? parsed.data : SETTINGS[key].fallback;
+        return parsed.success ? (parsed.data as ProfileSettings[K]) : fallback;
       } catch {
-        return SETTINGS[key].fallback;
+        return fallback;
       }
     };
-    return { theme: read('theme') };
+    return { theme: read('theme'), accent: read('accent'), surface: read('surface') };
   }
 
   update(patch: {

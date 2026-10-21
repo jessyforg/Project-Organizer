@@ -159,7 +159,11 @@ test('notes: write Markdown, autosave, preview, search, leave safely, trash and 
     .getByLabel('Note text (Markdown)')
     .fill('# Agenda\n\n- Budget **review**\n\n<b>not bold</b>');
   await expect(page.getByTestId('note-save-state')).toHaveText('Saved');
-  await expect(page.getByRole('list', { name: 'Notes' })).toContainText('Meeting notes');
+  // The library lists it; opening it again shows the note view.
+  await page.getByRole('button', { name: 'All notes' }).click();
+  const list = page.getByRole('list', { name: 'Notes' });
+  await expect(list).toContainText('Meeting notes');
+  await list.getByRole('button', { name: /Meeting notes/ }).click();
 
   // The preview renders Markdown and shows raw HTML as text.
   await page.getByRole('button', { name: 'Preview' }).click();
@@ -359,5 +363,45 @@ test('calendar: tasks appear on due dates; changing a due date moves the entry a
   await expect(page.getByRole('button', { name: /Pay rent/ })).toBeHidden();
   await page.getByLabel('Show done and cancelled').check();
   await expect(page.getByRole('button', { name: /Pay rent.*done/ })).toBeVisible();
+  await app.close();
+});
+
+test('settings: colours persist across a restart, and tags can be deleted', async () => {
+  let { app, page } = await launch(dataDir);
+  await page.getByLabel('Profile name').fill('Colours');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await page.evaluate(async () => {
+    const tag = await window.api.tags.create({ name: 'Obsolete' });
+    if (tag.ok) await window.api.notes.create({ title: 'Tagged', tagIds: [tag.data.id] });
+  });
+  await nav(page).getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('radio', { name: 'Teal' }).check();
+  await page.getByRole('radio', { name: 'Warm' }).check();
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('data-accent', 'teal');
+  await expect(html).toHaveAttribute('data-surface', 'warm');
+
+  // Deleting a tag says where it is used and keeps the note.
+  const tags = page.getByRole('list', { name: 'Tags' });
+  await expect(tags).toContainText('1 note');
+  await tags.getByRole('button', { name: 'Actions for tag Obsolete' }).click();
+  await page.getByRole('menuitem', { name: 'Delete tag' }).click();
+  await expect(page.getByText('It is removed from 1 note. The items are kept.')).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Delete tag' }).click();
+  await expect(page.getByText('No tags yet.', { exact: false })).toBeVisible();
+  await app.close();
+
+  ({ app, page } = await launch(dataDir));
+  await expect(page.locator('html')).toHaveAttribute('data-accent', 'teal');
+  await expect(page.locator('html')).toHaveAttribute('data-surface', 'warm');
+  const accent = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+  );
+  expect(accent).toBe('#0e7068');
+  const titles = await page.evaluate(async () => {
+    const notes = await window.api.notes.list({});
+    return notes.ok ? notes.data.map((n) => [n.title, n.tagIds.length]) : [];
+  });
+  expect(titles).toEqual([['Tagged', 0]]);
   await app.close();
 });

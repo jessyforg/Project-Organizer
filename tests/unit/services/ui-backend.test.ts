@@ -34,12 +34,12 @@ describe('TaskService.setCompleted', () => {
 describe('SettingsService', () => {
   it('defaults to the system theme, saves changes, and ignores invalid stored values', async () => {
     const p = await setupProfile();
-    expect(p.settings.get()).toEqual({ theme: 'system' });
-    expect(p.settings.update({ theme: 'dark' })).toEqual({ theme: 'dark' });
+    expect(p.settings.get()).toMatchObject({ theme: 'system' });
+    expect(p.settings.update({ theme: 'dark' })).toMatchObject({ theme: 'dark' });
     p.db.prepare("UPDATE settings SET value_json = '\"neon\"' WHERE key = 'theme'").run();
-    expect(p.settings.get()).toEqual({ theme: 'system' });
+    expect(p.settings.get()).toMatchObject({ theme: 'system' });
     p.db.prepare("UPDATE settings SET value_json = 'not json' WHERE key = 'theme'").run();
-    expect(p.settings.get()).toEqual({ theme: 'system' });
+    expect(p.settings.get()).toMatchObject({ theme: 'system' });
   });
 });
 

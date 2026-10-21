@@ -132,6 +132,7 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'tags:create': (input) => s().tags.create(input),
     'tags:update': (input) => s().tags.update(input),
     'tags:delete': ({ id }) => (s().tags.delete(id), null),
+    'tags:usage': () => s().tags.usage(),
     'tags:setTaskTags': ({ taskId, tagIds }) => (s().tags.setTaskTags(taskId, tagIds), null),
     'tags:setProjectTags': ({ projectId, tagIds }) => (
       s().tags.setProjectTags(projectId, tagIds),
@@ -170,6 +171,8 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'notes:move': (input) => s().notes.move(input),
     'notes:setFolder': (input) => s().notes.setFolder(input),
     'notes:duplicate': ({ id }) => s().notes.duplicate(id),
+    'notes:archive': ({ id }) => s().notes.archive(id),
+    'notes:unarchive': ({ id }) => s().notes.unarchive(id),
     'notes:import': (input) => s().notes.import(input),
     // The saved body goes to the clipboard from here, so the renderer needs no clipboard access.
     'notes:copyMarkdown': ({ id }) => {

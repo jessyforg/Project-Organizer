@@ -6,6 +6,8 @@ import {
   PROJECT_STATES,
   STATUS_CATEGORIES,
   THEMES,
+  ACCENTS,
+  SURFACES,
 } from './domain';
 
 /** Input validation for domain operations. Used at the IPC boundary and by forms. */
@@ -150,6 +152,9 @@ export const taskListQuerySchema = z.strictObject({
 });
 
 // Notes
+/** Newest update first, newest created first, or title A–Z. */
+export const NOTE_SORTS = ['updated', 'created', 'title'] as const;
+export type NoteSort = (typeof NOTE_SORTS)[number];
 const noteBody = z.string().max(LIMITS.description, 'This note is too long.');
 export const createNoteSchema = z.strictObject({
   title,
@@ -181,7 +186,11 @@ export const noteListQuerySchema = z.strictObject({
   folderId: id.nullable().optional(),
   tagIds: idList.optional(),
   text: z.string().max(LIMITS.searchText).optional(),
+  /** Notes in archived projects. */
   includeArchived: z.boolean().optional(),
+  /** Archived notes (ADR-0015): left out by default, listed alone, or listed with the rest. */
+  archived: z.enum(['exclude', 'only', 'include']).optional(),
+  sort: z.enum(NOTE_SORTS).optional(),
   limit: z.number().int().min(1).max(LIMITS.listPageSize).optional(),
 });
 
@@ -195,7 +204,11 @@ export const setCompletedSchema = z.strictObject({ id, completed: z.boolean() })
 export const taskIdSchema = z.strictObject({ taskId: id });
 export const projectIdSchema = z.strictObject({ projectId: id });
 export const listProjectsSchema = z.strictObject({ includeArchived: z.boolean().optional() });
-export const updateSettingsSchema = z.strictObject({ theme: z.enum(THEMES).optional() });
+export const updateSettingsSchema = z.strictObject({
+  theme: z.enum(THEMES).optional(),
+  accent: z.enum(ACCENTS).optional(),
+  surface: z.enum(SURFACES).optional(),
+});
 export const emptySchema = z.strictObject({});
 
 export type CreateFolderInput = z.output<typeof createFolderSchema>;

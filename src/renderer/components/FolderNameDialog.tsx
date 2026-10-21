@@ -1,7 +1,45 @@
 import { useState } from 'react';
 import type { Result } from '@shared/result';
+import { LIMITS } from '@shared/schemas';
 import { useInvalidate } from '../app/data';
 import { Dialog } from './ui';
+
+/** A dialog with one name field: creating or renaming a folder, renaming a note, and so on. */
+export function NameDialog({
+  open,
+  title,
+  fieldLabel,
+  submitLabel,
+  initial,
+  maxLength = LIMITS.name,
+  onSave,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  fieldLabel: string;
+  submitLabel: string;
+  initial: string;
+  maxLength?: number;
+  onSave: (name: string) => Promise<Result<unknown>>;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={open} onClose={onClose} label={title}>
+      {open && (
+        <NameForm
+          title={title}
+          fieldLabel={fieldLabel}
+          submitLabel={submitLabel}
+          initial={initial}
+          maxLength={maxLength}
+          onSave={onSave}
+          onDone={onClose}
+        />
+      )}
+    </Dialog>
+  );
+}
 
 /**
  * Names a new folder or renames one; used for project folders and note folders. `state` is
@@ -18,30 +56,36 @@ export function FolderNameDialog({
 }) {
   const renaming = state?.name !== undefined;
   return (
-    <Dialog
+    <NameDialog
       open={state !== null}
+      title={renaming ? 'Rename folder' : 'New folder'}
+      fieldLabel="Folder name"
+      submitLabel={renaming ? 'Rename folder' : 'Create folder'}
+      initial={state?.name ?? ''}
+      onSave={onSave}
       onClose={onClose}
-      label={renaming ? 'Rename folder' : 'New folder'}
-    >
-      {state && (
-        <FolderNameForm initial={state.name} renaming={renaming} onSave={onSave} onDone={onClose} />
-      )}
-    </Dialog>
+    />
   );
 }
 
-function FolderNameForm({
+function NameForm({
+  title,
+  fieldLabel,
+  submitLabel,
   initial,
-  renaming,
+  maxLength,
   onSave,
   onDone,
 }: {
-  initial: string | undefined;
-  renaming: boolean;
+  title: string;
+  fieldLabel: string;
+  submitLabel: string;
+  initial: string;
+  maxLength: number;
   onSave: (name: string) => Promise<Result<unknown>>;
   onDone: () => void;
 }) {
-  const [name, setName] = useState(initial ?? '');
+  const [name, setName] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const invalidate = useInvalidate();
   return (
@@ -50,7 +94,7 @@ function FolderNameForm({
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        if (!name.trim()) return setError('Enter a folder name.');
+        if (!name.trim()) return setError(`Enter a ${fieldLabel.toLowerCase()}.`);
         void (async () => {
           const result = await onSave(name);
           if (!result.ok) return setError(result.error.message);
@@ -59,14 +103,14 @@ function FolderNameForm({
         })();
       }}
     >
-      <h2>{renaming ? 'Rename folder' : 'New folder'}</h2>
+      <h2>{title}</h2>
       <div className="field">
-        <label htmlFor="folder-name">Folder name</label>
+        <label htmlFor="name-dialog-field">{fieldLabel}</label>
         <input
-          id="folder-name"
+          id="name-dialog-field"
           className="input"
           value={name}
-          maxLength={200}
+          maxLength={maxLength}
           autoFocus
           aria-invalid={error !== null}
           onChange={(e) => setName(e.target.value)}
@@ -82,7 +126,7 @@ function FolderNameForm({
           Cancel
         </button>
         <button type="submit" className="btn btn--primary">
-          {renaming ? 'Rename folder' : 'Create folder'}
+          {submitLabel}
         </button>
       </div>
     </form>

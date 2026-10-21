@@ -161,6 +161,8 @@ export interface NoteSummary {
   projectId: string;
   /** The note's folder (ADR-0014); null when it is in no folder. */
   folderId: string | null;
+  /** When the note was archived (ADR-0015); null for live notes. */
+  archivedAt: string | null;
   title: string;
   excerpt: string;
   tagIds: string[];
@@ -173,6 +175,7 @@ export interface Note {
   id: string;
   projectId: string;
   folderId: string | null;
+  archivedAt: string | null;
   title: string;
   body: string;
   tagIds: string[];
@@ -189,8 +192,25 @@ export interface SearchResults {
 export const THEMES = ['system', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
 
+/** Primary colour palettes (ADR-0015); each is checked for contrast in light and dark. */
+export const ACCENTS = ['blue', 'teal', 'green', 'violet', 'rose', 'amber'] as const;
+export type Accent = (typeof ACCENTS)[number];
+
+/** Secondary colour: the tone of backgrounds and surfaces (ADR-0015). */
+export const SURFACES = ['cool', 'neutral', 'warm'] as const;
+export type Surface = (typeof SURFACES)[number];
+
+/** How many live items use a tag. */
+export interface TagUsage {
+  tasks: number;
+  projects: number;
+  notes: number;
+}
+
 export interface ProfileSettings {
   theme: Theme;
+  accent: Accent;
+  surface: Surface;
 }
 
 export interface ProjectListItem extends Project {
