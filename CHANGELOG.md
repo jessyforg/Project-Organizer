@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 — Slash commands (2026-10-21, not yet publicly released)
+
+- **Slash commands in notes:** type `/` at the start of a line (or after a space) to insert a block: text, headings 1–3, bulleted, numbered, and checklists, a quote, a code block, or a divider.
+  - Keep typing to filter (`/h2`, `/todo`).
+  - ↑ and ↓ choose, and Enter, Tab, or a click inserts. Escape closes the menu (in focus mode it closes only the menu).
+- An empty line shows the hint "Type / for commands".
+- Notes are still saved as the same Markdown; no data changes.
+
 ## 0.4.0 — Notes library, archiving, colour themes, and right-click menus (2026-10-21, not yet publicly released)
 
 - **Notes library and note view:** Notes opens on a library (folders beside a full-width list with search, project, tag, and sort filters). Opening a note shows it on its own, with "← All notes" and a breadcrumb.

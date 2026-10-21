@@ -151,3 +151,70 @@ test('notes: library, right-click archive, read-only archived notes, and focus m
   await page.keyboard.press('Escape');
   await expect(nav(page)).toBeVisible();
 });
+
+test('notes: slash commands insert blocks from the keyboard and mouse, saved as Markdown', async () => {
+  const { page } = await launch();
+  await page.getByLabel('Profile name').fill('Slash');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await nav(page).getByRole('button', { name: 'Notes' }).click();
+  await page.getByRole('button', { name: 'New note' }).click();
+  await page.getByLabel('Note title').fill('Weekly plan');
+  const body = page.getByRole('textbox', { name: 'Note text' });
+  await body.click();
+  const menu = page.getByRole('listbox', { name: 'Insert a block' });
+
+  // "/" opens the menu just below the cursor, inside the window.
+  await page.keyboard.type('/');
+  await expect(menu).toBeVisible();
+  const caret = await body.locator('.slash-query').boundingBox();
+  const box = await page.locator('.slash-menu').boundingBox();
+  expect(caret && box).toBeTruthy();
+  expect(box!.y).toBeGreaterThanOrEqual(caret!.y + caret!.height - 1);
+  expect(box!.x).toBeLessThan(caret!.x + 8);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(800);
+
+  // Filter, then Enter; the arrow keys pick another match.
+  await page.keyboard.type('h2');
+  await expect(menu.getByRole('option')).toHaveCount(1);
+  await page.keyboard.press('Enter');
+  await expect(menu).toHaveCount(0);
+  await page.keyboard.type('Goals');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('/list');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await expect(menu.getByRole('option', { name: /Checklist/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Ship slash commands');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+
+  // A click works too, and keeps the cursor in the note.
+  await page.keyboard.type('/div');
+  await menu.getByRole('option', { name: /Divider/ }).click();
+  await expect(menu).toHaveCount(0);
+  await page.keyboard.type('Notes');
+
+  // In focus mode, Escape closes only the menu; a second Escape leaves focus mode.
+  await page.keyboard.press('Control+Shift+F');
+  await expect(nav(page)).toHaveCount(0);
+  await page.keyboard.type(' /quo');
+  await expect(menu).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(menu).toHaveCount(0);
+  await expect(nav(page)).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(nav(page)).toBeVisible();
+
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+  const saved = await page.evaluate(async () => {
+    const list = await window.api.notes.list({});
+    if (!list.ok) return null;
+    const note = await window.api.notes.get({ id: list.data[0]!.id });
+    return note.ok ? note.data.body : null;
+  });
+  expect(saved).toBe('## Goals\n\n- [ ] Ship slash commands\n\n---\n\nNotes /quo\n');
+});

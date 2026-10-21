@@ -2,6 +2,42 @@
 
 Newest entries first.
 
+## 2026-10-21 — Slash commands (version 0.5.0), awaiting merge approval
+
+**Approval:** the product owner asked for Phase 3 without a plan review ("no need for approval, just do it and do what you recommend"). The merge into `main` still waits for their approval. The work is on `feature/slash-commands`, branched from `main` at 0.4.0 (`610bccf`). Decisions are recorded in [ADR-0016](DECISIONS/0016-slash-commands.md).
+
+**Scope completed:**
+- **Slash menu:** `/` at the start of a line or after a space. It filters by name and keywords and is driven by the keyboard (↑ ↓ Enter Tab Escape) or the mouse.
+- **Ten commands:** Text, Heading 1–3, the three list types, Quote, Code block, and Divider. Commands an editor cannot show are left out.
+- **Closed when it should be:** inside words, code blocks, read-only notes, and Markdown mode.
+- **Hint:** "Type / for commands" on an empty line.
+- **Dependencies:** `@tiptap/suggestion` 3.31.4 is new. `@tiptap/extensions` was already installed and is now declared. Both are dev (build-time) dependencies.
+- **No data changes:** the commands produce blocks notes already store as Markdown.
+- **Version 0.5.0** and a CHANGELOG entry.
+
+**Defects found and fixed during the work:**
+- **Enter straight after typing could start a new line:** the plugin reports an empty "loading" list before the items, so Enter in that moment would not have run the command. The list is now computed at once, and a component test fails without this.
+- **Stale state in the key handler:** the handler read state that React might not have rendered yet. The menu's state now lives in an external store.
+- **Scrollable list not keyboard-focusable:** found by the new axe scan of the open menu (WCAG 2.1.1). The list is now focusable.
+- **Test timing (not a product defect):** Tiptap's `focus()` waits a frame, so early test key presses sometimes missed the editor. The tests now focus synchronously and assert it.
+
+**Verification (2026-10-21):**
+
+| Check | Result |
+|---|---|
+| `npm run check` (typecheck, lint, formatting, unit tests) | Passed — 393 of 393 (15 new slash-command component tests) |
+| `npm run test:e2e` | Passed — 18 of 18, including the new slash-command workflow and accessibility scans of the open menu in both themes |
+| Regression tests | The Enter-while-loading and Escape-in-focus-mode tests were each confirmed to fail without their fix |
+| `npm audit --omit=dev` | 0 vulnerabilities |
+| Screenshots (production build, light and dark) | Menu open with a highlight, flipped above the cursor near the bottom of the window, the "no matches" state, and the empty-line hint |
+
+**Known limitations:**
+- Only blocks that notes can store as Markdown; no tables or images yet.
+- No grouping or recent commands.
+- No manual screen-reader pass.
+
+**Next step:** the product owner reviews the 0.5.0 installer and approves the merge into `main`.
+
 ## 2026-10-21 — Notes library and views, archiving, colour themes, tag management, right-click menus (version 0.4.0), awaiting merge approval
 
 **Approval:** the product owner approved all recommended options ("do all of the recommended"):
@@ -53,6 +89,8 @@ Newest entries first.
 - No manual screen-reader pass.
 
 **Next step:** the product owner reviews the 0.4.0 installer and approves the merge into `main`. Phase 3 (slash commands) waits for approval.
+
+**Update:** 0.4.0 was fast-forwarded into `main` and pushed (`610bccf`) on 2026-10-21 with the product owner's approval.
 
 ## 2026-10-21 — Note actions, Markdown import, and note folders (version 0.3.0), awaiting merge approval
 

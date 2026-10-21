@@ -93,8 +93,9 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 
 14. Kanban: move cards with the Move dialog and by real drag and drop → order and status persist across a restart → Done completes the task.
 15. Calendar: a task appears on its due date → open it from the calendar → change the due date → the entry moves at once → completed tasks hidden unless shown.
+16. Slash commands (ADR-0016): `/` opens the menu below the cursor and inside the window → `/h2` + Enter → arrow keys + Enter for a checklist → a click for a divider → in focus mode Escape closes only the menu → the stored text is the expected Markdown.
 
-All fifteen workflows are automated: 1–5, 7–9, and 12–15 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, and 10–11 in `tests/e2e/notes.spec.ts`.
+All sixteen workflows are automated: 1–5, 7–9, and 12–15 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, and 10–11 and 16 in `tests/e2e/notes.spec.ts`. The accessibility scans include the open slash menu.
 
 Some editor behaviour can only be tested end to end: jsdom does not reproduce ProseMirror marking Escape as handled, so the focus-mode Escape check lives in workflow 11, not in a component test. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
 

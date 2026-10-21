@@ -180,6 +180,10 @@ for (const theme of ['light', 'dark'] as const) {
     await page.getByRole('button', { name: 'New note' }).click();
     await page.getByRole('textbox', { name: 'Note text' }).fill('A visual note');
     await expectNoViolations(page, 'Notes (visual)');
+    await page.keyboard.type(' /');
+    await expect(page.getByRole('listbox', { name: 'Insert a block' })).toBeVisible();
+    await expectNoViolations(page, 'Notes (slash command menu)');
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Note actions' }).click();
     await expectNoViolations(page, 'Notes (actions menu)');
     await page.keyboard.press('Escape');

@@ -300,6 +300,114 @@ img.ProseMirror-separator {
   display: block;
 }
 
+/* Hint on the empty line holding the cursor (Placeholder extension). */
+.doc-editor__body .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+/* Slash command menu (ADR-0016). The plugin adds the host to the page and positions it. */
+.slash-menu-host {
+  z-index: 40;
+}
+
+.slash-menu {
+  width: min(300px, calc(100vw - 32px));
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+  animation: rise-in var(--duration-fast) var(--ease);
+}
+
+.slash-menu__list {
+  max-height: min(332px, 50vh);
+  overflow-y: auto;
+  border-radius: var(--radius-control);
+}
+
+.slash-menu__list:focus-visible {
+  outline: 2px solid var(--focus);
+}
+
+.slash-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.slash-menu__item[aria-selected='true'] {
+  background: var(--surface-hover);
+}
+
+.slash-menu__icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink-muted);
+}
+
+.slash-menu__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.slash-menu__item[aria-selected='true'] .slash-menu__icon {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.slash-menu__text {
+  display: grid;
+  min-width: 0;
+}
+
+.slash-menu__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.slash-menu__description {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slash-menu__empty {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* The typed "/query" while the menu is open. */
+.doc-editor__body .slash-query {
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+@media (pointer: coarse) {
+  .slash-menu__item {
+    min-height: 44px;
+  }
+}
+
 /* Editor lab (development builds only). */
 .editor-lab {
   display: grid;

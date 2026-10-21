@@ -6,9 +6,11 @@ import {
   type Extensions,
   type JSONContent,
 } from '@tiptap/react';
+import { Placeholder } from '@tiptap/extensions';
 import { LIMITS } from '@shared/schemas';
 import { documentExtensions, EXTERNAL_LINK } from './editor-config';
 import { EditorToolbar } from './EditorToolbar';
+import { useSlashMenu } from './SlashMenu';
 
 export interface DocumentEditorProps {
   /** With `onTitleChange`, shows a title field above the body; leave both out for no title. */
@@ -29,6 +31,8 @@ export interface DocumentEditorProps {
   label?: string;
   /** False shows the document read-only, without the toolbar. */
   editable?: boolean;
+  /** Typing "/" opens a menu of blocks to insert (ADR-0016). Read once. */
+  slashCommands?: boolean;
   className?: string;
 }
 
@@ -47,12 +51,19 @@ export function DocumentEditor({
   titlePlaceholder = 'Untitled',
   label = 'Document body',
   editable = true,
+  slashCommands = true,
   className,
 }: DocumentEditorProps) {
   const id = useId();
   const bodyId = `${id}-body`;
+  const slash = useSlashMenu();
   // Tiptap compares extensions by identity, so create them once.
-  const [loaded] = useState(() => extensions ?? documentExtensions());
+  const [loaded] = useState(() => [
+    ...(extensions ?? documentExtensions()),
+    ...(slashCommands
+      ? [slash.extension, Placeholder.configure({ placeholder: 'Type / for commands' })]
+      : []),
+  ]);
   const editor = useEditor({
     extensions: loaded,
     content: initialContent ?? '',
@@ -123,6 +134,7 @@ export function DocumentEditor({
       )}
       {editor && editable && <EditorToolbar editor={editor} controls={bodyId} />}
       <EditorContent editor={editor} className="doc-editor__content" />
+      {slash.render(editor)}
     </div>
   );
 }
