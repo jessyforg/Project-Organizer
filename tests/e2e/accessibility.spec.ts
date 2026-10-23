@@ -160,6 +160,17 @@ for (const theme of ['light', 'dark'] as const) {
     await nav.getByRole('button', { name: 'Projects', exact: true }).click();
     await expectNoViolations(page, 'Projects');
 
+    // The command palette and quick switcher (ADR-0018).
+    await page.keyboard.press('Control+k');
+    await expect(page.getByRole('option', { name: /New task/ })).toBeVisible();
+    await expectNoViolations(page, 'Command palette (actions)');
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Control+o');
+    await page.keyboard.type('fix');
+    await expect(page.getByRole('option', { name: /Fix layout bug/ })).toBeVisible();
+    await expectNoViolations(page, 'Quick switcher (results)');
+    await page.keyboard.press('Escape');
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');

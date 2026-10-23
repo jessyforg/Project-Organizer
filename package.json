@@ -1,7 +1,7 @@
 {
   "name": "projectforge",
   "productName": "ProjectForge",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Free, local-first Windows desktop project organizer",
   "private": true,
   "license": "UNLICENSED",

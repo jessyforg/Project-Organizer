@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ProfileSettings } from '@shared/domain';
 import type { ProfileSummary } from '@shared/types';
 import { Dialog, Loading } from '../components/ui';
@@ -13,9 +13,11 @@ import { MyTasksPage } from '../features/tasks/MyTasksPage';
 import { TaskDetails } from '../features/tasks/TaskDetails';
 import { TrashPage } from '../features/trash/TrashPage';
 import { applyPalette } from '../theme/palettes';
+import type { PaletteMode } from './CommandPalette';
 import { useQuery } from './data';
 import { useFocusMode } from './focus';
 import { useNavigation, type Route } from './navigation';
+import { isDark, PaletteHost } from './PaletteHost';
 import { useQuickAdd } from './quick-add';
 import { useShortcuts } from './shortcuts';
 import { Sidebar } from './Sidebar';
@@ -48,19 +50,25 @@ export function Shell({
   const searchRef = useRef<HTMLInputElement>(null);
   const mainRef = useRef<HTMLElement>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [palette, setPalette] = useState<PaletteMode | null>(null);
   const { focused } = useFocusMode();
-  useTheme();
+  const theme = useTheme();
 
+  const newTask = useCallback(
+    () => quickAdd(route.name === 'project' ? { projectId: route.id } : undefined),
+    [quickAdd, route],
+  );
   const handlers = useMemo(
     () => ({
-      newTask: () => quickAdd(route.name === 'project' ? { projectId: route.id } : undefined),
-      search: () => searchRef.current?.focus(),
+      newTask,
+      palette: () => setPalette('actions'),
+      switcher: () => setPalette('items'),
       goTo: (index: 1 | 2 | 3 | 4) => navigate(GO_TO[index]),
       settings: () => navigate({ name: 'settings' }),
       help: () => setHelpOpen(true),
       closeDetails: () => openTask(null),
     }),
-    [quickAdd, route, navigate, openTask],
+    [newTask, navigate, openTask],
   );
   useShortcuts(handlers);
 
@@ -92,6 +100,13 @@ export function Shell({
         )}
       </main>
       {openTaskId && <TaskDetails taskId={openTaskId} />}
+      <PaletteHost
+        mode={palette}
+        setMode={setPalette}
+        newTask={newTask}
+        showShortcuts={() => setHelpOpen(true)}
+        theme={theme}
+      />
       <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} label="Keyboard shortcuts">
         <div className="dialog__form">
           <h2>Keyboard shortcuts</h2>
@@ -107,8 +122,11 @@ export function Shell({
   );
 }
 
-/** Applies the profile's theme and colours, following Windows when the theme is "system". */
-function useTheme(): void {
+/**
+ * Applies the profile's theme and colours, following Windows when the theme is "system".
+ * Returns the chosen theme.
+ */
+function useTheme(): ProfileSettings['theme'] {
   const settings = useQuery('settings', () => window.api.settings.get());
   const theme = settings.data?.theme ?? 'system';
   const accent = settings.data?.accent ?? 'blue';
@@ -120,6 +138,7 @@ function useTheme(): void {
     media?.addEventListener('change', apply);
     return () => media?.removeEventListener('change', apply);
   }, [theme, accent, surface]);
+  return theme;
 }
 
 /** The theme and colour palette together (ADR-0015). */
@@ -129,10 +148,7 @@ export function applyAppearance({
   surface,
 }: Pick<ProfileSettings, 'theme' | 'accent' | 'surface'>): void {
   applyTheme(theme);
-  const dark =
-    theme === 'dark' ||
-    (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches === true);
-  applyPalette(accent, surface, dark ? 'dark' : 'light');
+  applyPalette(accent, surface, isDark(theme) ? 'dark' : 'light');
 }
 
 export function applyTheme(theme: 'system' | 'light' | 'dark'): void {

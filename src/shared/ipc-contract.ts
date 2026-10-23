@@ -15,6 +15,7 @@ import type {
   ProjectListItem,
   RestoreResult,
   SearchResults,
+  SwitcherItem,
   Tag,
   TagUsage,
   Task,
@@ -168,6 +169,9 @@ export const ipcContract = {
   'trash:deletePermanently': s.batchSchema,
   'trash:empty': s.emptySchema,
   'search:query': s.searchSchema,
+  'switcher:search': s.switcherSearchSchema,
+  'switcher:recent': s.switcherRecentSchema,
+  'switcher:recordOpened': s.linkTargetSchema,
 } as const satisfies Record<IpcChannel, z.ZodType>;
 
 /** Shape the renderer sends. */
@@ -270,4 +274,7 @@ export interface IpcResponses {
   'trash:deletePermanently': null;
   'trash:empty': { removed: number };
   'search:query': SearchResults;
+  'switcher:search': SwitcherItem[];
+  'switcher:recent': SwitcherItem[];
+  'switcher:recordOpened': null;
 }

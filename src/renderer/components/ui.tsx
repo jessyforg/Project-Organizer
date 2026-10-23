@@ -144,6 +144,8 @@ export interface MenuItem {
   danger?: boolean;
   /** Draw a separator above this item. */
   separated?: boolean;
+  /** Its keyboard shortcut, shown in the command palette (ADR-0018). */
+  shortcut?: string;
   onSelect: () => void;
 }
 
@@ -389,12 +391,15 @@ export function Dialog({
   label,
   children,
   wide,
+  className,
 }: {
   open: boolean;
   onClose: () => void;
   label: string;
   children: ReactNode;
   wide?: boolean;
+  /** Added to the dialog's own class. */
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
@@ -406,7 +411,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className={`dialog${wide ? ' dialog--wide' : ''}`}
+      className={['dialog', wide && 'dialog--wide', className].filter(Boolean).join(' ')}
       aria-label={label}
       onClose={onClose}
     >

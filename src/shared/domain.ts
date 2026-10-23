@@ -191,6 +191,21 @@ export interface SearchResults {
   notes: NoteSummary[];
 }
 
+/** One result of the quick switcher (ADR-0018). */
+export interface SwitcherItem {
+  kind: AppLinkKind;
+  id: string;
+  title: string;
+  /** The project a task or note belongs to; null for a project. */
+  projectName: string | null;
+  /** A note's folder, or a project's folder; null for tasks and items outside folders. */
+  folderName: string | null;
+  /** The item, or its project, is archived. */
+  archived: boolean;
+  /** A task that is done. */
+  completed: boolean;
+}
+
 export const THEMES = ['system', 'light', 'dark'] as const;
 export type Theme = (typeof THEMES)[number];
 

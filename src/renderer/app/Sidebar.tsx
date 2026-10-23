@@ -89,7 +89,6 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
           value={route.name === 'search' ? route.text : ''}
           onChange={(e) => navigate({ name: 'search', text: e.target.value })}
         />
-        <kbd aria-hidden="true">Ctrl K</kbd>
       </div>
       <button
         type="button"

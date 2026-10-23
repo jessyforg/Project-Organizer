@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.0 — Find and act fast (2026-10-23, not yet publicly released)
+
+- **Command palette (Ctrl+K):** type to find and run an action.
+  - New task, note, or project; go to any screen; switch between light and dark; show the keyboard shortcuts.
+  - On a note or project, its own actions come first: the same ones as its buttons and ⋯ menu, with the same confirmations and undo.
+  - Each action shows its shortcut, if it has one.
+  - The last entry, "Search everything for …", opens the search page.
+- **Quick switcher (Ctrl+O):** type a name to jump to a project, note, or task.
+  - Each result shows its type, project, and folder. Titles that start with what you typed come first.
+  - With nothing typed, it lists the 10 items you opened most recently.
+  - Archived items show only when "Include archived" is ticked. Items in the trash never show.
+  - Enter opens the item, and Ctrl+Enter opens a note in focus mode.
+  - In the palette, deleting the `>` switches to finding items, and typing `>` switches back.
+- **Changed:** Ctrl+K used to move to the sidebar search box. The box still works with the mouse, and the palette's last entry opens the same search.
+- No data changes. Recent items are kept in the profile, so backups include them.
+
 ## 0.6.0 — Notes (2026-10-23, not yet publicly released)
 
 - **Formatting bubble:** select text in a note to get a small toolbar above it.

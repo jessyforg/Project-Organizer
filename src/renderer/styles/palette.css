@@ -1,0 +1,205 @@
+/* Command palette and quick switcher (ADR-0018). A dialog near the top of the window. */
+.dialog.palette {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 96px));
+  margin: max(48px, 12vh) auto auto;
+  overflow: hidden;
+}
+
+.palette__body {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+}
+
+.palette__field {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-muted);
+}
+
+.palette__field svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.palette__input {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.palette__input:focus {
+  outline: none;
+}
+
+.palette__input::placeholder {
+  color: var(--ink-muted);
+}
+
+/* The text box has no border of its own, so the field shows focus. */
+.palette__field:focus-within {
+  box-shadow: inset 0 -2px 0 var(--focus);
+}
+
+.palette__archived {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.palette__list {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+}
+
+.palette__list:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.palette__group {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.palette__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.palette__option[aria-selected='true'] {
+  background: var(--surface-hover);
+}
+
+.palette__icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink-muted);
+}
+
+.palette__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.palette__option[aria-selected='true'] .palette__icon {
+  border-color: transparent;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.palette__option--danger .palette__label {
+  color: var(--danger);
+}
+
+.palette__text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.palette__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__badge {
+  flex: none;
+}
+
+.palette__meta {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette__kbd,
+.palette__hint kbd {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-family: inherit;
+  font-size: var(--text-xs);
+}
+
+.palette__empty {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.palette__hint {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.palette__mode {
+  margin-left: auto;
+}
+
+@media (max-width: 520px) {
+  .palette__kbd,
+  .palette__hint {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .palette__option {
+    min-height: 44px;
+  }
+}

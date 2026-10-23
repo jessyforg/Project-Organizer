@@ -100,8 +100,9 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 20. Note links (ADR-0017): `[[` + Enter → the saved Markdown is the link → the chip opens the note → backlinks list it → Link a mention → rename shows in the chip → trashed: broken and inert → restored: works → Ctrl+click opens focus mode → after a restart the backlinks remain.
 21. Mentions (ADR-0017): `@fix` + Enter → the chip shows the status and due date → completing the task shows Done → the chip opens the task → "Mentioned in 1 note" opens the note → the saved Markdown matches.
 22. Images and files (ADR-0017): `/file` (its Choose button) and `/image` (Enter on its prompt) through the real file picker → the image loads under the Content Security Policy → its description is set → Save a copy writes the same bytes → the saved Markdown matches → the preview shows the image → after a restart it is still there → no Content Security Policy message.
+23. Command palette and quick switcher (ADR-0018): Ctrl+K → New project (the same dialog) → on the project its own actions come first → Move to trash asks first → New note in this project → focus mode and back → Ctrl+O lists recent items → typing finds a task (type and project shown) and opens its details → Ctrl+Enter opens a note in focus mode → Escape returns focus → archived items need "Include archived" → the other theme → restart → theme and recent items kept → no console errors.
 
-All twenty-two workflows are automated: 1–5, 7–9, and 12–15 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, and 10–11 and 16–22 in `tests/e2e/notes.spec.ts`. The accessibility scans include the open slash menu, the formatting bubble, its link field, the outline, and a note with every callout kind, toggles, and a table, in the editor and the preview.
+All twenty-three workflows are automated: 1–5, 7–9, and 12–15 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, 10–11 and 16–22 in `tests/e2e/notes.spec.ts`, and 23 in `tests/e2e/palette.spec.ts`. The quick switcher's speed (under 100 ms with 5,000 tasks) is checked in `tests/unit/services/switcher.test.ts`. The accessibility scans include the command palette in both modes, the open slash menu, the formatting bubble, its link field, the outline, and a note with every callout kind, toggles, and a table, in the editor and the preview.
 
 Some editor behaviour can only be tested end to end: jsdom does not reproduce ProseMirror marking Escape as handled, so the focus-mode Escape check lives in workflow 11, not in a component test. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
 
@@ -131,7 +132,7 @@ Component tests use the real preload `createApi` over a scripted fake backend (`
 
 ### Keyboard-only walkthrough
 
-Partly automated (the core workflow uses Ctrl+K, Ctrl+N, Ctrl+1, Ctrl+4, Ctrl+, , Escape, and Enter-to-submit). Checked by design and code review:
+Partly automated (the core workflow uses Ctrl+K and Enter for search, Ctrl+N, Ctrl+1, Ctrl+4, Ctrl+, , Escape, and Enter-to-submit). Checked by design and code review:
 
 - Every interactive element is a native `button`, `input`, `select`, `textarea`, or `dialog`, so Tab order follows the page and Enter/Space activate controls.
 - Task rows expose two stops: the completion checkbox (name "Done: <title>", stable while toggling) and the title button that opens details.

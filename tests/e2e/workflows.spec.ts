@@ -84,9 +84,10 @@ test('core workflow: projects, tasks, subtasks, filters, search, trash, archive,
   await page.getByRole('button', { name: 'Clear filters' }).click();
   await expect(taskButton(page, 'Design homepage')).toBeVisible();
 
-  // Global search with the keyboard shortcut.
+  // Global search from the command palette's last entry (ADR-0018).
   await page.keyboard.press('Control+k');
   await page.keyboard.type('homepa');
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'Results for “homepa”' })).toBeVisible();
   await expect(taskButton(page, 'Design homepage')).toBeVisible();
 
@@ -182,6 +183,7 @@ test('notes: write Markdown, autosave, preview, search, leave safely, trash and 
   // Global search finds note bodies.
   await page.keyboard.press('Control+k');
   await page.keyboard.type('decide');
+  await page.keyboard.press('Enter');
   await page.getByRole('list', { name: 'Matching notes' }).getByRole('button').click();
   await expect(page.getByTestId('note-save-state')).toHaveText('Saved');
   await expect(editor).toContainText('Decide date.');

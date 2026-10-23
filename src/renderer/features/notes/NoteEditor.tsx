@@ -1,11 +1,22 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { Archive, Eye, FileCode2, PenLine, TableOfContents, Type } from 'lucide-react';
+import {
+  Archive,
+  Eye,
+  FileCode2,
+  Maximize2,
+  Minimize2,
+  PenLine,
+  Save,
+  TableOfContents,
+  Type,
+} from 'lucide-react';
 import type { Editor, JSONContent } from '@tiptap/react';
 import type { Note } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useFocusMode } from '../../app/focus';
 import { useNavigation } from '../../app/navigation';
+import { usePaletteActions } from '../../app/palette-registry';
 import { useToast } from '../../app/toasts';
 import { TagPicker } from '../../components/TagPicker';
 import { ConfirmDialog, MenuButton } from '../../components/ui';
@@ -92,7 +103,7 @@ export function NoteEditor({ note }: { note: Note }) {
     null,
   );
   const actions = useNoteActions();
-  const { focused } = useFocusMode();
+  const { focused, setFocused } = useFocusMode();
   /** Archived notes are read-only until unarchived (ADR-0015). */
   const readOnly = note.archivedAt !== null;
   // Held in state, not a ref: the actions menu receives `rename` during render.
@@ -279,6 +290,35 @@ export function NoteEditor({ note }: { note: Note }) {
 
   const projects = projectList.filter((p) => p.archivedAt === null || p.id === note.projectId);
 
+  // The ⋯ menu, also offered by the command palette (ADR-0018).
+  const menuItems = () =>
+    actions.itemsFor(
+      {
+        id: note.id,
+        title: title.trim() || UNTITLED,
+        folderId: note.folderId,
+        archivedAt: note.archivedAt,
+      },
+      {
+        // Actions work on what is on screen, so they save first (ADR-0014).
+        beforeAction: save,
+        onRename: rename,
+        onTrashed: () => setLeaveGuard(null),
+      },
+    );
+  usePaletteActions(`Note: ${title.trim() || UNTITLED}`, () => [
+    ...(readOnly
+      ? []
+      : [{ label: 'Save now', icon: Save, shortcut: 'Ctrl+S', onSelect: () => void save() }]),
+    {
+      label: focused ? 'Leave focus mode' : 'Focus mode',
+      icon: focused ? Minimize2 : Maximize2,
+      shortcut: 'Ctrl+Shift+F',
+      onSelect: () => setFocused(!focused),
+    },
+    ...menuItems(),
+  ]);
+
   return (
     <div className="note-editor" onKeyDown={onKeyDown}>
       <div className="note-editor__top">
@@ -311,25 +351,7 @@ export function NoteEditor({ note }: { note: Note }) {
             Try again
           </button>
         )}
-        <MenuButton
-          label="Note actions"
-          items={() =>
-            actions.itemsFor(
-              {
-                id: note.id,
-                title: title.trim() || UNTITLED,
-                folderId: note.folderId,
-                archivedAt: note.archivedAt,
-              },
-              {
-                // Actions work on what is on screen, so they save first (ADR-0014).
-                beforeAction: save,
-                onRename: rename,
-                onTrashed: () => setLeaveGuard(null),
-              },
-            )
-          }
-        />
+        <MenuButton label="Note actions" items={menuItems} />
       </div>
 
       {readOnly && (

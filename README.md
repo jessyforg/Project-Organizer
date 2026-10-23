@@ -4,7 +4,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 
 ## Status
 
-**Version 0.6.0 (MVP plus notes with visual editing, slash commands, links, mentions, images and files, folders, and archiving; Kanban board; calendar; colour themes), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
+**Version 0.7.0 (MVP plus notes with visual editing, slash commands, links, mentions, images and files, folders, and archiving; a command palette and quick switcher; Kanban board; calendar; colour themes), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
 
 ## Features
 

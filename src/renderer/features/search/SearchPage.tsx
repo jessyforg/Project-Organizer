@@ -21,7 +21,8 @@ export function SearchPage({ text }: { text: string }) {
         <PageHeader title="Search" />
         <div className="panel">
           <EmptyState icon={Search} title="Search everything">
-            Type in the search box to find projects, tasks, and notes. Press Ctrl+K to jump there.
+            Type in the search box to find projects, tasks, and notes. To jump straight to one,
+            press Ctrl+O.
           </EmptyState>
         </div>
       </div>

@@ -31,7 +31,7 @@ Status: **Implemented through Phase 3** (2026-10-17): `app.db`, and profile sche
 
 **schema_migrations** — as above.
 
-**settings** — `key` PK, `value_json`, `updated_at`. Theme, primary colour (`accent`) and background tone (`surface`) ([ADR-0015](DECISIONS/0015-notes-views-archive-colours-menus.md)), and similar preferences. Unknown or invalid stored values fall back to defaults.
+**settings** — `key` PK, `value_json`, `updated_at`. Theme, primary colour (`accent`) and background tone (`surface`) ([ADR-0015](DECISIONS/0015-notes-views-archive-colours-menus.md)), and similar preferences. Unknown or invalid stored values fall back to defaults. The quick switcher keeps the 10 most recently opened items under `recentItems`, as a JSON list of `{ kind, id }` ([ADR-0018](DECISIONS/0018-command-palette-and-switcher.md)); a damaged list counts as empty.
 
 **folders**
 | Column | Type | Notes |

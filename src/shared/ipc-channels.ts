@@ -96,6 +96,9 @@ export const IPC_CHANNELS = [
   'trash:deletePermanently',
   'trash:empty',
   'search:query',
+  'switcher:search',
+  'switcher:recent',
+  'switcher:recordOpened',
 ] as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[number];

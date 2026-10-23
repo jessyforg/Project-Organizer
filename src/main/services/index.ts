@@ -12,6 +12,7 @@ import { ensureInbox, ProjectService } from './projects';
 import { SearchService } from './search';
 import { SettingsService } from './settings';
 import { StatusService } from './statuses';
+import { SwitcherService } from './switcher';
 import { TagService } from './tags';
 import { TaskService } from './tasks';
 import { TrashService } from './trash';
@@ -31,6 +32,7 @@ export interface ProfileServices {
   dependencies: DependencyService;
   trash: TrashService;
   search: SearchService;
+  switcher: SwitcherService;
   settings: SettingsService;
   dashboard: DashboardService;
 }
@@ -49,6 +51,7 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
     dependencies: new DependencyService(ctx),
     trash: new TrashService(ctx),
     search: new SearchService(ctx),
+    switcher: new SwitcherService(ctx),
     settings: new SettingsService(ctx),
     dashboard: new DashboardService(ctx),
   };

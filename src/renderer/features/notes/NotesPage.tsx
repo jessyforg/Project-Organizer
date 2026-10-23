@@ -33,8 +33,9 @@ import {
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
 import { useLookups } from '../tasks/useLookups';
 import { importSummary, readMarkdownFiles } from './import';
-import { NoteEditor, UNTITLED } from './NoteEditor';
+import { NoteEditor } from './NoteEditor';
 import { NoteList } from './NoteList';
+import { useCreateNote } from './useCreateNote';
 
 /** Which notes the library shows (ADR-0014, ADR-0015). */
 type FolderFilter = 'all' | 'none' | 'archived' | { id: string };
@@ -131,12 +132,8 @@ function NotesLibrary({
     folderId: folderIdOf(folder),
   };
 
-  const create = async () => {
-    const result = await window.api.notes.create({ title: UNTITLED, ...target });
-    if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
-    invalidate();
-    navigate({ name: 'notes', noteId: result.data.id });
-  };
+  const createNote = useCreateNote();
+  const create = () => createNote(target);
 
   const importFiles = async (files: File[]) => {
     if (files.length === 0) return;

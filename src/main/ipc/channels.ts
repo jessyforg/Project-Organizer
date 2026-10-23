@@ -261,5 +261,11 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'trash:empty': () => ({ removed: s().trash.empty() }),
 
     'search:query': ({ text }) => s().search.search(text),
+    'switcher:search': (query) => s().switcher.search(query),
+    'switcher:recent': (query) => s().switcher.recent(query),
+    'switcher:recordOpened': (target) => {
+      s().switcher.recordOpened(target);
+      return null;
+    },
   };
 }

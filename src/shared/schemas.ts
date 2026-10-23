@@ -216,6 +216,12 @@ export const resolveLinksSchema = z.strictObject({
 export const linkMentionSchema = z.strictObject({ sourceId: id, targetId: id });
 export const batchSchema = z.strictObject({ batchId: id });
 export const searchSchema = z.strictObject({ text: z.string().max(LIMITS.searchText) });
+/** The quick switcher (ADR-0018). */
+export const switcherSearchSchema = z.strictObject({
+  text: z.string().max(LIMITS.searchText),
+  includeArchived: z.boolean().optional(),
+});
+export const switcherRecentSchema = z.strictObject({ includeArchived: z.boolean().optional() });
 export const setCompletedSchema = z.strictObject({ id, completed: z.boolean() });
 export const taskIdSchema = z.strictObject({ taskId: id });
 export const projectIdSchema = z.strictObject({ projectId: id });
@@ -228,6 +234,7 @@ export const updateSettingsSchema = z.strictObject({
 });
 export const emptySchema = z.strictObject({});
 
+export type SwitcherQuery = z.output<typeof switcherSearchSchema>;
 export type CreateFolderInput = z.output<typeof createFolderSchema>;
 export type RenameFolderInput = z.output<typeof renameFolderSchema>;
 export type CreateTagInput = z.output<typeof createTagSchema>;

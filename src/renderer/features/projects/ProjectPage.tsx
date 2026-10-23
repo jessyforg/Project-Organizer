@@ -10,12 +10,14 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  SquarePen,
   Trash2,
   Workflow,
 } from 'lucide-react';
 import type { ProjectDetails } from '@shared/domain';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
+import { usePaletteActions } from '../../app/palette-registry';
 import { useToast } from '../../app/toasts';
 import {
   ConfirmDialog,
@@ -26,10 +28,12 @@ import {
   PageHeader,
   ProgressMeter,
   Swatch,
+  type MenuItem,
 } from '../../components/ui';
 import { formatDate, localToday } from '../../lib/format';
 import { TaskBoard } from '../board/TaskBoard';
 import { ProjectNotes } from '../notes/ProjectNotes';
+import { useCreateNote } from '../notes/useCreateNote';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
 import { TaskList } from '../tasks/TaskList';
@@ -76,6 +80,7 @@ function ProjectView({ details }: { details: ProjectDetails }) {
   const toast = useToast();
   const { navigate } = useNavigation();
   const lookups = useLookups();
+  const createNote = useCreateNote();
   const [editing, setEditing] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
@@ -135,6 +140,43 @@ function ProjectView({ details }: { details: ProjectDetails }) {
     );
   const unarchive = () =>
     void run(window.api.projects.unarchive({ id: project.id }), 'Project restored from archive.');
+  // The ⋯ menu; the command palette offers it too, with the header's buttons (ADR-0018).
+  const moreItems: MenuItem[] = [
+    project.status === 'active'
+      ? { label: 'Mark completed', icon: CheckCircle2, onSelect: () => setStatus('completed') }
+      : { label: 'Reopen project', icon: RotateCcw, onSelect: () => setStatus('active') },
+    archived
+      ? { label: 'Unarchive', icon: ArchiveRestore, onSelect: unarchive }
+      : {
+          label: 'Archive',
+          icon: Archive,
+          onSelect: () =>
+            void run(window.api.projects.archive({ id: project.id }), 'Project archived.'),
+        },
+    {
+      label: 'Move to trash',
+      icon: Trash2,
+      danger: true,
+      separated: true,
+      onSelect: () => setConfirmTrash(true),
+    },
+  ];
+  usePaletteActions(`Project: ${project.name}`, () => [
+    ...(project.isInbox
+      ? []
+      : [{ label: 'Edit project', icon: Pencil, onSelect: () => setEditing(true) }]),
+    { label: 'Edit workflow', icon: Workflow, onSelect: () => setWorkflowOpen(true) },
+    ...(archived
+      ? []
+      : [
+          {
+            label: 'New note in this project',
+            icon: SquarePen,
+            onSelect: () => void createNote({ projectId: project.id }),
+          },
+        ]),
+    ...(project.isInbox ? [] : moreItems),
+  ]);
   const tagNames = project.tagIds
     .map((t) => lookups.tags.get(t)?.name)
     .filter(Boolean)
@@ -173,42 +215,7 @@ function ProjectView({ details }: { details: ProjectDetails }) {
             <button type="button" className="btn" onClick={() => setWorkflowOpen(true)}>
               <Workflow aria-hidden /> Workflow
             </button>
-            {!project.isInbox && (
-              <MenuButton
-                label="More project actions"
-                items={[
-                  project.status === 'active'
-                    ? {
-                        label: 'Mark completed',
-                        icon: CheckCircle2,
-                        onSelect: () => setStatus('completed'),
-                      }
-                    : {
-                        label: 'Reopen project',
-                        icon: RotateCcw,
-                        onSelect: () => setStatus('active'),
-                      },
-                  archived
-                    ? { label: 'Unarchive', icon: ArchiveRestore, onSelect: unarchive }
-                    : {
-                        label: 'Archive',
-                        icon: Archive,
-                        onSelect: () =>
-                          void run(
-                            window.api.projects.archive({ id: project.id }),
-                            'Project archived.',
-                          ),
-                      },
-                  {
-                    label: 'Move to trash',
-                    icon: Trash2,
-                    danger: true,
-                    separated: true,
-                    onSelect: () => setConfirmTrash(true),
-                  },
-                ]}
-              />
-            )}
+            {!project.isInbox && <MenuButton label="More project actions" items={moreItems} />}
           </>
         }
       />

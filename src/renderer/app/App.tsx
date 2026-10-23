@@ -5,6 +5,7 @@ import { ProfileSetup } from '../features/profiles/ProfileSetup';
 import { DataProvider } from './data';
 import { FocusModeProvider } from './focus';
 import { NavigationProvider } from './navigation';
+import { PaletteRegistryProvider } from './palette-registry';
 import { QuickAddProvider } from './quick-add';
 import { resetPalette } from '../theme/palettes';
 import { applyTheme, Shell } from './Shell';
@@ -67,11 +68,13 @@ export function App() {
           <NavigationProvider>
             <FocusModeProvider>
               <QuickAddProvider>
-                <Shell
-                  active={state.active}
-                  profiles={state.profiles}
-                  onProfilesChanged={refresh}
-                />
+                <PaletteRegistryProvider>
+                  <Shell
+                    active={state.active}
+                    profiles={state.profiles}
+                    onProfilesChanged={refresh}
+                  />
+                </PaletteRegistryProvider>
               </QuickAddProvider>
             </FocusModeProvider>
           </NavigationProvider>

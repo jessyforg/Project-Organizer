@@ -2,6 +2,27 @@
 
 Newest entries first.
 
+## 2026-10-23 — Release 0.7.0, command palette and quick switcher, awaiting the product owner's check before merging
+
+**Approval:** the product owner said "start 0.7.0" after 0.6.0 was merged (`d41c91c`). The branch is `feature/palette-0.7`, and decisions are recorded in [ADR-0018](DECISIONS/0018-command-palette-and-switcher.md).
+
+**What was built:**
+- **Command palette:** Ctrl+K, with actions for every screen, plus the open note's or project's own actions. These reuse the exact `MenuItem` lists their buttons use, so confirmations and saving pending edits are unchanged.
+- **Quick switcher:** Ctrl+O, served by a new `SwitcherService` with three IPC channels. Recent items are kept per profile in the `settings` table, so there is no schema change.
+
+**Defect found and fixed during the work:**
+- **What happened:** group headings were linked by IDs made from the group name. "Project: Website" contains a space, which `aria-labelledby` reads as two IDs, so the group had no accessible name.
+- **How it was found:** the new end-to-end workflow.
+- **Fix:** IDs now use the group's position. The component test checks the name itself, not just the attribute.
+
+**Verification:**
+- **Checks:** typecheck, lint, and formatting are clean. 538 of 538 unit and component tests pass (20 new), run with 4 workers on battery.
+- **End to end:** 25 of 25 pass, with one new workflow (23) and axe scans of the palette in both modes, in light and dark.
+- **Audit:** `npm audit --omit=dev` reports 0 vulnerabilities.
+- **Screenshots:** the palette was captured and reviewed in light and dark, at 1280×800 and at the minimum window size of 900×600.
+- **Speed:** the switcher measured 3–40 ms with 5,000 tasks. Once, under four parallel test workers on the capped CPU, a single reading went past 100 ms. The test now takes the best of three runs per query, which still catches a truly slow query.
+- **Also during the run:** the formatting-bubble workflow failed once with "inactive": the window lost focus while lint ran beside the suite. It passed alone and in a clean full run.
+
 ## 2026-10-23 — Notes release 0.6.0, all six stages done, awaiting the product owner's check before merging
 
 **Approval:** the plan was approved on 2026-10-22 with all recommended options. Work continues stage by stage with a report after each; the product owner checks before any merge or push. The branch is `feature/notes-0.6`, and decisions are recorded in [ADR-0017](DECISIONS/0017-notes-release-0.6.md).
