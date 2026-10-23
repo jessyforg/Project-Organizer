@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { APP_LINK_KINDS } from './app-links';
+import { parseCover } from './covers';
+import { ICON_VALUES } from './icons';
 import {
   COLOR_TOKENS,
   PRIORITIES,
@@ -222,6 +224,27 @@ export const switcherSearchSchema = z.strictObject({
   includeArchived: z.boolean().optional(),
 });
 export const switcherRecentSchema = z.strictObject({ includeArchived: z.boolean().optional() });
+/** Favourites, icons, and covers belong to a project or a note (ADR-0019). */
+const looksTarget = { kind: z.enum(['project', 'note']), id };
+export const favouriteTargetSchema = z.strictObject(looksTarget);
+export const setFavouriteSchema = z.strictObject({ ...looksTarget, starred: z.boolean() });
+export const setIconSchema = z.strictObject({
+  ...looksTarget,
+  value: z.enum(ICON_VALUES).nullable(),
+});
+export const setCoverSchema = z.strictObject({
+  ...looksTarget,
+  value: z
+    .string()
+    .max(100)
+    .refine((v) => parseCover(v) !== null, 'Not a cover')
+    .nullable(),
+});
+export const addCoverImageSchema = z.strictObject({
+  ...looksTarget,
+  name: z.string().min(1).max(1000),
+  data: z.instanceof(Uint8Array).refine((d) => d.byteLength <= 21 * 1024 * 1024, 'Too large'),
+});
 export const setCompletedSchema = z.strictObject({ id, completed: z.boolean() });
 export const taskIdSchema = z.strictObject({ taskId: id });
 export const projectIdSchema = z.strictObject({ projectId: id });
@@ -235,6 +258,10 @@ export const updateSettingsSchema = z.strictObject({
 export const emptySchema = z.strictObject({});
 
 export type SwitcherQuery = z.output<typeof switcherSearchSchema>;
+export type FavouriteTarget = z.output<typeof favouriteTargetSchema>;
+export type SetIconInput = z.output<typeof setIconSchema>;
+export type SetCoverInput = z.output<typeof setCoverSchema>;
+export type AddCoverImageInput = z.output<typeof addCoverImageSchema>;
 export type CreateFolderInput = z.output<typeof createFolderSchema>;
 export type RenameFolderInput = z.output<typeof renameFolderSchema>;
 export type CreateTagInput = z.output<typeof createTagSchema>;

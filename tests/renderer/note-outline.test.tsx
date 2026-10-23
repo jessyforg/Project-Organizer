@@ -22,6 +22,9 @@ function makeNote(body = BODY): Note {
     tagIds: [],
     createdAt: NOW,
     updatedAt: NOW,
+    icon: null,
+    cover: null,
+    favourite: false,
   };
 }
 

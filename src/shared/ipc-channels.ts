@@ -99,6 +99,12 @@ export const IPC_CHANNELS = [
   'switcher:search',
   'switcher:recent',
   'switcher:recordOpened',
+  'favourites:list',
+  'favourites:set',
+  'favourites:reorder',
+  'looks:setIcon',
+  'looks:setCover',
+  'looks:addCoverImage',
 ] as const;
 
 export type IpcChannel = (typeof IPC_CHANNELS)[number];

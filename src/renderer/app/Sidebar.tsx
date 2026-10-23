@@ -15,9 +15,12 @@ import {
 } from 'lucide-react';
 import type { ProfileSummary } from '@shared/types';
 import { Swatch } from '../components/ui';
+import { ItemIcon } from '../features/looks/ItemIcon';
+import { useProjectMenu } from '../features/projects/useProjectMenu';
 import { useLookups } from '../features/tasks/useLookups';
 import { useNavigation, type Route } from './navigation';
 import { useQuickAdd } from './quick-add';
+import { SidebarFavourites } from './SidebarFavourites';
 
 type NavEntry = { route: Route; label: string; icon: typeof Sun };
 
@@ -50,6 +53,7 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
   const { route, navigate } = useNavigation();
   const quickAdd = useQuickAdd();
   const { projectList } = useLookups();
+  const projectMenu = useProjectMenu();
   const active = projectList.filter((p) => p.archivedAt === null);
   const inbox = active.find((p) => p.isInbox);
   const others = active.filter((p) => !p.isInbox);
@@ -98,6 +102,7 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
       >
         <Plus aria-hidden /> New task
       </button>
+      <SidebarFavourites />
       {PRIMARY.map((group, index) => (
         <div key={index} className="nav">
           {group.map(item)}
@@ -111,8 +116,9 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
             className="nav__item"
             aria-current={route.name === 'project' && route.id === inbox.id ? 'page' : undefined}
             onClick={() => navigate({ name: 'project', id: inbox.id })}
+            {...projectMenu.bind(inbox, 'Inbox')}
           >
-            <Inbox aria-hidden />
+            {inbox.icon ? <ItemIcon value={inbox.icon} /> : <Inbox aria-hidden />}
             <span className="nav__label">Inbox</span>
           </button>
         )}
@@ -124,8 +130,9 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
             title={p.name}
             aria-current={route.name === 'project' && route.id === p.id ? 'page' : undefined}
             onClick={() => navigate({ name: 'project', id: p.id })}
+            {...projectMenu.bind(p)}
           >
-            <Swatch color={p.color} />
+            {p.icon ? <ItemIcon value={p.icon} /> : <Swatch color={p.color} />}
             <span className="nav__label">{p.name}</span>
             {p.status === 'completed' && <span className="nav__count">Done</span>}
           </button>
@@ -141,6 +148,7 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
           </button>
         )}
       </div>
+      {projectMenu.menu}
       <div className="sidebar__footer">
         {SECONDARY.map(item)}
         <div className="profile-chip">

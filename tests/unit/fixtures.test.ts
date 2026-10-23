@@ -14,8 +14,9 @@ import { fakeClock, tempDir } from './helpers';
 /**
  * Upgrade tests against committed databases from earlier schema versions (TESTING.md §3).
  * Committed files catch accidental edits to old migrations, which fixtures generated at
- * test time would not. Regenerate only when adding a new released version:
+ * test time would not. When a version is released with a new migration, add its fixture with:
  *   REGENERATE_FIXTURES=1 npx vitest run tests/unit/fixtures.test.ts
+ * Only missing files are built; committed ones are never rewritten.
  */
 const DIR = path.resolve(__dirname, '../fixtures');
 const clock = fakeClock('2026-10-17T00:00:00.000Z');
@@ -36,12 +37,30 @@ function fillV5(db: ReturnType<typeof openDatabase>) {
   note.run(randomUUID(), inbox.id, 'Old', 'Archived note', 'x');
 }
 
+// Released in 0.6.0 and 0.7.0: note links and attachments. Its upgrade to v7 adds favourites,
+// icons, and covers, and must keep the attachment and the link index.
+const V6_NOTE = '7e6d5c4b-3a29-4b8f-9e7d-6c5b4a3f2e1d';
+const V6_FILE = '8f7e6d5c-4b3a-4c9f-8e7d-6c5b4a3f2e1e';
+function fillV6(db: ReturnType<typeof openDatabase>) {
+  ensureInbox({ db, clock, newId: randomUUID });
+  const inbox = db.prepare('SELECT id FROM projects WHERE is_inbox = 1').get() as { id: string };
+  db.prepare(
+    `INSERT INTO notes (id, project_id, title, body, created_at, updated_at)
+     VALUES (?, ?, 'Trip', ?, 'x', 'x')`,
+  ).run(V6_NOTE, inbox.id, `![Map](projectforge://file/${V6_FILE})`);
+  db.prepare(
+    `INSERT INTO attachments (id, note_id, name, kind, mime, size, sha256, data, created_at)
+     VALUES (?, ?, 'map.png', 'image', 'image/png', 3, 'x', X'010203', 'x')`,
+  ).run(V6_FILE, V6_NOTE);
+  db.prepare("INSERT INTO note_links VALUES (?, 'note', ?)").run(V6_NOTE, V6_NOTE);
+}
+
 async function build(
   file: string,
   migrations: typeof profileMigrations,
   fill: (db: ReturnType<typeof openDatabase>) => void,
 ) {
-  fs.rmSync(file, { force: true });
+  if (fs.existsSync(file)) return;
   const db = openDatabase(file);
   await migrate({ db, migrations, snapshotDir: tempDir(), clock, logger: nullLogger });
   fill(db);
@@ -120,6 +139,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ).run(inbox.id);
     });
     await build(path.join(DIR, 'profile-v5.db'), profileMigrations.slice(0, 5), fillV5);
+    await build(path.join(DIR, 'profile-v6.db'), profileMigrations.slice(0, 6), fillV6);
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -136,6 +156,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['profile-v3.db', profileMigrations],
       ['profile-v4.db', profileMigrations],
       ['profile-v5.db', profileMigrations],
+      ['profile-v6.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -242,6 +263,34 @@ if (process.env['REGENERATE_FIXTURES']) {
       expect(s.notes.list({ archived: 'only' }).map((n) => n.title)).toEqual(['Old']);
       expect(s.notes.backlinks(V5_TARGET).linked).toEqual([
         expect.objectContaining({ noteId: V5_SOURCE, snippet: 'See Roadmap.' }),
+      ]);
+      db.close();
+    });
+
+    it('keeps profile v6 links and files, and adds favourites, icons, and covers (schema v7)', async () => {
+      const db = openDatabase(copy('profile-v6.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      expect(db.prepare('SELECT count(*) AS n FROM note_links').get()).toEqual({ n: 1 });
+      const ctx = { db, clock, newId: randomUUID };
+      runProfileMaintenance(ctx, nullLogger);
+      const s = createProfileServices(ctx);
+      expect(s.notes.get(V6_NOTE)).toMatchObject({
+        title: 'Trip',
+        icon: null,
+        cover: null,
+        favourite: false,
+      });
+      expect(s.attachments.info([V6_FILE])[0]).toMatchObject({ name: 'map.png', missing: false });
+      s.favourites.set({ kind: 'note', id: V6_NOTE, starred: true });
+      s.looks.setIcon({ kind: 'note', id: V6_NOTE, value: 'emoji:✈️' });
+      expect(s.favourites.list()).toEqual([
+        expect.objectContaining({ itemId: V6_NOTE, icon: 'emoji:✈️' }),
       ]);
       db.close();
     });

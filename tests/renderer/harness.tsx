@@ -38,6 +38,8 @@ export function installApi(handlers: Partial<Record<IpcChannel, Handler>> = {}):
     calls.push({ channel, payload: body });
     const handler = handlers[channel];
     if (handler) return handler(body);
+    // Saving a note answers with the saved note, as the real service does.
+    if (channel === 'notes:update') return ok(body);
     return ok(DEFAULTS[channel] ?? null);
   });
   return {
@@ -105,6 +107,9 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
     archivedAt: null,
     createdAt: NOW,
     updatedAt: NOW,
+    icon: null,
+    cover: null,
+    favourite: false,
     tagIds: [],
     ...overrides,
   };

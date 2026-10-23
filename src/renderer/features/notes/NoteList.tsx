@@ -5,6 +5,7 @@ import { useNavigation } from '../../app/navigation';
 import { useContextMenu } from '../../components/ui';
 import { formatTimestamp } from '../../lib/format';
 import { useLookups } from '../tasks/useLookups';
+import { ItemIcon } from '../looks/ItemIcon';
 import { useNoteActions } from './useNoteActions';
 
 /**
@@ -49,6 +50,7 @@ export function NoteList({
                 )}
               >
                 <span className="note-row__title">
+                  <ItemIcon value={note.icon} />
                   {note.title}
                   {note.archivedAt && (
                     <span className="label note-row__badge">

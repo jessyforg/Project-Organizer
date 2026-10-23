@@ -16,7 +16,9 @@ import {
   Swatch,
 } from '../../components/ui';
 import { formatDate, localToday } from '../../lib/format';
+import { ItemIcon } from '../looks/ItemIcon';
 import { ProjectDialog } from './ProjectDialog';
+import { useProjectMenu } from './useProjectMenu';
 
 export function ProjectsPage() {
   const [showArchived, setShowArchived] = useState(false);
@@ -154,33 +156,40 @@ export function ProjectsPage() {
 
 function ProjectRows({ projects }: { projects: ProjectListItem[] }) {
   const { navigate } = useNavigation();
+  const menu = useProjectMenu();
   const today = localToday();
   return (
-    <ul className="project-list">
-      {projects.map((p) => (
-        <li key={p.id} className="project-row">
-          <Swatch color={p.color} />
-          <div className="project-row__main">
-            <div className="project-row__name">
-              <button
-                type="button"
-                className="link"
-                title={p.name}
-                onClick={() => navigate({ name: 'project', id: p.id })}
-              >
-                {p.name}
-              </button>
-              {p.archivedAt && <span className="label">Archived</span>}
-              {p.status === 'completed' && <span className="label label--success">Completed</span>}
+    <>
+      <ul className="project-list">
+        {projects.map((p) => (
+          <li key={p.id} className="project-row">
+            {p.icon ? <ItemIcon value={p.icon} /> : <Swatch color={p.color} />}
+            <div className="project-row__main">
+              <div className="project-row__name">
+                <button
+                  type="button"
+                  className="link"
+                  title={p.name}
+                  onClick={() => navigate({ name: 'project', id: p.id })}
+                  {...menu.bind(p)}
+                >
+                  {p.name}
+                </button>
+                {p.archivedAt && <span className="label">Archived</span>}
+                {p.status === 'completed' && (
+                  <span className="label label--success">Completed</span>
+                )}
+              </div>
+              {p.description && <span className="project-row__description">{p.description}</span>}
             </div>
-            {p.description && <span className="project-row__description">{p.description}</span>}
-          </div>
-          <ProgressMeter progress={p.progress} label={`${p.name} progress`} />
-          <span className="project-row__date">
-            {p.targetDate ? `Target ${formatDate(p.targetDate, today)}` : ''}
-          </span>
-        </li>
-      ))}
-    </ul>
+            <ProgressMeter progress={p.progress} label={`${p.name} progress`} />
+            <span className="project-row__date">
+              {p.targetDate ? `Target ${formatDate(p.targetDate, today)}` : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {menu.menu}
+    </>
   );
 }

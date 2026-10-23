@@ -21,6 +21,9 @@ function makeNote(overrides: Partial<Note> = {}): Note {
     tagIds: [],
     createdAt: NOW,
     updatedAt: NOW,
+    icon: null,
+    cover: null,
+    favourite: false,
     ...overrides,
   };
 }

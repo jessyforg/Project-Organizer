@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.0 — Favourites, icons, and covers (2026-10-23, not yet publicly released)
+
+- **Favourites:** star a project or note from its ⋯ menu, its right-click menu, or the command palette.
+  - Starred items appear under "Favourites" at the top of the sidebar.
+  - Drag them to reorder, or use Move up and Move down in a favourite's right-click menu (Shift+F10 from the keyboard).
+  - An item in the trash leaves the list until it is restored. Archived items stay, marked "Archived".
+- **Icons:** give a project or note one of 60 built-in icons (emoji and line icons).
+  - It is shown in the sidebar, the project and note lists, the command palette, and above the title.
+  - Nothing is downloaded.
+- **Covers:** add a coloured or gradient cover above a project or note, or upload an image (PNG, JPEG, GIF, or WebP, up to 20 MB).
+  - Covers are softer in light mode and dimmed in dark mode.
+  - Images are stored with the profile, so encrypted backups include them.
+- **Removing:** "Remove icon" and "Remove cover" restore the usual look.
+- **Projects** now have a right-click menu in the sidebar and on the Projects page.
+- Profile data schema version 7. Existing profiles upgrade automatically after a verified snapshot.
+
 ## 0.7.0 — Find and act fast (2026-10-23, not yet publicly released)
 
 - **Command palette (Ctrl+K):** type to find and run an action.

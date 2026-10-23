@@ -83,6 +83,12 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   tagIds: string[];
+  /** A built-in icon (`src/shared/icons.ts`), or null (ADR-0019). */
+  icon: string | null;
+  /** A cover preset or image (`src/shared/covers.ts`), or null. */
+  cover: string | null;
+  /** Starred; shown in the sidebar's Favourites. */
+  favourite: boolean;
 }
 
 export interface Task {
@@ -170,6 +176,12 @@ export interface NoteSummary {
   tagIds: string[];
   createdAt: string;
   updatedAt: string;
+  /** A built-in icon (`src/shared/icons.ts`), or null (ADR-0019). */
+  icon: string | null;
+  /** A cover preset or image (`src/shared/covers.ts`), or null. */
+  cover: string | null;
+  /** Starred; shown in the sidebar's Favourites. */
+  favourite: boolean;
 }
 
 /** A Markdown note (R26). The body is stored as typed and never rendered as HTML. */
@@ -183,6 +195,26 @@ export interface Note {
   tagIds: string[];
   createdAt: string;
   updatedAt: string;
+  /** A built-in icon (`src/shared/icons.ts`), or null (ADR-0019). */
+  icon: string | null;
+  /** A cover preset or image (`src/shared/covers.ts`), or null. */
+  cover: string | null;
+  /** Starred; shown in the sidebar's Favourites. */
+  favourite: boolean;
+}
+
+/** A starred project or note, in the sidebar's order (ADR-0019). */
+export interface FavouriteItem {
+  /** The favourite's own ID, used to reorder. */
+  id: string;
+  kind: 'project' | 'note';
+  itemId: string;
+  title: string;
+  icon: string | null;
+  /** A project's colour, shown when it has no icon. */
+  color: ColorToken | null;
+  /** The item, or a note's project, is archived. */
+  archived: boolean;
 }
 
 export interface SearchResults {
@@ -204,6 +236,8 @@ export interface SwitcherItem {
   archived: boolean;
   /** A task that is done. */
   completed: boolean;
+  /** A project's or note's icon (ADR-0019); null for tasks. */
+  icon: string | null;
 }
 
 export const THEMES = ['system', 'light', 'dark'] as const;

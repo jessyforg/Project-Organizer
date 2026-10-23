@@ -33,6 +33,9 @@ import {
 import { formatDate, localToday } from '../../lib/format';
 import { TaskBoard } from '../board/TaskBoard';
 import { ProjectNotes } from '../notes/ProjectNotes';
+import { CoverBanner } from '../looks/Cover';
+import { LooksRow } from '../looks/LooksRow';
+import { useLooks, type LooksTarget } from '../looks/useLooks';
 import { useCreateNote } from '../notes/useCreateNote';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
@@ -81,6 +84,7 @@ function ProjectView({ details }: { details: ProjectDetails }) {
   const { navigate } = useNavigation();
   const lookups = useLookups();
   const createNote = useCreateNote();
+  const looks = useLooks();
   const [editing, setEditing] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
@@ -140,11 +144,24 @@ function ProjectView({ details }: { details: ProjectDetails }) {
     );
   const unarchive = () =>
     void run(window.api.projects.unarchive({ id: project.id }), 'Project restored from archive.');
+  const looksTarget: LooksTarget = {
+    kind: 'project',
+    id: project.id,
+    title: project.name,
+    favourite: project.favourite,
+    icon: project.icon,
+    cover: project.cover,
+    editable: true,
+  };
   // The ⋯ menu; the command palette offers it too, with the header's buttons (ADR-0018).
   const moreItems: MenuItem[] = [
-    project.status === 'active'
-      ? { label: 'Mark completed', icon: CheckCircle2, onSelect: () => setStatus('completed') }
-      : { label: 'Reopen project', icon: RotateCcw, onSelect: () => setStatus('active') },
+    ...looks.itemsFor(looksTarget),
+    {
+      ...(project.status === 'active'
+        ? { label: 'Mark completed', icon: CheckCircle2, onSelect: () => setStatus('completed') }
+        : { label: 'Reopen project', icon: RotateCcw, onSelect: () => setStatus('active') }),
+      separated: true,
+    },
     archived
       ? { label: 'Unarchive', icon: ArchiveRestore, onSelect: unarchive }
       : {
@@ -175,7 +192,7 @@ function ProjectView({ details }: { details: ProjectDetails }) {
             onSelect: () => void createNote({ projectId: project.id }),
           },
         ]),
-    ...(project.isInbox ? [] : moreItems),
+    ...(project.isInbox ? looks.itemsFor(looksTarget) : moreItems),
   ]);
   const tagNames = project.tagIds
     .map((t) => lookups.tags.get(t)?.name)
@@ -184,6 +201,8 @@ function ProjectView({ details }: { details: ProjectDetails }) {
 
   return (
     <div className="page">
+      <CoverBanner value={project.cover} />
+      <LooksRow target={looksTarget} onIcon={looks.editIcon} onCover={looks.editCover} />
       <PageHeader
         eyebrow={
           <>
@@ -194,7 +213,8 @@ function ProjectView({ details }: { details: ProjectDetails }) {
             <span className="truncate">{project.isInbox ? 'Inbox' : project.name}</span>
           </>
         }
-        leading={<Swatch color={project.color} />}
+        // With an icon, the tile above the title shows it; otherwise the colour does.
+        leading={project.icon ? undefined : <Swatch color={project.color} />}
         title={project.name}
         titleAdornment={
           <>
@@ -344,6 +364,7 @@ function ProjectView({ details }: { details: ProjectDetails }) {
       <ProjectNotes project={project} />
 
       <ProjectDialog open={editing} project={project} onClose={() => setEditing(false)} />
+      {looks.dialogs}
       <StatusManager
         open={workflowOpen}
         projectId={project.id}

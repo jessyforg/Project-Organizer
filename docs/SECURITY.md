@@ -90,6 +90,16 @@ Implemented in Phase 5 (`src/main/backup/`); see [ADR-0006](DECISIONS/0006-backu
 - Input size limits (Zod, implemented): profile names 100 characters, names 200, titles 500, descriptions and note bodies 1,000,000 characters. Planned: import files size-checked before parsing.
 - Logs: event names, IDs, counts, error names/codes, and stack frames only. Error **messages are not logged** because they can contain user content (unit-tested). Never content, titles, profile names, passwords, or user file paths.
 
+### Icons and covers (ADR-0019)
+
+- **Icons** are chosen from a fixed list of 60 built-in values. The IPC schema and the service both refuse anything else, and nothing is fetched.
+- **Cover presets** are a fixed list. A cover image goes through the same attachment store as note images:
+  - images are detected from their bytes;
+  - the 20 MB and 1 GB limits and the free-space check apply;
+  - images are shown through `blob:` URLs.
+- **Content Security Policy:** unchanged.
+- **Stored values:** a stored cover value is parsed before use. An unknown value, or an image ID that is not a UUID, is ignored.
+
 ## 6. Dependency policy
 
 Before adding a dependency: purpose, whether a built-in suffices, licence, maintenance status, and security relevance are recorded in the pull request or ADR. Versions are pinned exactly in `package.json` and locked via `package-lock.json`, and must have been published at least two weeks earlier. `npm audit` is run at every phase checkpoint and findings are reported.

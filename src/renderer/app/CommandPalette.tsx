@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type ComponentType, type KeyboardEvent } fr
 import { CircleCheck, FolderKanban, NotebookPen, Search, SquareCheck } from 'lucide-react';
 import type { SwitcherItem } from '@shared/domain';
 import { Dialog } from '../components/ui';
+import { ItemIcon } from '../features/looks/ItemIcon';
 
 export type PaletteMode = 'actions' | 'items';
 
@@ -11,6 +12,8 @@ export interface PaletteOption {
   label: string;
   group: string;
   icon?: ComponentType<{ 'aria-hidden'?: boolean }>;
+  /** A project's or note's own icon (ADR-0019), shown instead of `icon`. */
+  iconValue?: string;
   /** A second line, such as an item's type and project. */
   meta?: string;
   badge?: string;
@@ -58,6 +61,7 @@ export function itemOption(
     label: item.title,
     group,
     icon: item.kind === 'task' && item.completed ? CircleCheck : KIND[item.kind].icon,
+    ...(item.icon ? { iconValue: item.icon } : {}),
     meta: place ? `${KIND[item.kind].label} · ${place}` : KIND[item.kind].label,
     ...(badge ? { badge } : {}),
     run: ({ ctrl }) => open(item, ctrl),
@@ -244,10 +248,16 @@ function PaletteBody({
                     onMouseMove={() => at !== current && setActive(at)}
                     onClick={(e) => choose(option, e.ctrlKey)}
                   >
-                    {Icon && (
+                    {option.iconValue ? (
                       <span className="palette__icon" aria-hidden>
-                        <Icon />
+                        <ItemIcon value={option.iconValue} />
                       </span>
+                    ) : (
+                      Icon && (
+                        <span className="palette__icon" aria-hidden>
+                          <Icon />
+                        </span>
+                      )
                     )}
                     <span className="palette__text">
                       <span className="palette__label">

@@ -160,6 +160,26 @@ PK (source_note_id, target_kind, target_id).
 | created_at | TEXT NOT NULL | |
 | unused_since | TEXT NULL | Set when no note body (trashed ones included) refers to the file; removed after the trash retention period; cleared when referred to again |
 
+Since schema v7, a file can also be a cover image (`note_id` is null for a project's cover). Clean-up counts a file named by any project's or note's `cover` as in use.
+
+**favourites** (schema v7, [ADR-0019](DECISIONS/0019-favourites-icons-covers.md))
+| Column | Type | Notes |
+|---|---|---|
+| id | TEXT PK | |
+| project_id | TEXT NULL → projects(id) ON DELETE CASCADE | Unique when set |
+| note_id | TEXT NULL → notes(id) ON DELETE CASCADE | Unique when set |
+| sort_key | INTEGER NOT NULL | Order in the sidebar |
+| created_at | TEXT NOT NULL | |
+
+`CHECK ((project_id IS NULL) <> (note_id IS NULL))`: each favourite names exactly one item.
+- **Trash:** a favourite whose item, or whose note's project, is in the trash is not listed. Restoring the item brings it back.
+- **Reordering:** the listed favourites swap their keys among themselves, so hidden ones keep their place.
+
+**Icons and covers** (schema v7): `projects.icon`, `projects.cover`, `notes.icon`, and `notes.cover` are nullable TEXT.
+- **Icons:** `emoji:<character>` or `lucide:<name>`, checked against the 60 values in `src/shared/icons.ts`.
+- **Covers:** `preset:<name>` (16 presets in `src/shared/covers.ts`) or `image:<attachment id>`.
+- Null means the usual look.
+
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
 ### Database guards
@@ -177,7 +197,7 @@ Only top-level tasks move between projects; their subtasks (including trashed on
 - `tasks(project_id, deleted_at)`, `tasks(parent_task_id)`, `tasks(status_id)`, `tasks(due_date) WHERE deleted_at IS NULL`, `tasks(updated_at)`, `tasks(deletion_batch_id)`.
 - `projects(deleted_at, archived_at)`, `projects(folder_id)`, `projects(deletion_batch_id)`.
 - `task_dependencies(depends_on_task_id)`, `task_tags(tag_id)`, `project_tags(tag_id)`, `note_tags(tag_id)`.
-- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(archived_at)` (partial, archived only), `notes(updated_at)`, `notes(deletion_batch_id)`, `note_links(target_kind, target_id)` (backlinks). Note lists read only the first 600 characters of each body (for the excerpt).
+- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(archived_at)` (partial, archived only), `notes(updated_at)`, `notes(deletion_batch_id)`, `note_links(target_kind, target_id)` (backlinks), and the two partial unique indexes on `favourites`. Note lists read only the first 600 characters of each body (for the excerpt).
 - Full-text search: FTS5 tables `tasks_fts` (title, description), `projects_fts` (name, description), and `notes_fts` (title, body) with the `unicode61 remove_diacritics 2` tokenizer, so "cafe" finds "Café". Each keeps its own copy keyed by ID rather than rowid, so it stays correct even if SQLite renumbers rowids; triggers keep it in sync. User input is converted to quoted prefix terms, so search text is never interpreted as query syntax.
 - Measured in Phase 3 with 6,250 tasks: list, filter, and search queries 3–38 ms; progress for 20 projects 21 ms.
 

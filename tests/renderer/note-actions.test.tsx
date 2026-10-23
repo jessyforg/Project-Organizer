@@ -20,6 +20,9 @@ function makeNote(overrides: Partial<Note> = {}): Note {
     tagIds: [],
     createdAt: NOW,
     updatedAt: NOW,
+    icon: null,
+    cover: null,
+    favourite: false,
     ...overrides,
   };
 }
@@ -49,7 +52,7 @@ const channelsCalled = (backend: ReturnType<typeof installApi>) =>
     .filter((c) => (c.startsWith('notes:') || c.startsWith('trash:')) && c !== 'notes:backlinks');
 
 describe('Note actions menu', () => {
-  it('offers rename, duplicate, move, archive, copy, export, and trash, in that order', async () => {
+  it('offers the star, icon, cover, rename, duplicate, move, archive, copy, export, and trash, in that order', async () => {
     installApi();
     renderWithApp(<NoteEditor note={makeNote()} />);
     const menu = await openMenu();
@@ -58,6 +61,9 @@ describe('Note actions menu', () => {
         .getAllByRole('menuitem')
         .map((i) => i.textContent),
     ).toEqual([
+      'Add to favourites',
+      'Add icon…',
+      'Add cover…',
       'Rename',
       'Duplicate',
       'Move to folder…',

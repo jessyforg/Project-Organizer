@@ -23,6 +23,9 @@ function makeNote(overrides: Partial<Note> = {}): Note {
     tagIds: [],
     createdAt: NOW,
     updatedAt: NOW,
+    icon: null,
+    cover: null,
+    favourite: false,
     ...overrides,
   };
 }
@@ -100,6 +103,9 @@ describe('Notes library', () => {
         .map((i) => i.textContent),
     ).toEqual([
       'Open',
+      'Add to favourites',
+      'Add icon…',
+      'Add cover…',
       'Rename',
       'Duplicate',
       'Move to folder…',

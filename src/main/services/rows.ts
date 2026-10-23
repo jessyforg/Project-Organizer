@@ -98,12 +98,16 @@ export interface ProjectRow {
   created_at: string;
   updated_at: string;
   tag_ids: string;
+  icon: string | null;
+  cover: string | null;
+  favourite: number;
 }
 
 export const PROJECT_SELECT = `
   SELECT p.id, p.folder_id, p.name, p.description, p.kind, p.status, p.is_inbox, p.color,
          p.start_date, p.target_date, p.archived_at, p.created_at, p.updated_at,
-         (SELECT json_group_array(tag_id) FROM project_tags WHERE project_id = p.id) AS tag_ids
+         (SELECT json_group_array(tag_id) FROM project_tags WHERE project_id = p.id) AS tag_ids,
+         p.icon, p.cover, EXISTS (SELECT 1 FROM favourites WHERE project_id = p.id) AS favourite
   FROM projects p`;
 
 export function toProject(row: ProjectRow): Project {
@@ -122,6 +126,9 @@ export function toProject(row: ProjectRow): Project {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     tagIds: idList(row.tag_ids),
+    icon: row.icon,
+    cover: row.cover,
+    favourite: row.favourite === 1,
   };
 }
 
@@ -196,10 +203,14 @@ export interface NoteRow {
   created_at: string;
   updated_at: string;
   tag_ids: string;
+  icon: string | null;
+  cover: string | null;
+  favourite: number;
 }
 
 const NOTE_COLUMNS = `n.id, n.project_id, n.folder_id, n.archived_at, n.title, n.created_at, n.updated_at,
-  (SELECT json_group_array(tag_id) FROM note_tags WHERE note_id = n.id) AS tag_ids`;
+  (SELECT json_group_array(tag_id) FROM note_tags WHERE note_id = n.id) AS tag_ids,
+  n.icon, n.cover, EXISTS (SELECT 1 FROM favourites WHERE note_id = n.id) AS favourite`;
 
 export const NOTE_SELECT = `SELECT ${NOTE_COLUMNS}, n.body FROM notes n JOIN projects p ON p.id = n.project_id`;
 
@@ -218,7 +229,13 @@ export function toNote(row: NoteRow): Note {
     tagIds: idList(row.tag_ids),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ...looks(row),
   };
+}
+
+/** Icon, cover, and favourite (ADR-0019). */
+function looks(row: Pick<NoteRow, 'icon' | 'cover' | 'favourite'>) {
+  return { icon: row.icon, cover: row.cover, favourite: row.favourite === 1 };
 }
 
 export function toNoteSummary(row: NoteRow): NoteSummary {
@@ -232,6 +249,7 @@ export function toNoteSummary(row: NoteRow): NoteSummary {
     tagIds: idList(row.tag_ids),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    ...looks(row),
   };
 }
 

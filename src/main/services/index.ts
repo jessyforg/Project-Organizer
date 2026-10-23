@@ -3,9 +3,11 @@ import type { Logger } from '../platform/logger';
 import type { ServiceContext } from './context';
 import { DashboardService } from './dashboard';
 import { DependencyService } from './dependencies';
+import { FavouriteService } from './favourites';
 import { FolderService } from './folders';
 import { AttachmentService } from './attachments';
 import { LinkService } from './links';
+import { LooksService } from './looks';
 import { NoteFolderService } from './note-folders';
 import { NoteService } from './notes';
 import { ensureInbox, ProjectService } from './projects';
@@ -29,6 +31,8 @@ export interface ProfileServices {
   noteFolders: NoteFolderService;
   links: LinkService;
   attachments: AttachmentService;
+  favourites: FavouriteService;
+  looks: LooksService;
   dependencies: DependencyService;
   trash: TrashService;
   search: SearchService;
@@ -48,6 +52,8 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
     noteFolders: new NoteFolderService(ctx),
     links: new LinkService(ctx),
     attachments: new AttachmentService(ctx),
+    favourites: new FavouriteService(ctx),
+    looks: new LooksService(ctx),
     dependencies: new DependencyService(ctx),
     trash: new TrashService(ctx),
     search: new SearchService(ctx),

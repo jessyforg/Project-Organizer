@@ -23,6 +23,7 @@ interface Row {
   archived: number;
   completed: number;
   updated_at: string;
+  icon: string | null;
   rank: number;
 }
 
@@ -36,7 +37,7 @@ type Fragment = (column: string, ftsClause: string) => string;
 const SELECT: Record<AppLinkKind, (rank: Fragment, match: Fragment) => string> = {
   project: (rank, match) => `
     SELECT 'project' AS kind, p.id, p.name AS title, NULL AS project_name, f.name AS folder_name,
-           p.archived_at IS NOT NULL AS archived, 0 AS completed, p.updated_at,
+           p.archived_at IS NOT NULL AS archived, 0 AS completed, p.updated_at, p.icon,
            ${rank('p.name', '')} AS rank
     FROM projects p LEFT JOIN folders f ON f.id = p.folder_id
     WHERE p.deleted_at IS NULL
@@ -45,7 +46,7 @@ const SELECT: Record<AppLinkKind, (rank: Fragment, match: Fragment) => string> =
   note: (rank, match) => `
     SELECT 'note' AS kind, n.id, n.title, p.name AS project_name, nf.name AS folder_name,
            (n.archived_at IS NOT NULL OR p.archived_at IS NOT NULL) AS archived, 0 AS completed,
-           n.updated_at, ${rank('n.title', '')} AS rank
+           n.updated_at, n.icon, ${rank('n.title', '')} AS rank
     FROM notes n JOIN projects p ON p.id = n.project_id
     LEFT JOIN note_folders nf ON nf.id = n.folder_id
     WHERE n.deleted_at IS NULL AND p.deleted_at IS NULL
@@ -54,7 +55,7 @@ const SELECT: Record<AppLinkKind, (rank: Fragment, match: Fragment) => string> =
   task: (rank, match) => `
     SELECT 'task' AS kind, t.id, t.title, p.name AS project_name, NULL AS folder_name,
            p.archived_at IS NOT NULL AS archived, s.category = 'done' AS completed,
-           t.updated_at, ${rank('t.title', '')} AS rank
+           t.updated_at, NULL AS icon, ${rank('t.title', '')} AS rank
     FROM tasks t JOIN projects p ON p.id = t.project_id
     JOIN project_statuses s ON s.id = t.status_id
     WHERE t.deleted_at IS NULL AND p.deleted_at IS NULL
@@ -78,6 +79,7 @@ function toItem(row: Row): SwitcherItem {
     folderName: row.folder_name,
     archived: row.archived === 1,
     completed: row.completed === 1,
+    icon: row.icon,
   };
 }
 

@@ -2,6 +2,33 @@
 
 Newest entries first.
 
+## 2026-10-23 — Release 0.8.0, favourites, icons, and covers (schema v7), awaiting the product owner's check before merging
+
+**Approval:** the product owner said "merge and push then continue to 0.8.0". 0.7.0 was squash-merged and pushed as `51bd8ec`. The branch is `feature/personal-0.8`, and decisions are recorded in [ADR-0019](DECISIONS/0019-favourites-icons-covers.md).
+
+**What was built:**
+- **Schema v7:** a `favourites` table, plus `icon` and `cover` columns on projects and notes. A committed `profile-v6.db` fixture has an upgrade test.
+- **Services:** `FavouriteService` and `LooksService`. Cover images use the attachment store, and its clean-up now counts covers as in use.
+- **Interface:**
+  - the sidebar's Favourites section, reordered by drag and drop or from the keyboard menu;
+  - icon and cover pickers;
+  - covers above project and note titles;
+  - icons in the sidebar, lists, and the palette;
+  - a new right-click menu on projects.
+- **Order of hidden favourites:** reordering keeps the place of favourites hidden while their item is in the trash. A first version gave the listed ones fresh positions, which would have scrambled the order on restore. A service test caught it before any UI existed.
+
+**Pre-existing test noise fixed:**
+- **What happened:** the component suite reported 8 "unhandled errors" while every test passed. This was already true on `main`, checked in a separate worktree.
+- **Cause:** the fake backend answered `notes:update` with nothing, so the editor's autosave failed after some tests ended.
+- **Fix:** it now answers with the saved note, like the real service, and the suite reports no errors.
+- **Correction:** the 0.6.0 and 0.7.0 reports did not mention this, because the summary line used to check them left out the "Errors" line.
+
+**Verification:**
+- **Checks:** typecheck, lint, and formatting are clean. 557 of 557 unit and component tests pass (19 new), with no unhandled errors, run with 4 workers on battery.
+- **End to end:** 26 of 26 pass, with one new workflow (24) and axe scans of the icon picker, the cover picker, and a project with an icon, a cover, and favourites, in light and dark.
+- **Audit:** `npm audit --omit=dev` reports 0 vulnerabilities.
+- **Screenshots:** reviewed in light and dark. One change came out of it: on the project page, the icon showed both on its tile and beside the title, so the title now shows the colour swatch only when there is no icon.
+
 ## 2026-10-23 — Release 0.7.0, command palette and quick switcher, awaiting the product owner's check before merging
 
 **Approval:** the product owner said "start 0.7.0" after 0.6.0 was merged (`d41c91c`). The branch is `feature/palette-0.7`, and decisions are recorded in [ADR-0018](DECISIONS/0018-command-palette-and-switcher.md).

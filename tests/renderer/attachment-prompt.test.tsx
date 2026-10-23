@@ -21,6 +21,9 @@ const note: Note = {
   tagIds: [],
   createdAt: '2026-03-10T09:00:00.000Z',
   updatedAt: '2026-03-10T09:00:00.000Z',
+  icon: null,
+  cover: null,
+  favourite: false,
 };
 
 /** The system file picker: answers with `files` when it is opened. */

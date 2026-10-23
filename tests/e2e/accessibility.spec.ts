@@ -171,6 +171,19 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoViolations(page, 'Quick switcher (results)');
     await page.keyboard.press('Escape');
 
+    // Icons, covers, and favourites (ADR-0019).
+    await nav.getByRole('button', { name: 'Website' }).click();
+    await page.getByRole('button', { name: 'Add icon' }).click();
+    await expectNoViolations(page, 'Icon picker');
+    await page.getByRole('button', { name: 'Rocket' }).click();
+    await page.getByRole('button', { name: 'Add cover' }).click();
+    await expectNoViolations(page, 'Cover picker');
+    await page.getByRole('button', { name: 'Ocean gradient' }).click();
+    await page.getByRole('button', { name: 'More project actions' }).click();
+    await page.getByRole('menuitem', { name: 'Add to favourites' }).click();
+    await expect(nav.getByRole('list', { name: 'Favourites' })).toBeVisible();
+    await expectNoViolations(page, 'Project with an icon, a cover, and favourites');
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');

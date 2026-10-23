@@ -4,6 +4,7 @@ import type {
   AttachmentInfo,
   Backlink,
   Dashboard,
+  FavouriteItem,
   Folder,
   Note,
   NoteBacklinks,
@@ -172,6 +173,12 @@ export const ipcContract = {
   'switcher:search': s.switcherSearchSchema,
   'switcher:recent': s.switcherRecentSchema,
   'switcher:recordOpened': s.linkTargetSchema,
+  'favourites:list': s.emptySchema,
+  'favourites:set': s.setFavouriteSchema,
+  'favourites:reorder': s.reorderSchema,
+  'looks:setIcon': s.setIconSchema,
+  'looks:setCover': s.setCoverSchema,
+  'looks:addCoverImage': s.addCoverImageSchema,
 } as const satisfies Record<IpcChannel, z.ZodType>;
 
 /** Shape the renderer sends. */
@@ -277,4 +284,10 @@ export interface IpcResponses {
   'switcher:search': SwitcherItem[];
   'switcher:recent': SwitcherItem[];
   'switcher:recordOpened': null;
+  'favourites:list': FavouriteItem[];
+  'favourites:set': FavouriteItem[];
+  'favourites:reorder': FavouriteItem[];
+  'looks:setIcon': null;
+  'looks:setCover': null;
+  'looks:addCoverImage': string;
 }

@@ -22,6 +22,7 @@ const item = (overrides: Partial<SwitcherItem>): SwitcherItem => ({
   folderName: null,
   archived: false,
   completed: false,
+  icon: null,
   ...overrides,
 });
 

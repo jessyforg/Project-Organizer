@@ -17,9 +17,13 @@ import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
 import { NameDialog } from '../../components/FolderNameDialog';
 import { ConfirmDialog, Dialog, type MenuItem } from '../../components/ui';
+import { useLooks } from '../looks/useLooks';
 
 /** What the actions need to know about a note; both lists and the editor can supply it. */
-export type NoteRef = Pick<NoteSummary, 'id' | 'title' | 'folderId' | 'archivedAt'>;
+export type NoteRef = Pick<
+  NoteSummary,
+  'id' | 'title' | 'folderId' | 'archivedAt' | 'favourite' | 'icon' | 'cover'
+>;
 
 export interface NoteActionOptions {
   /** Runs first; resolve false to stop (the editor saves pending edits here). */
@@ -40,6 +44,7 @@ export function useNoteActions() {
   const invalidate = useInvalidate();
   const toast = useToast();
   const { route, navigate } = useNavigation();
+  const looks = useLooks();
   const [renaming, setRenaming] = useState<NoteRef | null>(null);
   const [moving, setMoving] = useState<NoteRef | null>(null);
   const [trashing, setTrashing] = useState<{ note: NoteRef; options: NoteActionOptions } | null>(
@@ -100,6 +105,18 @@ export function useNoteActions() {
         onSelect: () => navigate({ name: 'notes', noteId: note.id }),
       });
     }
+    // The star, icon, and cover (ADR-0019); archived notes keep only the star.
+    items.push(
+      ...looks.itemsFor({
+        kind: 'note',
+        id: note.id,
+        title: note.title,
+        favourite: note.favourite,
+        icon: note.icon,
+        cover: note.cover,
+        editable: !archived,
+      }),
+    );
     // Archived notes are read-only, so they cannot be renamed until unarchived.
     if (!archived) {
       items.push({
@@ -158,6 +175,7 @@ export function useNoteActions() {
 
   const dialogs: ReactNode = (
     <>
+      {looks.dialogs}
       <NameDialog
         open={renaming !== null}
         title="Rename note"
@@ -185,7 +203,7 @@ export function useNoteActions() {
     </>
   );
 
-  return { itemsFor, dialogs };
+  return { itemsFor, dialogs, looks };
 }
 
 function MoveToFolderDialog({ note, onClose }: { note: NoteRef | null; onClose: () => void }) {

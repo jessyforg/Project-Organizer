@@ -29,6 +29,9 @@ import { NoteMarkdown } from './NoteMarkdown';
 import { NoteOutline } from './NoteOutline';
 import { useNoteActions } from './useNoteActions';
 import { useNoteOutline } from './useNoteOutline';
+import { CoverBanner } from '../looks/Cover';
+import { LooksRow } from '../looks/LooksRow';
+import type { LooksTarget } from '../looks/useLooks';
 import { AttachmentContext, useAttachmentStore } from './attachment-store';
 import { LinkResolverContext, useLinkResolver } from './link-resolver';
 import { NoteBacklinks } from './NoteBacklinks';
@@ -290,6 +293,16 @@ export function NoteEditor({ note }: { note: Note }) {
 
   const projects = projectList.filter((p) => p.archivedAt === null || p.id === note.projectId);
 
+  const looksTarget: LooksTarget = {
+    kind: 'note',
+    id: note.id,
+    title: title.trim() || UNTITLED,
+    favourite: note.favourite,
+    icon: note.icon,
+    cover: note.cover,
+    editable: !readOnly,
+  };
+
   // The ⋯ menu, also offered by the command palette (ADR-0018).
   const menuItems = () =>
     actions.itemsFor(
@@ -298,6 +311,9 @@ export function NoteEditor({ note }: { note: Note }) {
         title: title.trim() || UNTITLED,
         folderId: note.folderId,
         archivedAt: note.archivedAt,
+        favourite: note.favourite,
+        icon: note.icon,
+        cover: note.cover,
       },
       {
         // Actions work on what is on screen, so they save first (ADR-0014).
@@ -321,6 +337,12 @@ export function NoteEditor({ note }: { note: Note }) {
 
   return (
     <div className="note-editor" onKeyDown={onKeyDown}>
+      {!focused && <CoverBanner value={note.cover} />}
+      <LooksRow
+        target={looksTarget}
+        onIcon={actions.looks.editIcon}
+        onCover={actions.looks.editCover}
+      />
       <div className="note-editor__top">
         <label className="visually-hidden" htmlFor={`${id}-title`}>
           Note title

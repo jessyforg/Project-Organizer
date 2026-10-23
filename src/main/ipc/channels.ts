@@ -267,5 +267,17 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
       s().switcher.recordOpened(target);
       return null;
     },
+    'favourites:list': () => s().favourites.list(),
+    'favourites:set': (input) => s().favourites.set(input),
+    'favourites:reorder': ({ ids }) => s().favourites.reorder(ids),
+    'looks:setIcon': (input) => {
+      s().looks.setIcon(input);
+      return null;
+    },
+    'looks:setCover': (input) => {
+      s().looks.setCover(input);
+      return null;
+    },
+    'looks:addCoverImage': (input) => s().looks.addCoverImage(input),
   };
 }

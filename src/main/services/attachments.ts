@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AttachmentInfo, AttachmentKind } from '@shared/domain';
 import { extractFileIds } from '@shared/app-links';
+import { parseCover } from '@shared/covers';
 import { TRASH_RETENTION_DAYS } from '@shared/domain';
 import { AppError } from '../errors';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
@@ -109,15 +110,30 @@ export class AttachmentService {
   }
 
   add(input: { noteId: string; name: string; data: Uint8Array }): AttachmentInfo {
-    const { db } = this.ctx;
-    const note = db
+    const note = this.ctx.db
       .prepare('SELECT archived_at FROM notes WHERE id = ? AND deleted_at IS NULL')
       .get(input.noteId) as { archived_at: string | null } | undefined;
     if (!note) throw notFound('Note');
     if (note.archived_at !== null) {
       throw new AppError('CONFLICT', 'Unarchive the note before adding files to it.');
     }
-    const size = input.data.byteLength;
+    return this.store(input.noteId, input.name, input.data);
+  }
+
+  /**
+   * An image for a cover (ADR-0019), with the same limits as files in notes. A project's cover
+   * belongs to no note. The caller checks the item can be changed.
+   */
+  addCover(input: { noteId: string | null; name: string; data: Uint8Array }): AttachmentInfo {
+    if (!sniffImage(input.data)) {
+      throw new AppError('VALIDATION_FAILED', 'Choose a PNG, JPEG, GIF, or WebP image.');
+    }
+    return this.store(input.noteId, input.name, input.data);
+  }
+
+  private store(noteId: string | null, name: string, data: Uint8Array): AttachmentInfo {
+    const { db } = this.ctx;
+    const size = data.byteLength;
     if (size > MAX_ATTACHMENT_BYTES) {
       throw new AppError('VALIDATION_FAILED', 'Files can be up to 20 MB.');
     }
@@ -136,10 +152,10 @@ export class AttachmentService {
       throw new AppError('NOT_ENOUGH_SPACE', 'The disk is nearly full. Free up some space first.');
     }
 
-    const image = sniffImage(input.data);
+    const image = sniffImage(data);
     const row: Row = {
       id: this.ctx.newId(),
-      name: cleanFileName(input.name),
+      name: cleanFileName(name),
       kind: image ? 'image' : 'file',
       mime: image ?? 'application/octet-stream',
       size,
@@ -150,13 +166,13 @@ export class AttachmentService {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       row.id,
-      input.noteId,
+      noteId,
       row.name,
       row.kind,
       row.mime,
       row.size,
-      createHash('sha256').update(input.data).digest('hex'),
-      Buffer.from(input.data.buffer, input.data.byteOffset, input.data.byteLength),
+      createHash('sha256').update(data).digest('hex'),
+      Buffer.from(data.buffer, data.byteOffset, data.byteLength),
       nowIso(this.ctx),
     );
     return this.toInfo(row);
@@ -198,9 +214,9 @@ export class AttachmentService {
   }
 
   /**
-   * Runs when a profile opens and daily: files referred to by any note body (trashed notes
-   * included) are kept; others are marked unused, and removed once unused for the retention
-   * period. A file referred to again starts over.
+   * Runs when a profile opens and daily: files referred to by any note body or used as a cover
+   * (trashed items included) are kept; others are marked unused, and removed once unused for
+   * the retention period. A file referred to again starts over.
    */
   cleanUp(): number {
     const { db } = this.ctx;
@@ -209,6 +225,16 @@ export class AttachmentService {
       .prepare("SELECT body FROM notes WHERE body LIKE '%projectforge://file/%'")
       .all() as { body: string }[];
     for (const { body } of bodies) for (const id of extractFileIds(body)) referenced.add(id);
+    const covers = db
+      .prepare(
+        `SELECT cover FROM projects WHERE cover LIKE 'image:%'
+         UNION ALL SELECT cover FROM notes WHERE cover LIKE 'image:%'`,
+      )
+      .all() as { cover: string }[];
+    for (const { cover } of covers) {
+      const parsed = parseCover(cover);
+      if (parsed?.kind === 'image') referenced.add(parsed.attachmentId);
+    }
 
     const now = nowIso(this.ctx);
     const cutoff = new Date(this.ctx.clock().getTime() - TRASH_RETENTION_DAYS * 86_400_000);

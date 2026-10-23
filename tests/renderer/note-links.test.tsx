@@ -27,6 +27,9 @@ function makeNote(body: string): Note {
     tagIds: [],
     createdAt: NOW,
     updatedAt: NOW,
+    icon: null,
+    cover: null,
+    favourite: false,
   };
 }
 
@@ -41,6 +44,9 @@ function summary(id: string, title: string): NoteSummary {
     tagIds: [],
     createdAt: NOW,
     updatedAt: NOW,
+    icon: null,
+    cover: null,
+    favourite: false,
   };
 }
 

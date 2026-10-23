@@ -28,6 +28,7 @@ describe('quick switcher search (ADR-0018)', () => {
           folderName: 'Clients',
           archived: false,
           completed: false,
+          icon: null,
         },
         {
           kind: 'note',
@@ -37,6 +38,7 @@ describe('quick switcher search (ADR-0018)', () => {
           folderName: 'Meetings',
           archived: false,
           completed: false,
+          icon: null,
         },
         {
           kind: 'task',
@@ -46,6 +48,7 @@ describe('quick switcher search (ADR-0018)', () => {
           folderName: null,
           archived: false,
           completed: false,
+          icon: null,
         },
       ]),
     );

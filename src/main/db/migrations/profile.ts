@@ -285,4 +285,29 @@ export const profileMigrations: readonly Migration[] = [
       CREATE INDEX attachments_note ON attachments (note_id);
     `,
   },
+  {
+    // Favourites, icons, and covers (ADR-0019). A favourite names exactly one item and goes
+    // with it when the item is permanently deleted; while the item is in the trash it is
+    // simply not listed. Icons and covers are checked against fixed lists by the service.
+    version: 7,
+    name: 'favourites_icons_covers',
+    sql: `
+      CREATE TABLE favourites (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT REFERENCES projects (id) ON DELETE CASCADE,
+        note_id TEXT REFERENCES notes (id) ON DELETE CASCADE,
+        sort_key INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        CHECK ((project_id IS NULL) <> (note_id IS NULL))
+      ) STRICT;
+      CREATE UNIQUE INDEX favourites_project ON favourites (project_id)
+        WHERE project_id IS NOT NULL;
+      CREATE UNIQUE INDEX favourites_note ON favourites (note_id) WHERE note_id IS NOT NULL;
+
+      ALTER TABLE projects ADD COLUMN icon TEXT;
+      ALTER TABLE projects ADD COLUMN cover TEXT;
+      ALTER TABLE notes ADD COLUMN icon TEXT;
+      ALTER TABLE notes ADD COLUMN cover TEXT;
+    `,
+  },
 ];

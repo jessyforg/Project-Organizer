@@ -159,3 +159,4 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0016](DECISIONS/0016-slash-commands.md) | Slash commands in the visual editor |
 | [0017](DECISIONS/0017-notes-release-0.6.md) | Notes release 0.6.0: formatting bubble, outline, blocks, links, mentions, attachments |
 | [0018](DECISIONS/0018-command-palette-and-switcher.md) | Command palette and quick switcher (0.7.0) |
+| [0019](DECISIONS/0019-favourites-icons-covers.md) | Favourites, icons, and covers (0.8.0, schema v7) |

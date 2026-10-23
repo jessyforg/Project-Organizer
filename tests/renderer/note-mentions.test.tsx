@@ -26,6 +26,9 @@ const note = (body: string): Note => ({
   tagIds: [],
   createdAt: NOW,
   updatedAt: NOW,
+  icon: null,
+  cover: null,
+  favourite: false,
 });
 
 const RESOLVED: Record<string, AppLinkInfo> = {

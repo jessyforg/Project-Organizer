@@ -1,0 +1,229 @@
+/* Favourites, icons, and covers (ADR-0019). */
+
+/* An item's icon: an emoji or a lucide icon, sized like the text beside it. */
+.item-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.25em;
+  height: 1.25em;
+  line-height: 1;
+}
+
+.item-icon svg {
+  width: 100%;
+  height: 100%;
+  color: inherit;
+}
+
+.item-icon--emoji {
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: 1.05em;
+}
+
+.nav__item .item-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.nav__item .item-icon svg {
+  color: var(--ink-faint);
+}
+
+.note-row__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.page__title-row > .item-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 24px;
+}
+
+.project-row > .item-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Covers: two colour tokens mixed with the surface, so they are soft in light and dim in dark.
+   Nothing but the icon tile is drawn on a cover. */
+.cover {
+  --cover-mix: 58%;
+  display: block;
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--cover-from) var(--cover-mix), var(--surface)),
+    color-mix(in srgb, var(--cover-to) var(--cover-mix), var(--surface))
+  );
+}
+
+:root[data-theme='dark'] .cover {
+  --cover-mix: 45%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .cover {
+    --cover-mix: 45%;
+  }
+}
+
+.cover--banner {
+  height: 132px;
+  margin-bottom: calc(var(--space-6) * -1);
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+}
+
+.cover--image,
+.cover--loading {
+  background: var(--surface-sunken);
+}
+
+.cover--image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover--swatch {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--radius-control) - 2px);
+}
+
+/* The row above a title: the icon tile and quiet "Add icon" and "Add cover" buttons. */
+.looks-row {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  min-height: 32px;
+  margin-bottom: var(--space-2);
+  padding-left: var(--space-1);
+}
+
+.looks-row__tile {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  color: var(--ink-muted);
+  box-shadow: var(--shadow-sm);
+}
+
+button.looks-row__tile {
+  cursor: pointer;
+}
+
+button.looks-row__tile:hover {
+  background: var(--surface-hover);
+}
+
+.looks-row__icon {
+  width: 32px;
+  height: 32px;
+  font-size: 28px;
+}
+
+.looks-row__actions {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0.85;
+}
+
+/* The pickers. */
+.look-grid {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.look-grid--icons {
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+}
+
+.look-grid--covers {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.look-grid__choice {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  min-width: 32px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.look-grid__choice .item-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.look-grid__choice:hover {
+  background: var(--surface-hover);
+}
+
+.look-grid__choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.look-grid__choice--cover {
+  aspect-ratio: 3 / 2;
+  padding: 3px;
+  border-color: var(--line);
+}
+
+.look-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.dialog__actions-start {
+  margin-right: auto;
+}
+
+/* The sidebar's Favourites. */
+.sidebar__favourites {
+  display: grid;
+  flex: none;
+}
+
+.sidebar__favourite-list {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.favourite > .nav__item {
+  width: 100%;
+}
+
+.favourite .nav__item[data-dragging='true'] {
+  opacity: 0.5;
+}
+
+.favourite--drop {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.favourite--drop-end {
+  height: 2px;
+  background: var(--accent);
+}

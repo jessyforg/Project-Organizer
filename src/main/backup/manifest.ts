@@ -20,6 +20,7 @@ export const COUNTED_TABLES = [
   'note_tags',
   'note_links',
   'attachments',
+  'favourites',
   'settings',
 ] as const;
 
@@ -44,6 +45,8 @@ export const INCLUDES = [
   'Tasks and subtasks, including items in the trash',
   'Tags and dependencies',
   'Notes and note folders, including notes in the trash',
+  'Images and files in notes, and cover images',
+  'Favourites, icons, and covers',
   'Profile settings',
 ];
 export const OMITS = ['The profile’s automatic snapshots', 'App-wide settings outside the profile'];
