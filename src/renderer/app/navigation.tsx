@@ -13,7 +13,8 @@ export type Route =
   | { name: 'tasks' }
   | { name: 'projects' }
   | { name: 'project'; id: string }
-  | { name: 'notes'; noteId: string | null; projectId?: string }
+  /** `focus` opens the note in focus mode (Ctrl+click on a note link, ADR-0017). */
+  | { name: 'notes'; noteId: string | null; projectId?: string; focus?: boolean }
   | { name: 'calendar' }
   | { name: 'search'; text: string }
   | { name: 'trash' }

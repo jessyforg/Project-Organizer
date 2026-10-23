@@ -44,6 +44,14 @@ describe('contentSecurityPolicy', () => {
     expect(csp).not.toContain('unsafe-eval');
     expect(csp).not.toContain('http');
   });
+
+  it('loads images only from the app, data URLs, and blob URLs it made itself (ADR-0017)', () => {
+    const imgSrc = contentSecurityPolicy()
+      .split(';')
+      .map((d) => d.trim())
+      .find((d) => d.startsWith('img-src'));
+    expect(imgSrc).toBe("img-src 'self' data: blob:");
+  });
 });
 
 describe('resolveRendererPath', () => {

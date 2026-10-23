@@ -1,7 +1,7 @@
 {
   "name": "projectforge",
   "productName": "ProjectForge",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Free, local-first Windows desktop project organizer",
   "private": true,
   "license": "UNLICENSED",
@@ -40,6 +40,7 @@
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.7",
     "@tiptap/extension-list": "3.31.4",
+    "@tiptap/extension-table": "3.31.4",
     "@tiptap/extensions": "3.31.4",
     "@tiptap/markdown": "3.31.4",
     "@tiptap/pm": "3.31.4",

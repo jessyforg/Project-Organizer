@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { BrowserWindow } from 'electron';
-import { app, clipboard, dialog, ipcMain, Menu, protocol, session } from 'electron';
+import { app, clipboard, dialog, ipcMain, Menu, protocol, session, shell } from 'electron';
 import { BackupService } from './backup/backup-service';
 import { openDatabase, type Db } from './db/connection';
 import { migrate } from './db/migrator';
@@ -137,6 +137,7 @@ async function start(): Promise<void> {
       fileTokens: new FileTokens(),
       dialogs: testDialogs() ?? nativeDialogs,
       clipboard,
+      files: { tempDir: paths.tmp, openPath: (file) => shell.openPath(file) },
       clock,
     }),
     { isTrustedSender: (url) => isTrustedOrigin(url, devServerUrl), logger },

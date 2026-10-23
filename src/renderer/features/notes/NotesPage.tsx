@@ -405,8 +405,14 @@ function NotesLibrary({
 
 /** One note at a comfortable reading width, with a way back and focus mode (ADR-0015). */
 function NoteView({ noteId }: { noteId: string }) {
-  const { navigate } = useNavigation();
+  const { navigate, route } = useNavigation();
   const { focused, setFocused } = useFocusMode();
+  // Opened with Ctrl+click on a link: start in focus mode (after the previous note's view has
+  // left it).
+  const [startFocused] = useState(() => route.name === 'notes' && route.focus === true);
+  useEffect(() => {
+    if (startFocused) setFocused(true);
+  }, [startFocused, setFocused]);
   const note = useQuery(`note:${noteId}`, () => window.api.notes.get({ id: noteId }));
   const folders = useQuery('note-folders', () => window.api.noteFolders.list());
   const folder = folders.data?.find((f) => f.id === note.data?.folderId);

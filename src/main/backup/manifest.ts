@@ -18,6 +18,8 @@ export const COUNTED_TABLES = [
   'note_folders',
   'notes',
   'note_tags',
+  'note_links',
+  'attachments',
   'settings',
 ] as const;
 

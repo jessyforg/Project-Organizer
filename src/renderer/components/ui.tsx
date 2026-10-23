@@ -152,7 +152,7 @@ export interface MenuItem {
  * the first item when it appears; arrows, Home, and End move; Escape closes it and asks for focus
  * to return; Tab or choosing an item closes it.
  */
-function MenuList({
+export function MenuList({
   id,
   label,
   items,

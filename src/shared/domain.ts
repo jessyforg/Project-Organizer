@@ -1,3 +1,5 @@
+import type { AppLinkKind } from './app-links';
+
 export const STATUS_CATEGORIES = ['todo', 'in_progress', 'done', 'cancelled'] as const;
 export type StatusCategory = (typeof STATUS_CATEGORIES)[number];
 
@@ -211,6 +213,58 @@ export interface ProfileSettings {
   theme: Theme;
   accent: Accent;
   surface: Surface;
+  /** Whether notes show their outline panel (ADR-0017). */
+  noteOutline: boolean;
+}
+
+export type AttachmentKind = 'image' | 'file';
+
+/** An image or other file in a note (ADR-0017 stage 6). */
+export interface AttachmentInfo {
+  id: string;
+  /** The file name, without folders. */
+  name: string;
+  /** Images are shown; other files are saved or opened. Decided from the file's contents. */
+  kind: AttachmentKind;
+  mime: string;
+  size: number;
+  /** Removed (no note referred to it for 30 days) or never existed. */
+  missing: boolean;
+  /** Runs code when opened (by its extension): it can be saved, but not opened from the app. */
+  executable?: boolean;
+}
+
+/** The current state of an item a note links to (ADR-0017). */
+export interface AppLinkInfo {
+  kind: AppLinkKind;
+  id: string;
+  /** Today's title or name; empty when missing. */
+  label: string;
+  /** Deleted or in the trash: the link is broken until it is restored. */
+  missing: boolean;
+  archived: boolean;
+  /** The project a note or task belongs to. */
+  projectId: string | null;
+  /** Tasks only. */
+  status?: { name: string; category: StatusCategory };
+  dueDate?: string | null;
+}
+
+/** A note that links to, or mentions, another note (ADR-0017). */
+export interface Backlink {
+  noteId: string;
+  title: string;
+  /** Plain text around the link or mention. */
+  snippet: string;
+  archived: boolean;
+  updatedAt: string;
+}
+
+export interface NoteBacklinks {
+  /** Notes with a link to this note. */
+  linked: Backlink[];
+  /** Notes that mention its title in plain text, without a link. */
+  unlinked: Backlink[];
 }
 
 export interface ProjectListItem extends Project {

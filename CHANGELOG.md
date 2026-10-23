@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.6.0 — Notes (2026-10-23, not yet publicly released)
+
+- **Formatting bubble:** select text in a note to get a small toolbar above it.
+  - It has bold, italic, strikethrough, inline code, link, and "Turn into" for headings, lists, quotes, and code blocks.
+  - Alt+F10 moves into it from the keyboard.
+  - Links accept web and email addresses; `https://` is added when left out.
+- **Outline:** the Outline button shows a panel of the note's headings beside the text.
+  - Click a heading to jump to it.
+  - The heading you are in is highlighted.
+  - The choice to show it is remembered per profile.
+- **New blocks:** callouts (note, tip, warning), toggles that open and close, and tables.
+  - Each is available from the `/` menu, and callouts also from "Turn into".
+  - Each is saved as standard Markdown that GitHub and Obsidian read.
+  - Notes with tables now open in the visual editor.
+- **Table toolbar:** add or delete rows and columns while the cursor is in a table.
+- **Note links:** type `[[` to link to another note, or to create one.
+  - A link always shows the note's current title.
+  - Click to open it, Ctrl+click to open it in focus mode.
+  - A link to a note in the trash shows as broken until the note is restored.
+- **Backlinks:** below each note, see the notes that link to it, and notes that mention its title without a link. "Link" turns such a mention into a link.
+- **Mentions:** type `@` to mention a task or project.
+  - A task shows its status and due date, and updates when the task changes.
+  - Clicking opens the task's details, or the project.
+  - A task's details list the notes that mention it.
+- **Images and files:** paste or drop them into a note, or use `/image` and `/file`. These show a "Choose…" button that opens the file window.
+  - Images show in the note, with a description for screen readers.
+  - Other files can be opened or saved as a copy. Files that run programs can only be saved.
+  - Files are kept with the profile, so encrypted backups include them.
+  - Up to 20 MB per file and 1 GB per profile.
+  - Images on the web are still never loaded.
+- Profile data schema version 6 (a link index and attachments). Existing profiles upgrade automatically after a verified snapshot.
+- **Fixed:** opening a note that ends in a list could mark it "Unsaved changes" without anything being typed.
+
 ## 0.5.0 — Slash commands (2026-10-21, not yet publicly released)
 
 - **Slash commands in notes:** type `/` at the start of a line (or after a space) to insert a block: text, headings 1–3, bulleted, numbered, and checklists, a quote, a code block, or a divider.

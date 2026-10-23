@@ -408,6 +408,303 @@ img.ProseMirror-separator {
   }
 }
 
+/* Formatting bubble (ADR-0017). The plugin adds it beside the editor and positions it. */
+.bubble {
+  z-index: 20;
+  animation: rise-in var(--duration-fast) var(--ease);
+}
+
+.bubble__tools,
+.bubble__link {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius-control) + 2px);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+}
+
+.bubble__link {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  max-width: min(420px, calc(100vw - 32px));
+  padding: var(--space-2);
+}
+
+.bubble__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bubble__button svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.bubble__button:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.bubble__button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.bubble__button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.bubble__turn {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.bubble__turn .bubble__chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-muted);
+}
+
+.bubble__divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 3px;
+  background: var(--line-strong);
+}
+
+/* The "Turn into" list opens below its button, from the left. */
+.menu.bubble__menu {
+  right: auto;
+  left: 0;
+}
+
+.bubble__input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.bubble__error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+
+@media (pointer: coarse) {
+  .bubble__button {
+    min-width: 40px;
+    height: 40px;
+  }
+}
+
+/* Callouts (ADR-0017), in the editor and the Markdown preview. */
+.doc-editor__body .callout,
+.markdown .callout {
+  margin: 0 0 0.8em;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--callout-line, var(--accent));
+  border-left-width: 4px;
+  border-radius: var(--radius-control);
+  background: var(--callout-bg, var(--accent-soft));
+  color: var(--ink);
+}
+
+.doc-editor__body .callout::before,
+.markdown .callout__title {
+  display: block;
+  margin: 0 0 2px;
+  color: var(--callout-label, var(--accent-text));
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* In the editor the label is drawn by CSS, so it is not part of the text. */
+.doc-editor__body .callout::before {
+  content: attr(data-label);
+}
+
+.doc-editor__body .callout > :last-child,
+.markdown .callout > :last-child {
+  margin-bottom: 0;
+}
+
+.callout[data-kind='tip'] {
+  --callout-line: var(--success);
+  --callout-bg: var(--success-soft);
+  --callout-label: var(--success);
+}
+
+.callout[data-kind='warning'] {
+  --callout-line: var(--notice-line);
+  --callout-bg: var(--notice-soft);
+  --callout-label: var(--ink);
+}
+
+.callout[data-kind='caution'] {
+  --callout-line: var(--danger);
+  --callout-bg: var(--danger-soft);
+  --callout-label: var(--danger);
+}
+
+/* Toggles: a button beside the title; a closed toggle shows only its title. */
+.doc-editor__body .toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin: 0 0 0.8em;
+}
+
+.toggle__button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.toggle__button::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid currentColor;
+  transition: transform var(--duration-fast) var(--ease);
+}
+
+.toggle[data-open] > .toggle__button::before {
+  transform: rotate(90deg);
+}
+
+.toggle__button:hover {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+
+.toggle__button:focus-visible {
+  outline: 2px solid var(--focus);
+}
+
+.toggle__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.toggle__summary {
+  font-weight: 600;
+}
+
+/* An empty title shows a hint, like an empty line does. */
+.toggle__summary:empty::before {
+  content: 'Toggle title';
+  color: var(--ink-faint);
+  font-weight: 400;
+  pointer-events: none;
+}
+
+.doc-editor__body .toggle:not([data-open]) > .toggle__content > :not(.toggle__summary) {
+  display: none;
+}
+
+.doc-editor__body .toggle__content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown details {
+  margin: 0 0 0.8em;
+}
+
+.markdown summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.markdown details > :not(summary) {
+  margin-left: 18px;
+}
+
+/* Tables: GitHub tables, one line per cell. */
+.doc-editor__body .table-wrapper {
+  margin: 0 0 0.8em;
+  overflow-x: auto;
+}
+
+.doc-editor__body table {
+  border-collapse: collapse;
+  min-width: 50%;
+}
+
+.doc-editor__body th,
+.doc-editor__body td {
+  min-width: 80px;
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  vertical-align: top;
+  text-align: left;
+}
+
+.doc-editor__body th {
+  background: var(--surface-sunken);
+  font-weight: 600;
+}
+
+.doc-editor__body td > p,
+.doc-editor__body th > p {
+  margin: 0;
+}
+
+.doc-editor__body [data-align='center'],
+.markdown [align='center'] {
+  text-align: center;
+}
+
+.doc-editor__body [data-align='right'],
+.markdown [align='right'] {
+  text-align: right;
+}
+
+/* prosemirror-tables marks selected cells. */
+.doc-editor__body .selectedCell {
+  background: var(--accent-soft);
+}
+
+.bubble__button--danger,
+.bubble__button--danger:hover {
+  color: var(--danger);
+}
+
+.bubble__button[aria-disabled='true'] {
+  color: var(--ink-faint);
+  opacity: 0.55;
+  cursor: default;
+}
+
 /* Editor lab (development builds only). */
 .editor-lab {
   display: grid;

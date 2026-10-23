@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { markdownFileName } from '@shared/markdown-file';
 import type { AppInfo } from '@shared/types';
@@ -5,6 +6,7 @@ import type { BackupService } from '../backup/backup-service';
 import { buildJsonExport, writeJsonExport } from '../backup/json-export';
 import { localIsoDate } from '../domain/dates';
 import { AppError } from '../errors';
+import { writeFileAtomic } from '../notes/attachment-files';
 import { writeNoteMarkdown } from '../notes/markdown-files';
 import type { FileTokens } from './file-tokens';
 import type { ProfileService } from '../profiles/profile-service';
@@ -28,12 +30,15 @@ export interface ChannelDeps {
   };
   /** The system clipboard (Electron's, in the main process; ADR-0014). */
   clipboard: { writeText(text: string): void };
+  /** Opening attachments (ADR-0017): a private folder to copy them to, and the system's opener. */
+  files: { tempDir: string; openPath(file: string): Promise<string> };
   clock: () => Date;
 }
 
 const BACKUP_FILTER = { name: 'ProjectForge backup', extension: 'pfbackup' };
 const JSON_FILTER = { name: 'JSON export', extension: 'json' };
 const MARKDOWN_FILTER = { name: 'Markdown', extension: 'md' };
+const ANY_FILE = { name: 'All files', extension: '*' };
 
 /** A default file name that is safe on Windows. */
 function fileNameFor(profileName: string, date: string, extension: string): string {
@@ -48,7 +53,17 @@ function fileNameFor(profileName: string, date: string, extension: string): stri
 
 /** One implementation per channel; the mapped type makes a missing channel a compile error. */
 export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
-  const { appInfo, profiles, services: s, backups, fileTokens, dialogs, clipboard, clock } = deps;
+  const {
+    appInfo,
+    profiles,
+    services: s,
+    backups,
+    fileTokens,
+    dialogs,
+    clipboard,
+    clock,
+    files,
+  } = deps;
   const requireActive = () => {
     const active = profiles.getActive();
     if (!active) throw new AppError('NOT_FOUND', 'No profile is open.');
@@ -185,6 +200,44 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
       if (!destination) return { saved: false };
       writeNoteMarkdown(note, destination);
       return { saved: true, fileName: path.basename(destination) };
+    },
+    'notes:backlinks': ({ id }) => s().notes.backlinks(id),
+    'notes:linkMention': (input) => s().notes.linkMention(input),
+    'links:resolve': (input) => s().links.resolve(input),
+    'links:mentionedIn': (target) => s().links.mentionedIn(target),
+    'attachments:add': (input) => s().attachments.add(input),
+    'attachments:info': ({ ids }) => s().attachments.info(ids),
+    'attachments:readImage': ({ id }) => s().attachments.readImage(id),
+    'attachments:save': async ({ id }) => {
+      const file = s().attachments.read(id);
+      const extension = path.extname(file.name).slice(1);
+      const destination = await dialogs.saveFile(
+        file.name,
+        extension ? { name: `${extension.toUpperCase()} file`, extension } : ANY_FILE,
+      );
+      if (!destination) return { saved: false };
+      writeFileAtomic(destination, file.data);
+      return { saved: true, fileName: path.basename(destination) };
+    },
+    // Opens a copy with the system's default app. Executable files are never opened from here.
+    'attachments:open': async ({ id }) => {
+      const [info] = s().attachments.info([id]);
+      if (!info || info.missing) throw new AppError('NOT_FOUND', 'File not found.');
+      if (info.executable) {
+        throw new AppError(
+          'VALIDATION_FAILED',
+          'Files that run programs cannot be opened from a note. Save a copy instead.',
+        );
+      }
+      const file = s().attachments.read(id);
+      const dir = path.join(files.tempDir, 'open', id);
+      fs.mkdirSync(dir, { recursive: true });
+      const copy = path.join(dir, file.name);
+      writeFileAtomic(copy, file.data);
+      const problem = await files.openPath(copy);
+      if (problem)
+        throw new AppError('VALIDATION_FAILED', `The file could not be opened. ${problem}`);
+      return null;
     },
     'noteFolders:list': () => s().noteFolders.list(),
     'noteFolders:create': (input) => s().noteFolders.create(input),

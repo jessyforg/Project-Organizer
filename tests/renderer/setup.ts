@@ -30,3 +30,12 @@ if (!HTMLDialogElement.prototype.showModal) {
     this.dispatchEvent(new Event('close'));
   };
 }
+
+// jsdom has no object URLs; images stored in notes are shown through them (ADR-0017).
+if (!('createObjectURL' in URL)) {
+  let next = 0;
+  Object.assign(URL, {
+    createObjectURL: () => `blob:test/${(next += 1)}`,
+    revokeObjectURL: () => undefined,
+  });
+}

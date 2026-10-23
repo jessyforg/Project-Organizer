@@ -1,8 +1,10 @@
-import type { Note, NoteSummary } from '@shared/domain';
+import { appLinkMarkdown, extractAppLinks, findPlainMention } from '@shared/app-links';
+import type { Backlink, Note, NoteBacklinks, NoteSummary } from '@shared/domain';
 import {
   LIMITS,
   type CreateNoteInput,
   type ImportNotesInput,
+  type LinkMentionInput,
   type MoveNoteInput,
   type NoteListQuery,
   type NoteSort,
@@ -12,6 +14,7 @@ import {
 import { toFtsQuery } from '../domain/fts';
 import { AppError } from '../errors';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
+import { LinkService, toBacklink, type BacklinkRow } from './links';
 import { ensureInbox, requireLiveProject } from './projects';
 import { NOTE_SELECT, NOTE_SUMMARY_SELECT, toNote, toNoteSummary, type NoteRow } from './rows';
 
@@ -22,6 +25,10 @@ const ORDER: Record<NoteSort, string> = {
   title: 'n.title COLLATE NOCASE, n.id',
 };
 const COPY_SUFFIX = ' (copy)';
+/** Titles this short (or the default one) would match too many words to suggest as mentions. */
+const MIN_MENTION_TITLE = 3;
+const DEFAULT_TITLE = 'Untitled note';
+const BACKLINK_LIMIT = 100;
 
 interface NewNote {
   projectId: string | undefined;
@@ -151,10 +158,91 @@ export class NoteService {
     const title = input.title ?? current.title;
     const body = input.body ?? current.body;
     if (title === current.title && body === current.body) return current;
-    this.ctx.db
-      .prepare('UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?')
-      .run(title, body, nowIso(this.ctx), input.id);
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare('UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?')
+        .run(title, body, nowIso(this.ctx), input.id);
+      if (body !== current.body) this.syncLinks(input.id, body);
+    })();
     return this.get(input.id);
+  }
+
+  /**
+   * Notes that link to this one, and notes that mention its title without a link (ADR-0017).
+   * Trashed notes are left out; archived ones are listed among links but not mentions, since
+   * linking a mention edits the note.
+   */
+  backlinks(id: string): NoteBacklinks {
+    const target = this.get(id);
+    const { db } = this.ctx;
+    const live = 'n.deleted_at IS NULL AND p.deleted_at IS NULL AND n.id <> ?';
+    const linked = new LinkService(this.ctx).mentionedIn({ kind: 'note', id }, id);
+
+    const title = target.title.trim();
+    const fts = toFtsQuery(title);
+    if (title.length < MIN_MENTION_TITLE || title === DEFAULT_TITLE || fts === null) {
+      return { linked, unlinked: [] };
+    }
+    const linkedIds = new Set(linked.map((b) => b.noteId));
+    const candidates = db
+      .prepare(
+        `SELECT n.id, n.title, n.body, n.archived_at, n.updated_at
+         FROM notes n JOIN projects p ON p.id = n.project_id
+         WHERE ${live} AND n.archived_at IS NULL
+           AND n.id IN (SELECT note_id FROM notes_fts WHERE notes_fts MATCH ?)
+         ORDER BY n.updated_at DESC, n.id LIMIT ?`,
+      )
+      .all(id, fts, BACKLINK_LIMIT) as BacklinkRow[];
+    const unlinked: Backlink[] = [];
+    for (const row of candidates) {
+      if (linkedIds.has(row.id)) continue;
+      const at = findPlainMention(row.body, title);
+      if (at) unlinked.push(toBacklink(row, at[0]));
+    }
+    return { linked, unlinked };
+  }
+
+  /** Turns the first plain mention of the target's title in the source note into a link. */
+  linkMention(input: LinkMentionInput): Note {
+    const source = this.get(input.sourceId);
+    if (source.archivedAt !== null) {
+      throw new AppError('CONFLICT', 'Unarchive the note before editing it.');
+    }
+    const target = this.get(input.targetId);
+    const at = findPlainMention(source.body, target.title);
+    if (!at) {
+      throw new AppError('CONFLICT', `“${source.title}” no longer mentions “${target.title}”.`);
+    }
+    const [start, end] = at;
+    const linked = appLinkMarkdown({ kind: 'note', id: target.id }, source.body.slice(start, end));
+    return this.update({
+      id: source.id,
+      body: source.body.slice(0, start) + linked + source.body.slice(end),
+    });
+  }
+
+  /**
+   * Builds the link index when notes hold links it lacks: links written before it existed, for
+   * example in imported Markdown or a profile upgraded from schema v5. Runs when a profile opens.
+   */
+  rebuildLinkIndexIfNeeded(): number {
+    const { db } = this.ctx;
+    if (db.prepare('SELECT 1 FROM note_links LIMIT 1').get()) return 0;
+    const rows = db
+      .prepare("SELECT id, body FROM notes WHERE body LIKE '%projectforge://%'")
+      .all() as { id: string; body: string }[];
+    db.transaction(() => rows.forEach((row) => this.syncLinks(row.id, row.body)))();
+    return rows.length;
+  }
+
+  /** Replaces the note's entries in the link index with the links in `body`. */
+  private syncLinks(noteId: string, body: string): void {
+    const { db } = this.ctx;
+    db.prepare('DELETE FROM note_links WHERE source_note_id = ?').run(noteId);
+    const insert = db.prepare(
+      'INSERT INTO note_links (source_note_id, target_kind, target_id) VALUES (?, ?, ?)',
+    );
+    for (const target of extractAppLinks(body)) insert.run(noteId, target.kind, target.id);
   }
 
   move(input: MoveNoteInput): Note {
@@ -182,6 +270,7 @@ export class NoteService {
       `INSERT INTO notes (id, project_id, folder_id, title, body, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
     ).run(id, projectId, note.folderId ?? null, note.title, note.body, now, now);
+    this.syncLinks(id, note.body);
     const insertTag = db.prepare('INSERT INTO note_tags (note_id, tag_id) VALUES (?, ?)');
     for (const tagId of new Set(note.tagIds)) {
       if (!db.prepare('SELECT 1 FROM tags WHERE id = ?').get(tagId)) throw notFound('Tag');

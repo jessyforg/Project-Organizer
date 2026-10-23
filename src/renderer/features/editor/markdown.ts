@@ -28,7 +28,9 @@ export function createMarkdownCodec(extensions: Extensions): MarkdownCodec {
   const toMarkdown = (content: JSONContent): string => {
     // Trailing blank lines come from the empty paragraph the editor keeps at the end so there is
     // always somewhere to type; the editor adds it back when the note opens.
-    const text = manager.serialize(content).trimEnd();
+    // Leading newlines come from blocks such as tables that start their output with one. (Only
+    // newlines: leading spaces can matter, as in an indented code block.)
+    const text = manager.serialize(content).trimEnd().replace(/^\n+/, '');
     return text === '' ? '' : `${text}\n`;
   };
 
@@ -36,7 +38,7 @@ export function createMarkdownCodec(extensions: Extensions): MarkdownCodec {
     if (markdown.trim() === '') return { ok: true, content: { type: 'doc', content: [] } };
     try {
       // nodeFromJSON and check() reject anything the editor's schema cannot hold.
-      const doc = schema.nodeFromJSON(manager.parse(markdown));
+      const doc = schema.nodeFromJSON(wrapLooseInline(schema, manager.parse(markdown)));
       doc.check();
       const content = doc.toJSON() as JSONContent;
       return sameMarkdown(markdown, toMarkdown(content)) ? { ok: true, content } : { ok: false };
@@ -48,7 +50,43 @@ export function createMarkdownCodec(extensions: Extensions): MarkdownCodec {
   return { fromMarkdown, toMarkdown };
 }
 
+/**
+ * Puts inline content that stands where blocks belong into paragraphs. The Markdown parser lifts
+ * an image that is alone on its line out of its paragraph (Tiptap's own images are blocks);
+ * images in notes are inline (ADR-0017), so they go back into one. Driven by the schema, so it
+ * covers any container: the document, quotes, list items, callouts, and toggles.
+ */
+function wrapLooseInline(schema: Schema, node: JSONContent): JSONContent {
+  if (!node.content) return node;
+  const type = node.type ? schema.nodes[node.type] : undefined;
+  const children = node.content.map((child) => wrapLooseInline(schema, child));
+  if (!type || type.inlineContent || type.isAtom) return { ...node, content: children };
+  const isInline = (child: JSONContent) =>
+    child.type === 'text' || schema.nodes[child.type ?? '']?.isInline === true;
+  const content: JSONContent[] = [];
+  // Loose inline pieces next to each other share one new paragraph; they never join a paragraph
+  // that was in the Markdown, which would change the text.
+  let wrapper: JSONContent | null = null;
+  for (const child of children) {
+    if (!isInline(child)) {
+      content.push(child);
+      wrapper = null;
+    } else if (wrapper) {
+      wrapper.content!.push(child);
+    } else {
+      wrapper = { type: 'paragraph', content: [child] };
+      content.push(wrapper);
+    }
+  }
+  return { ...node, content };
+}
+
 const parser = unified().use(remarkParse).use(remarkGfm);
+
+/** The Markdown syntax tree (mdast), as the preview and the round-trip check read it. */
+export function parseMarkdown(markdown: string) {
+  return parser.parse(markdown);
+}
 
 /** Whether two Markdown texts mean the same thing. */
 export function sameMarkdown(a: string, b: string): boolean {

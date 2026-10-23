@@ -41,7 +41,12 @@ const SURFACE_LABEL: Record<Surface, string> = {
   warm: 'Warm',
 };
 
-const DEFAULTS: Appearance = { theme: 'system', accent: 'blue', surface: 'cool' };
+const DEFAULTS: Appearance = {
+  theme: 'system',
+  accent: 'blue',
+  surface: 'cool',
+  noteOutline: false,
+};
 
 export function SettingsPage({
   active,

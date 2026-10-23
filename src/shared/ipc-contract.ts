@@ -1,8 +1,12 @@
 import { z } from 'zod';
 import type {
+  AppLinkInfo,
+  AttachmentInfo,
+  Backlink,
   Dashboard,
   Folder,
   Note,
+  NoteBacklinks,
   NoteFolder,
   NoteSummary,
   ProfileSettings,
@@ -139,6 +143,15 @@ export const ipcContract = {
   'notes:import': s.importNotesSchema,
   'notes:copyMarkdown': s.idSchema,
   'notes:exportMarkdown': s.idSchema,
+  'notes:backlinks': s.idSchema,
+  'notes:linkMention': s.linkMentionSchema,
+  'links:resolve': s.resolveLinksSchema,
+  'links:mentionedIn': s.linkTargetSchema,
+  'attachments:add': s.addAttachmentSchema,
+  'attachments:info': s.attachmentIdsSchema,
+  'attachments:readImage': s.idSchema,
+  'attachments:save': s.idSchema,
+  'attachments:open': s.idSchema,
   'noteFolders:list': s.emptySchema,
   'noteFolders:create': s.createFolderSchema,
   'noteFolders:rename': s.renameFolderSchema,
@@ -232,6 +245,15 @@ export interface IpcResponses {
   'notes:import': Note[];
   'notes:copyMarkdown': null;
   'notes:exportMarkdown': SaveResult;
+  'notes:backlinks': NoteBacklinks;
+  'notes:linkMention': Note;
+  'links:resolve': AppLinkInfo[];
+  'links:mentionedIn': Backlink[];
+  'attachments:add': AttachmentInfo;
+  'attachments:info': AttachmentInfo[];
+  'attachments:readImage': { mime: string; data: Uint8Array };
+  'attachments:save': SaveResult;
+  'attachments:open': null;
   'noteFolders:list': NoteFolder[];
   'noteFolders:create': NoteFolder;
   'noteFolders:rename': NoteFolder;

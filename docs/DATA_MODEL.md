@@ -133,6 +133,33 @@ Notes cannot be created in, or moved into, an archived project; notes already in
 
 Note folders are flat and listed by name. Like project folders, they are not trashed: deleting one is immediate and only moves its notes, including notes in the trash, to "no folder".
 
+**note_links** (schema v6, [ADR-0017](DECISIONS/0017-notes-release-0.6.md))
+| Column | Type | Notes |
+|---|---|---|
+| source_note_id | TEXT NOT NULL → notes(id) ON DELETE CASCADE | The note containing the link |
+| target_kind | TEXT NOT NULL CHECK IN ('note', 'task', 'project') | |
+| target_id | TEXT NOT NULL | No foreign key: a link may point to something missing or trashed (shown as broken) |
+
+PK (source_note_id, target_kind, target_id).
+- **A derived index.** A note's Markdown is the source of truth. The links in it are `[Label](projectforge://kind/id)`, outside code.
+- **Kept current:** the index is rebuilt for a note in the same transaction as every create, update, import, and duplicate.
+- **Built on opening:** when a profile opens, the index is built if it is empty while notes contain app links, for example after an upgrade from v5 or for imported Markdown.
+- **Trash:** links from trashed notes stay in the index, but backlinks leave those notes out.
+
+**attachments** (schema v6, [ADR-0017](DECISIONS/0017-notes-release-0.6.md) stage 6)
+| Column | Type | Notes |
+|---|---|---|
+| id | TEXT PK | Referred to as `projectforge://file/<id>` in note Markdown |
+| note_id | TEXT NULL → notes(id) ON DELETE SET NULL | The note it was added to; a file can outlive it |
+| name | TEXT NOT NULL CHECK(length(trim(name)) > 0) | The file name alone, without folders |
+| kind | TEXT NOT NULL CHECK IN ('image', 'file') | Decided from the bytes: PNG, JPEG, GIF, and WebP are images |
+| mime | TEXT NOT NULL | The image type, or `application/octet-stream` |
+| size | INTEGER NOT NULL CHECK(size >= 0) | At most 20 MB; 1 GB per profile in total |
+| sha256 | TEXT NOT NULL | |
+| data | BLOB NOT NULL | The bytes; in the JSON export as Base64 |
+| created_at | TEXT NOT NULL | |
+| unused_since | TEXT NULL | Set when no note body (trashed ones included) refers to the file; removed after the trash retention period; cleared when referred to again |
+
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
 ### Database guards
@@ -150,7 +177,7 @@ Only top-level tasks move between projects; their subtasks (including trashed on
 - `tasks(project_id, deleted_at)`, `tasks(parent_task_id)`, `tasks(status_id)`, `tasks(due_date) WHERE deleted_at IS NULL`, `tasks(updated_at)`, `tasks(deletion_batch_id)`.
 - `projects(deleted_at, archived_at)`, `projects(folder_id)`, `projects(deletion_batch_id)`.
 - `task_dependencies(depends_on_task_id)`, `task_tags(tag_id)`, `project_tags(tag_id)`, `note_tags(tag_id)`.
-- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(archived_at)` (partial, archived only), `notes(updated_at)`, `notes(deletion_batch_id)`. Note lists read only the first 600 characters of each body (for the excerpt).
+- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(archived_at)` (partial, archived only), `notes(updated_at)`, `notes(deletion_batch_id)`, `note_links(target_kind, target_id)` (backlinks). Note lists read only the first 600 characters of each body (for the excerpt).
 - Full-text search: FTS5 tables `tasks_fts` (title, description), `projects_fts` (name, description), and `notes_fts` (title, body) with the `unicode61 remove_diacritics 2` tokenizer, so "cafe" finds "Café". Each keeps its own copy keyed by ID rather than rowid, so it stays correct even if SQLite renumbers rowids; triggers keep it in sync. User input is converted to quoted prefix terms, so search text is never interpreted as query syntax.
 - Measured in Phase 3 with 6,250 tasks: list, filter, and search queries 3–38 ms; progress for 20 projects 21 ms.
 

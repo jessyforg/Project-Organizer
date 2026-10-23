@@ -171,7 +171,7 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoViolations(page, 'Notes (right-click menu)');
     await page.keyboard.press('Escape');
     await page.getByRole('list', { name: 'Notes' }).getByRole('button').first().click();
-    // The seeded note has a table, so it opens in Markdown mode.
+    // The seeded note has an image, so it opens in Markdown mode.
     await expect(page.getByRole('heading', { name: 'Launch', level: 1 })).toBeVisible();
     await expectNoViolations(page, 'Notes (Markdown preview)');
     await page.getByRole('button', { name: 'Write' }).click();
@@ -184,6 +184,75 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByRole('listbox', { name: 'Insert a block' })).toBeVisible();
     await expectNoViolations(page, 'Notes (slash command menu)');
     await page.keyboard.press('Escape');
+    await page.keyboard.press('Shift+Home');
+    await expect(page.getByRole('toolbar', { name: 'Selection formatting' })).toBeVisible();
+    await expectNoViolations(page, 'Notes (formatting bubble)');
+    await page.getByRole('button', { name: 'Link' }).click();
+    await expectNoViolations(page, 'Notes (link field)');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Outline' }).click();
+    await expect(page.getByRole('navigation', { name: 'Outline' })).toBeVisible();
+    await expectNoViolations(page, 'Notes (outline)');
+    await page.getByRole('button', { name: 'Outline' }).click();
+    // The newer blocks (ADR-0017 stages 3–4), in the editor and in the preview: callouts,
+    // toggles, a table, a working link, and a broken one; the page also shows backlinks.
+    await page.evaluate(async () => {
+      const notes = await window.api.notes.list({});
+      const launch = notes.ok ? notes.data.find((n) => n.title === 'Launch plan') : undefined;
+      const tasks = await window.api.tasks.list({});
+      const task = tasks.ok ? tasks.data.find((t) => t.dueDate !== null) : undefined;
+      const projects = await window.api.projects.list({});
+      const project = projects.ok ? projects.data[0] : undefined;
+      const created = await window.api.notes.create({ title: 'Blocks' });
+      if (!created.ok) return;
+      // A stored image (a 1×1 PNG) and a file, as in stage 6.
+      const png = Uint8Array.from(
+        atob(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+        ),
+        (c) => c.charCodeAt(0),
+      );
+      const image = await window.api.attachments.add({
+        noteId: created.data.id,
+        name: 'dot.png',
+        data: png,
+      });
+      const file = await window.api.attachments.add({
+        noteId: created.data.id,
+        name: 'plan.txt',
+        data: new TextEncoder().encode('Plan'),
+      });
+      await window.api.notes.update({
+        id: created.data.id,
+        body: [
+          `See [Launch plan](projectforge://note/${launch?.id ?? ''}) and [Old](projectforge://note/9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a).`,
+          `Doing [task](projectforge://task/${task?.id ?? ''}) for [project](projectforge://project/${project?.id ?? ''}).`,
+          `![A dot](projectforge://file/${image.ok ? image.data.id : ''}) and [plan.txt](projectforge://file/${file.ok ? file.data.id : ''})`,
+          '> [!NOTE]\n> A note',
+          '> [!TIP]\n> A tip',
+          '> [!WARNING]\n> A warning',
+          '> [!CAUTION]\n> A caution',
+          '<details open>\n<summary>A toggle</summary>\n\nInside\n\n</details>',
+          '<details>\n<summary>Closed toggle</summary>\n\nHidden\n\n</details>',
+          '| Item | Qty |\n| --- | --: |\n| Apples | 3 |',
+        ].join('\n\n'),
+      });
+    });
+    await page.getByRole('button', { name: 'All notes' }).click();
+    await page
+      .getByRole('list', { name: 'Notes' })
+      .getByRole('button', { name: /Blocks/ })
+      .click();
+    const blocks = page.getByRole('textbox', { name: 'Note text' });
+    await expect(blocks.getByRole('note', { name: 'Caution' })).toBeVisible();
+    await blocks.getByText('Apples').click();
+    await expect(page.getByRole('toolbar', { name: 'Table' })).toBeVisible();
+    await expectNoViolations(page, 'Notes (callouts, toggles, table)');
+    await page.getByRole('button', { name: 'Markdown', exact: true }).click();
+    await page.getByRole('button', { name: 'Preview' }).click();
+    await expect(page.locator('.markdown details').first()).toBeVisible();
+    await expectNoViolations(page, 'Notes (preview of callouts, toggle, table)');
+    await page.getByRole('button', { name: 'Visual', exact: true }).click();
     await page.getByRole('button', { name: 'Note actions' }).click();
     await expectNoViolations(page, 'Notes (actions menu)');
     await page.keyboard.press('Escape');

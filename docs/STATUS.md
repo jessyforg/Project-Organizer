@@ -2,6 +2,118 @@
 
 Newest entries first.
 
+## 2026-10-23 — Notes release 0.6.0, all six stages done, awaiting the product owner's check before merging
+
+**Approval:** the plan was approved on 2026-10-22 with all recommended options. Work continues stage by stage with a report after each; the product owner checks before any merge or push. The branch is `feature/notes-0.6`, and decisions are recorded in [ADR-0017](DECISIONS/0017-notes-release-0.6.md).
+
+**Stage 1 — formatting bubble:** done; see ADR-0017.
+
+**Defect found and fixed:**
+- **What happened:** opening a note that ends in a list marked it unsaved once the bubble existed. BubbleMenu's options were re-sent as a transaction on every render, letting the editor add a trailing paragraph.
+- **How it was found:** an existing end-to-end workflow.
+- **Fix:** the options are now created once, and a regression test covers this.
+
+**Verification:**
+- `npm run check` passes: 406 of 406 tests (13 new), plus typecheck, lint, and formatting. The unit suite was run with 4 workers, explained below.
+- `npm run test:e2e` passes: 19 of 19, with one new workflow and new accessibility scans.
+
+**Note on the test environment:**
+- The laptop was on battery with the CPU capped at 1.2 GHz.
+- With the default worker count, five timing-sensitive tests in unrelated files timed out: calendar, task paging, and encryption key derivation. They pass alone, and the whole suite passes with `--maxWorkers=4`.
+- No test timeouts were changed.
+
+**Stage 2 — outline sidebar:** done.
+- **What it does:** the Outline button shows a panel of headings 1–3. Choosing one jumps there, and the current heading is marked.
+- **Setting:** whether it shows is remembered per profile in the new `noteOutline` setting. Settings are key–value pairs, so there is no schema change.
+- **Fix made alongside:** `DocumentEditor` now reports an edit only when the transaction itself changed the document. This removes the cause behind stage 1's defect.
+
+**Verification (stage 2):**
+- **Typecheck, lint, and formatting:** all pass.
+- **Unit tests:** 417 of 417 pass, with 4 workers because the laptop is still on battery.
+- **End to end:** 20 of 20 pass, including the new outline workflow and an accessibility scan of the outline.
+
+**Stage 3 — callout, toggle, and table blocks:** done.
+- **What they are:** each has one exact Markdown form: GitHub alerts, `<details>`, and GitHub tables. Anything else still opens in Markdown mode.
+- **Notes with tables:** these now open in the visual editor.
+- **Preview:** it renders callouts and toggles by building elements from the parsed text, with no raw HTML.
+- **New dependency:** `@tiptap/extension-table` 3.31.4, first-party and build-time only.
+
+**Defects found and fixed in stage 3:**
+- **Blocked inline styles:** the table extension writes inline `style` attributes, which the Content Security Policy blocks, so column alignment would not have shown. Tables now render without inline styles, and an end-to-end check fails on any policy message.
+- **Stray blank lines:** these appeared around tables inside toggles and callouts, and at the start of notes that begin with a table.
+
+**Test corrections, not product defects:**
+- An unescaped `|` in table code: GitHub splits the cell there. The lossless check correctly kept such a note in Markdown mode, and the test now covers that.
+- Ctrl+End in Chromium can land inside a toggle. The workflow now leaves the toggle with Enter on an empty line, which is the designed way.
+
+**Verification (stage 3):**
+- **Typecheck, lint, and formatting:** all pass.
+- **Unit tests:** 448 of 448 pass, with 4 workers because the laptop is on battery.
+- **End to end:** 21 of 21 pass.
+- **`npm audit --omit=dev`:** 0 vulnerabilities.
+
+**Stage 4 — note links and backlinks:** done.
+- **Links:** `[[` links to a note, or creates one. Links are saved as `[Title](projectforge://note/<id>)` and show the current title; missing ones are broken until the note is restored.
+- **Backlinks:** "Linked from" and "Unlinked mentions" (with "Link") appear below each note.
+- **Schema v6:** a `note_links` index, built for existing notes when a profile opens. There is a committed `profile-v5.db` fixture with an upgrade test.
+- **New channels:** `notes:backlinks`, `notes:linkMention`, and `links:resolve`.
+
+**Defects found and fixed:**
+- **Picker order:** title matches now rank first.
+- **Accessible name:** the preview's missing-link name ran words together.
+- **Editor hint:** its wording is updated for link chips.
+
+**Verification (stage 4):**
+- **Typecheck, lint, and formatting:** all pass.
+- **Unit tests:** 479 of 479 pass, with 4 workers on battery power.
+- **End to end:** 22 of 22 pass.
+
+**Stage 5 — mentions of tasks and projects:** done.
+- **The `@` picker:** it lists tasks and projects.
+- **Task chips:** they show a status dot and due date, update as the task changes, and open the task details panel. Project chips open the project.
+- **Task details:** they list "Mentioned in N notes".
+- **New channel:** `links:mentionedIn`. There is no schema change: mentions use stage 4's v6 index.
+
+**Verification (stage 5):**
+- **Typecheck, lint, and formatting:** all pass.
+- **Unit tests:** 487 of 487 pass, with 4 workers on battery power.
+- **End to end:** 23 of 23 pass.
+
+**Stage 6 — images and attachments:** done.
+- **Adding files:** paste, drop, `/image`, or `/file`.
+- **Storage:** files are stored in the profile database (schema v6 `attachments`), with types decided from contents.
+- **Limits:** 20 MB per file and 1 GB per profile, with a disk-space check.
+- **Cleanup:** files no note refers to are removed after 30 days.
+- **Executables:** they can be saved, never opened.
+- **Content Security Policy:** the only change is `img-src blob:`.
+
+**Defects found and fixed in stage 6:**
+- **Lone images:** an image alone on its line opened the note in Markdown mode.
+- **Image merged into a paragraph:** the first fix merged such an image into the paragraph before it (caught by the lossless check; found in screenshot review).
+- **Small buttons:** the file chip's buttons were under the 24 px target size (found by the accessibility scan).
+
+**Fix after the product owner's review (2026-10-23):**
+- **Problem:** after `/file`, the mouse pointer stayed hidden in the file window.
+- **Cause:** Windows' "Hide pointer while typing", with the window opening on the same keystroke. It was reproduced on their PC with real keystrokes.
+- **Fix:** `/image` and `/file` now show a prompt whose "Choose…" button opens the window. Enter still works for keyboard users.
+- **Verified:** with real typing and a real click, the pointer shows in the file window.
+- **Test stability (not product defects):**
+  - The blocks workflow pressed Enter before the editor had registered a click. It now waits for the editor's cursor.
+  - The backup workflow hung once at its 30-second limit, during a full run on a CPU throttled to 1.2 GHz on battery. It passed in 4 runs on its own and in the next full run (24 of 24); it is noted here in case it comes back.
+
+**Release 0.6.0:**
+- The version is bumped and the CHANGELOG is complete.
+- The installer is built: `release/ProjectForge Setup 0.6.0.exe`.
+- Branch `feature/notes-0.6` is **not merged or pushed**; the product owner checks first.
+
+**Verification (whole release, 2026-10-23):**
+- **Typecheck, lint, and formatting:** all pass.
+- **Unit tests:** 513 of 513 pass, with 4 workers on battery power.
+- **End to end:** 24 of 24 pass, including the accessibility scans in both themes.
+- **`npm audit --omit=dev`:** 0 vulnerabilities.
+
+**Before installing:** make a backup (Settings → Backup and restore). Opening a profile upgrades it to schema v6, after a verified snapshot.
+
 ## 2026-10-21 — Slash commands (version 0.5.0), awaiting merge approval
 
 **Approval:** the product owner asked for Phase 3 without a plan review ("no need for approval, just do it and do what you recommend"). The merge into `main` still waits for their approval. The work is on `feature/slash-commands`, branched from `main` at 0.4.0 (`610bccf`). Decisions are recorded in [ADR-0016](DECISIONS/0016-slash-commands.md).

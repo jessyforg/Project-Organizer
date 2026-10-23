@@ -1,6 +1,9 @@
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import type { Editor, Extensions } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import { AppLink, type LinkResolver } from './app-link';
+import { AttachmentInput, FileAttachment, NoteImage, type AttachmentStore } from './attachments';
+import { noteBlockExtensions } from './blocks';
 
 /**
  * Editor configuration for documents (ADR-0012), kept apart from the components that show it.
@@ -32,7 +35,10 @@ export function documentExtensions(): Extensions {
  * lists. Underline stays off because Markdown has no syntax for it. Anything else, such as
  * tables and images, keeps a note in Markdown mode (see markdown.ts).
  */
-export function noteExtensions(): Extensions {
+export function noteExtensions({
+  links = null,
+  attachments = null,
+}: { links?: LinkResolver | null; attachments?: AttachmentStore | null } = {}): Extensions {
   return [
     StarterKit.configure({
       underline: false,
@@ -46,6 +52,13 @@ export function noteExtensions(): Extensions {
     }),
     TaskList,
     TaskItem.configure({ nested: true }),
+    ...noteBlockExtensions(),
+    // Links to notes, tasks, and projects (ADR-0017); `links` looks up their current titles.
+    AppLink.configure({ resolver: links }),
+    // Images and files (stage 6); `attachments` stores and shows them.
+    NoteImage.configure({ store: attachments }),
+    FileAttachment.configure({ store: attachments }),
+    AttachmentInput.configure({ store: attachments }),
   ];
 }
 

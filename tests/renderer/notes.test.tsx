@@ -167,8 +167,9 @@ describe('NoteEditor', () => {
   });
 
   it('keeps notes the visual editor cannot show in Markdown mode, unchanged', async () => {
-    const table = '| a | b |\n|---|---|\n| 1 | 2 |\n';
-    const note = makeNote({ body: table });
+    // Images are shown only from stage 6 of 0.6.0; until then they keep a note in Markdown.
+    const image = '![Diagram](https://example.com/d.png)\n';
+    const note = makeNote({ body: image });
     const backend = installApi({ 'notes:update': saving(note) });
     renderWithApp(<NoteEditor note={note} />);
     expect(screen.getByText(/so it opens as Markdown/)).toHaveAttribute('role', 'status');
@@ -176,7 +177,7 @@ describe('NoteEditor', () => {
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('[Image not shown: Diagram]')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Visual' }));
     expect(screen.getByRole('button', { name: 'Markdown' })).toHaveAttribute(

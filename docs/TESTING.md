@@ -94,8 +94,14 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 14. Kanban: move cards with the Move dialog and by real drag and drop → order and status persist across a restart → Done completes the task.
 15. Calendar: a task appears on its due date → open it from the calendar → change the due date → the entry moves at once → completed tasks hidden unless shown.
 16. Slash commands (ADR-0016): `/` opens the menu below the cursor and inside the window → `/h2` + Enter → arrow keys + Enter for a checklist → a click for a divider → in focus mode Escape closes only the menu → the stored text is the expected Markdown.
+17. Formatting bubble (ADR-0017): double-click a word → bold → link (https added) → Alt+F10 → Turn into Heading 2 → the stored Markdown matches.
+18. Outline (ADR-0017): type three sections → Outline → jump to a heading below the window (in view, cursor in it) → edit it → restart → the outline is still open.
+19. Blocks (ADR-0017): type a warning callout, a toggle (collapse and expand), and a table (delete a column) → the stored Markdown matches → reopened visually → the preview shows the same blocks → no Content Security Policy message.
+20. Note links (ADR-0017): `[[` + Enter → the saved Markdown is the link → the chip opens the note → backlinks list it → Link a mention → rename shows in the chip → trashed: broken and inert → restored: works → Ctrl+click opens focus mode → after a restart the backlinks remain.
+21. Mentions (ADR-0017): `@fix` + Enter → the chip shows the status and due date → completing the task shows Done → the chip opens the task → "Mentioned in 1 note" opens the note → the saved Markdown matches.
+22. Images and files (ADR-0017): `/file` (its Choose button) and `/image` (Enter on its prompt) through the real file picker → the image loads under the Content Security Policy → its description is set → Save a copy writes the same bytes → the saved Markdown matches → the preview shows the image → after a restart it is still there → no Content Security Policy message.
 
-All sixteen workflows are automated: 1–5, 7–9, and 12–15 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, and 10–11 and 16 in `tests/e2e/notes.spec.ts`. The accessibility scans include the open slash menu.
+All twenty-two workflows are automated: 1–5, 7–9, and 12–15 in `tests/e2e/workflows.spec.ts` and `tests/e2e/app.spec.ts`, 6 in `tests/e2e/backup.spec.ts`, and 10–11 and 16–22 in `tests/e2e/notes.spec.ts`. The accessibility scans include the open slash menu, the formatting bubble, its link field, the outline, and a note with every callout kind, toggles, and a table, in the editor and the preview.
 
 Some editor behaviour can only be tested end to end: jsdom does not reproduce ProseMirror marking Escape as handled, so the focus-mode Escape check lives in workflow 11, not in a component test. Native file dialogs are replaced in tests by a folder given in `PROJECTFORGE_TEST_DIALOG_DIR` (unpackaged builds only).
 
@@ -154,3 +160,11 @@ Screens were captured and reviewed at 1280×800 and 1024×700 in light and dark 
 ## 6. Reporting
 
 Each checkpoint reports every check as **passed**, **failed**, **blocked**, **not run**, or **not applicable**, with the exact command used. No result is reported that was not observed.
+
+### Real keyboard and mouse (manual probe)
+
+Automated tests send simulated keys, which never reach Windows, so Windows' "Hide pointer while typing" cannot be tested there. The file-window pointer problem in ADR-0017 was reproduced, and its fix verified, with a PowerShell probe on the developer's PC.
+- **What it does:** it sends real keystrokes and a real mouse move and click to a test instance, then reads `GetCursorInfo`.
+- **Safety:** it acts only when the test instance's window is in front.
+- **Where it lives:** the probe is kept with the session notes rather than in the suite, because it takes over the mouse and keyboard.
+

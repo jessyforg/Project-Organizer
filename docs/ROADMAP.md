@@ -76,3 +76,7 @@ This is a priority order only. It does not approve implementing any of these fea
 | Notes | Product owner's go-ahead on 2026-10-20 ("let's go build it"); decisions accepted the same day | Implemented and verified |
 | Kanban board | Product owner's go-ahead on 2026-10-20 ("do the kanban and calendar") | Implemented and verified ([STATUS.md](STATUS.md)) |
 | Calendar | Same go-ahead | Implemented and verified for deadlines; milestones and recurring occurrences wait for L1.2 and L3.1 |
+
+### Proposed next features (draft, 2026-10-21)
+
+The product owner chose 15 features (Obsidian, Linear, and Notion inspired). Their proposed order, acceptance criteria, and open decisions are in [plans/2026-10-21-next-features-plan.md](plans/2026-10-21-next-features-plan.md). Approved on 2026-10-22: build with a report after each stage; the product owner checks before any merge or push.

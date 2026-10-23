@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { APP_LINK_KINDS } from './app-links';
 import {
   COLOR_TOKENS,
   PRIORITIES,
@@ -198,6 +199,21 @@ export const noteListQuerySchema = z.strictObject({
 export const dependencySchema = z.strictObject({ taskId: id, dependsOnTaskId: id });
 
 export const idSchema = z.strictObject({ id });
+/** Adds a file to a note (ADR-0017 stage 6); the size limit is checked again by the service. */
+export const addAttachmentSchema = z.strictObject({
+  noteId: id,
+  name: z.string().min(1).max(1000),
+  data: z.instanceof(Uint8Array).refine((d) => d.byteLength <= 21 * 1024 * 1024, 'Too large'),
+});
+export const attachmentIdsSchema = z.strictObject({ ids: z.array(id).max(500) });
+/** One item a note can link to (ADR-0017). */
+export const linkTargetSchema = z.strictObject({ kind: z.enum(APP_LINK_KINDS), id });
+/** Items notes link to, looked up together (ADR-0017). */
+export const resolveLinksSchema = z.strictObject({
+  targets: z.array(z.strictObject({ kind: z.enum(APP_LINK_KINDS), id })).max(500),
+});
+/** Turns a plain mention of the target's title in the source note into a link (ADR-0017). */
+export const linkMentionSchema = z.strictObject({ sourceId: id, targetId: id });
 export const batchSchema = z.strictObject({ batchId: id });
 export const searchSchema = z.strictObject({ text: z.string().max(LIMITS.searchText) });
 export const setCompletedSchema = z.strictObject({ id, completed: z.boolean() });
@@ -208,6 +224,7 @@ export const updateSettingsSchema = z.strictObject({
   theme: z.enum(THEMES).optional(),
   accent: z.enum(ACCENTS).optional(),
   surface: z.enum(SURFACES).optional(),
+  noteOutline: z.boolean().optional(),
 });
 export const emptySchema = z.strictObject({});
 
@@ -231,4 +248,7 @@ export type UpdateNoteInput = z.output<typeof updateNoteSchema>;
 export type MoveNoteInput = z.output<typeof moveNoteSchema>;
 export type NoteListQuery = z.output<typeof noteListQuerySchema>;
 export type SetNoteFolderInput = z.output<typeof setNoteFolderSchema>;
+export type LinkMentionInput = z.output<typeof linkMentionSchema>;
+export type ResolveLinksInput = z.output<typeof resolveLinksSchema>;
+export type AddAttachmentInput = z.output<typeof addAttachmentSchema>;
 export type ImportNotesInput = z.output<typeof importNotesSchema>;

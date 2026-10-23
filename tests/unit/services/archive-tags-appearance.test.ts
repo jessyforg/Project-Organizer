@@ -91,11 +91,17 @@ describe('Tag usage', () => {
 describe('Appearance settings', () => {
   it('defaults to the blue accent and cool surfaces, and saves choices', async () => {
     const p = await setupProfile();
-    expect(p.settings.get()).toEqual({ theme: 'system', accent: 'blue', surface: 'cool' });
+    expect(p.settings.get()).toEqual({
+      theme: 'system',
+      accent: 'blue',
+      surface: 'cool',
+      noteOutline: false,
+    });
     expect(p.settings.update({ accent: 'teal', surface: 'warm' })).toEqual({
       theme: 'system',
       accent: 'teal',
       surface: 'warm',
+      noteOutline: false,
     });
   });
 
@@ -107,5 +113,13 @@ describe('Appearance settings', () => {
       )
       .run();
     expect(p.settings.get().accent).toBe('blue');
+  });
+
+  it('remembers whether notes show their outline (ADR-0017), off by default', async () => {
+    const p = await setupProfile();
+    expect(p.settings.update({ noteOutline: true }).noteOutline).toBe(true);
+    expect(p.settings.get().noteOutline).toBe(true);
+    p.db.prepare("UPDATE settings SET value_json = '\"yes\"' WHERE key = 'noteOutline'").run();
+    expect(p.settings.get().noteOutline).toBe(false);
   });
 });

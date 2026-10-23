@@ -157,3 +157,4 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0014](DECISIONS/0014-note-actions-import-and-folders.md) | Note actions, Markdown import, and note folders |
 | [0015](DECISIONS/0015-notes-views-archive-colours-menus.md) | Notes library and note views, archived notes, colour palettes, tag management, right-click menus |
 | [0016](DECISIONS/0016-slash-commands.md) | Slash commands in the visual editor |
+| [0017](DECISIONS/0017-notes-release-0.6.md) | Notes release 0.6.0: formatting bubble, outline, blocks, links, mentions, attachments |

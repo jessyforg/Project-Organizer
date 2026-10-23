@@ -7,6 +7,7 @@ const SETTINGS = {
   theme: { schema: z.enum(THEMES), fallback: 'system' },
   accent: { schema: z.enum(ACCENTS), fallback: 'blue' },
   surface: { schema: z.enum(SURFACES), fallback: 'cool' },
+  noteOutline: { schema: z.boolean(), fallback: false },
 } as const satisfies Record<keyof ProfileSettings, { schema: z.ZodType; fallback: unknown }>;
 
 type Key = keyof ProfileSettings;
@@ -33,7 +34,12 @@ export class SettingsService {
         return fallback;
       }
     };
-    return { theme: read('theme'), accent: read('accent'), surface: read('surface') };
+    return {
+      theme: read('theme'),
+      accent: read('accent'),
+      surface: read('surface'),
+      noteOutline: read('noteOutline'),
+    };
   }
 
   update(patch: {

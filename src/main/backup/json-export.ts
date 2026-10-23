@@ -31,7 +31,19 @@ export function buildJsonExport(
 ): ExportDocument {
   const data: Record<string, unknown[]> = {};
   for (const table of COUNTED_TABLES) {
-    data[table] = db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all();
+    const rows = db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all() as Record<
+      string,
+      unknown
+    >[];
+    // Binary values (attachment contents, ADR-0017) are written as Base64 text.
+    data[table] = rows.map((row) =>
+      Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+          key,
+          Buffer.isBuffer(value) ? value.toString('base64') : value,
+        ]),
+      ),
+    );
   }
   return exportSchema.parse({
     format: EXPORT_FORMAT,
@@ -44,6 +56,7 @@ export function buildJsonExport(
     includes: [
       'Projects, folders, workflow statuses, tasks, notes, tags, dependencies, and settings',
       'Items in the trash (rows with a deleted_at value)',
+      'Images and files in notes, with their contents as Base64 text',
     ],
     data,
   });

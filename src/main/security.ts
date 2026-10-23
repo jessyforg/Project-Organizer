@@ -43,7 +43,7 @@ export function contentSecurityPolicy(devServerUrl?: string): string {
       `script-src 'self' 'unsafe-inline' ${devOrigin}`,
       `style-src 'self' 'unsafe-inline' ${devOrigin}`,
       `connect-src 'self' ${devOrigin} ${ws}`,
-      "img-src 'self' data:",
+      "img-src 'self' data: blob:",
       "object-src 'none'",
       "base-uri 'none'",
       "form-action 'none'",
@@ -54,7 +54,8 @@ export function contentSecurityPolicy(devServerUrl?: string): string {
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self'",
-    "img-src 'self' data:",
+    // blob: shows images stored in notes (ADR-0017); only this page can create blob URLs.
+    "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

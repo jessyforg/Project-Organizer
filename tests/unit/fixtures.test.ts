@@ -7,7 +7,7 @@ import { migrate } from '../../src/main/db/migrator';
 import { appMigrations } from '../../src/main/db/migrations/app';
 import { profileMigrations } from '../../src/main/db/migrations/profile';
 import { nullLogger } from '../../src/main/platform/logger';
-import { createProfileServices } from '../../src/main/services';
+import { createProfileServices, runProfileMaintenance } from '../../src/main/services';
 import { ensureInbox } from '../../src/main/services/projects';
 import { fakeClock, tempDir } from './helpers';
 
@@ -19,6 +19,22 @@ import { fakeClock, tempDir } from './helpers';
  */
 const DIR = path.resolve(__dirname, '../fixtures');
 const clock = fakeClock('2026-10-17T00:00:00.000Z');
+
+// Released in 0.4.0 and 0.5.0: archived notes. Holds an app link written as Markdown, so the
+// upgrade to v6 must build the link index from it.
+const V5_TARGET = '5c4b3a29-1807-4f6e-9d5c-4b3a2f1e0d9c';
+const V5_SOURCE = '6d5c4b3a-2918-4a7f-8e6d-5c4b3a2f1e0d';
+function fillV5(db: ReturnType<typeof openDatabase>) {
+  ensureInbox({ db, clock, newId: randomUUID });
+  const inbox = db.prepare('SELECT id FROM projects WHERE is_inbox = 1').get() as { id: string };
+  const note = db.prepare(
+    `INSERT INTO notes (id, project_id, title, body, archived_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 'x', 'x')`,
+  );
+  note.run(V5_TARGET, inbox.id, 'Roadmap', 'Where we are going', null);
+  note.run(V5_SOURCE, inbox.id, 'Weekly', `See [Roadmap](projectforge://note/${V5_TARGET}).`, null);
+  note.run(randomUUID(), inbox.id, 'Old', 'Archived note', 'x');
+}
 
 async function build(
   file: string,
@@ -103,6 +119,7 @@ if (process.env['REGENERATE_FIXTURES']) {
                  'Retro', 'What went well', 'x', 'x')`,
       ).run(inbox.id);
     });
+    await build(path.join(DIR, 'profile-v5.db'), profileMigrations.slice(0, 5), fillV5);
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -118,6 +135,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['profile-v2.db', profileMigrations],
       ['profile-v3.db', profileMigrations],
       ['profile-v4.db', profileMigrations],
+      ['profile-v5.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -206,6 +224,25 @@ if (process.env['REGENERATE_FIXTURES']) {
       s.notes.archive(retro!.id);
       expect(s.notes.list()).toEqual([]);
       expect(s.noteFolders.list()[0]!.noteCount).toBe(0);
+      db.close();
+    });
+
+    it('keeps profile v5 notes, and builds the link index on opening (schema v6)', async () => {
+      const db = openDatabase(copy('profile-v5.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      const ctx = { db, clock, newId: randomUUID };
+      runProfileMaintenance(ctx, nullLogger);
+      const s = createProfileServices(ctx);
+      expect(s.notes.list({ archived: 'only' }).map((n) => n.title)).toEqual(['Old']);
+      expect(s.notes.backlinks(V5_TARGET).linked).toEqual([
+        expect.objectContaining({ noteId: V5_SOURCE, snippet: 'See Roadmap.' }),
+      ]);
       db.close();
     });
 

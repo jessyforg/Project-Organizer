@@ -139,6 +139,38 @@ describe('DocumentEditor', () => {
     expect(title).toHaveValue('Release notes');
   });
 
+  it('reports only edits, not paragraphs the editor adds on its own', () => {
+    // A document ending in a list: after any transaction the editor appends an empty paragraph
+    // (so there is somewhere to type). That is not an edit, and must not mark a note unsaved.
+    const onEdit = vi.fn();
+    let editor: Editor | null = null;
+    render(
+      <DocumentEditor
+        initialContent={{
+          type: 'doc',
+          content: [
+            {
+              type: 'bulletList',
+              content: [
+                {
+                  type: 'listItem',
+                  content: [{ type: 'paragraph', content: [{ type: 'text', text: 'One' }] }],
+                },
+              ],
+            },
+          ],
+        }}
+        onEdit={onEdit}
+        onReady={(e) => (editor = e)}
+      />,
+    );
+    act(() => void editor!.commands.setTextSelection(3));
+    expect(editor!.getJSON().content?.at(-1)).toEqual({ type: 'paragraph' });
+    expect(onEdit).not.toHaveBeenCalled();
+    act(() => void editor!.commands.insertContent('!'));
+    expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
   it('destroys the editor when it unmounts', async () => {
     const { view, getEditor } = setup();
     const editor = getEditor();

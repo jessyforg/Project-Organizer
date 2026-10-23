@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Fragment, useMemo } from 'react';
 import {
   Bold,
   Code,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useEditorState, type Editor } from '@tiptap/react';
 import { actionsFor, formatState } from './editor-config';
+import { useRovingFocus } from './useRovingFocus';
 
 const ICONS: Record<string, typeof Bold> = {
   undo: Undo2,
@@ -43,28 +44,7 @@ const ICONS: Record<string, typeof Bold> = {
 export function EditorToolbar({ editor, controls }: { editor: Editor; controls: string }) {
   const actions = useMemo(() => actionsFor(editor), [editor]);
   const state = useEditorState({ editor, selector: ({ editor: e }) => formatState(e, actions) });
-  const [focusIndex, setFocusIndex] = useState(0);
-  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
-
-  const moveFocus = (index: number) => {
-    const count = actions.length;
-    const next = (index + count) % count;
-    setFocusIndex(next);
-    buttons.current[next]?.focus();
-  };
-
-  const onKeyDown = (event: KeyboardEvent) => {
-    const keys: Record<string, number> = {
-      ArrowRight: focusIndex + 1,
-      ArrowLeft: focusIndex - 1,
-      Home: 0,
-      End: actions.length - 1,
-    };
-    const target = keys[event.key];
-    if (target === undefined) return;
-    event.preventDefault();
-    moveFocus(target);
-  };
+  const { onKeyDown, itemProps } = useRovingFocus(actions.length);
 
   return (
     <div
@@ -83,17 +63,13 @@ export function EditorToolbar({ editor, controls }: { editor: Editor; controls: 
           <Fragment key={action.id}>
             {newGroup && <span className="doc-toolbar__divider" aria-hidden="true" />}
             <button
-              ref={(el) => {
-                buttons.current[index] = el;
-              }}
+              {...itemProps(index)}
               type="button"
               className="doc-toolbar__button"
-              tabIndex={index === focusIndex ? 0 : -1}
               aria-label={`${action.label} (${action.shortcut})`}
               title={`${action.label} (${action.shortcut})`}
               aria-pressed={toggles ? active : undefined}
               aria-disabled={!available}
-              onFocus={() => setFocusIndex(index)}
               // Keep the editor's selection: a mouse press would otherwise move focus first.
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {

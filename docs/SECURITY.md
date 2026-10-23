@@ -69,6 +69,18 @@ Implemented in Phase 5 (`src/main/backup/`); see [ADR-0006](DECISIONS/0006-backu
 ## 5. Content handling
 
 - Markdown (notes, implemented): rendered with `react-markdown` and `remark-gfm` only, with no raw-HTML plugin, so HTML in a note is shown as text and never becomes elements ([ADR-0009](DECISIONS/0009-markdown-notes.md)). Links open in the system browser only for `http`, `https`, and `mailto` (checked in the renderer and again by the main process's window-open handler); other links are inert text. Images are never loaded, because fetching one would contact a server; the preview shows "[Image not shown]" instead. Component tests cover each rule.
+- **Images and files in notes** ([ADR-0017](DECISIONS/0017-notes-release-0.6.md) stage 6):
+  - **Storage:** they are stored in the profile database.
+  - **Types:** the type is decided from the bytes, never the name. Only PNG, JPEG, GIF, and WebP are shown as images; SVG never is.
+  - **Names:** they are reduced to the file name alone.
+  - **Showing images:** the bytes are read over a validated IPC channel that serves only images, and shown through object URLs. The Content Security Policy's only change is `img-src 'self' data: blob:`, which a unit test pins.
+  - **Opening a file:** a copy is written to the app's temporary folder and given to the system's default app. Files whose extension runs code (`.exe`, `.bat`, `.ps1`, `.js`, `.lnk`, and others) are never opened from the app, only saved.
+  - **Limits:** sizes are limited and free disk space is checked first.
+- **Links between notes, tasks, and projects** ([ADR-0017](DECISIONS/0017-notes-release-0.6.md)) are Markdown links to `projectforge://note|task|project/<uuid>`.
+  - Only that exact form is recognised, the same in the main process and the renderer (`src/shared/app-links.ts`).
+  - They are never `<a href>` elements: the editor shows them as chips, and the preview shows them as buttons that navigate inside the app. So the address is never handed to the operating system or to the window-open handler.
+  - The preview keeps these addresses through react-markdown's URL filter and applies the default filter to everything else.
+  - Links inside code are text.
 - Visual note editor ([ADR-0013](DECISIONS/0013-visual-note-editing.md)): content is parsed into the editor's schema, so only its node and mark types can exist and no HTML element from a note is created. Links other than `http`, `https`, and `mailto` render with an empty `href`; Ctrl+click opens allowed links through the same window-open check. Notes with raw HTML or images stay in Markdown mode, where the rules above apply. The editor injects no `<style>` tags, so the production Content Security Policy is unchanged.
 - Note files ([ADR-0014](DECISIONS/0014-note-actions-import-and-folders.md)):
   - **Copy:** "Copy as Markdown" writes to the clipboard from the main process, given only a note ID. The renderer keeps all browser permissions denied.

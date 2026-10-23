@@ -4,6 +4,8 @@ import type { ServiceContext } from './context';
 import { DashboardService } from './dashboard';
 import { DependencyService } from './dependencies';
 import { FolderService } from './folders';
+import { AttachmentService } from './attachments';
+import { LinkService } from './links';
 import { NoteFolderService } from './note-folders';
 import { NoteService } from './notes';
 import { ensureInbox, ProjectService } from './projects';
@@ -24,6 +26,8 @@ export interface ProfileServices {
   tasks: TaskService;
   notes: NoteService;
   noteFolders: NoteFolderService;
+  links: LinkService;
+  attachments: AttachmentService;
   dependencies: DependencyService;
   trash: TrashService;
   search: SearchService;
@@ -40,6 +44,8 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
     tasks: new TaskService(ctx),
     notes: new NoteService(ctx),
     noteFolders: new NoteFolderService(ctx),
+    links: new LinkService(ctx),
+    attachments: new AttachmentService(ctx),
     dependencies: new DependencyService(ctx),
     trash: new TrashService(ctx),
     search: new SearchService(ctx),
@@ -58,7 +64,11 @@ export function runProfileMaintenance(
   options: { snapshotDir?: string } = {},
 ): void {
   ensureInbox(ctx);
+  const indexed = new NoteService(ctx).rebuildLinkIndexIfNeeded();
+  if (indexed > 0) logger.info('note_links.rebuilt', { notes: indexed });
   const purged = new TrashService(ctx).purgeExpired();
+  const removedFiles = new AttachmentService(ctx).cleanUp();
+  if (removedFiles > 0) logger.info('attachments.removed_unused', { files: removedFiles });
   if (purged > 0) logger.info('trash.purged', { batches: purged });
   if (options.snapshotDir) {
     // A failed snapshot must not stop the profile from opening; it is logged and retried later.

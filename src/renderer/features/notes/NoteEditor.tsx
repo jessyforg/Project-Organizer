@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
-import { Archive, Eye, FileCode2, PenLine, Type } from 'lucide-react';
+import { Archive, Eye, FileCode2, PenLine, TableOfContents, Type } from 'lucide-react';
 import type { Editor, JSONContent } from '@tiptap/react';
 import type { Note } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
@@ -15,7 +15,14 @@ import { noteExtensions } from '../editor/editor-config';
 import { createMarkdownCodec, type MarkdownCodec } from '../editor/markdown';
 import { useLookups } from '../tasks/useLookups';
 import { NoteMarkdown } from './NoteMarkdown';
+import { NoteOutline } from './NoteOutline';
 import { useNoteActions } from './useNoteActions';
+import { useNoteOutline } from './useNoteOutline';
+import { AttachmentContext, useAttachmentStore } from './attachment-store';
+import { LinkResolverContext, useLinkResolver } from './link-resolver';
+import { NoteBacklinks } from './NoteBacklinks';
+import { useMentionPicker } from './useMentionPicker';
+import { useNoteLinkPicker } from './useNoteLinkPicker';
 
 export const UNTITLED = 'Untitled note';
 /** Typing pauses this long before the note saves itself. */
@@ -155,9 +162,28 @@ export function NoteEditor({ note }: { note: Note }) {
     setEdits((n) => n + 1);
   }, []);
 
+  // Also held in state, for the outline, which follows the editor's document.
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
   const onEditorReady = useCallback((instance: Editor) => {
     editor.current = instance;
+    setEditorInstance(instance);
   }, []);
+  // Destructured: the refs are kept apart from the values read while rendering.
+  const { bodyField, previewRoot, ...outline } = useNoteOutline({
+    mode,
+    markdownView,
+    body,
+    editor: editorInstance,
+    focused,
+  });
+  // Links to other notes (ADR-0017): current titles, opening them, and the [[ picker. The
+  // editor reads its extensions once, so they are made once, with the resolver.
+  const links = useLinkResolver(note);
+  const linkPicker = useNoteLinkPicker(links);
+  const mentionPicker = useMentionPicker(links);
+  // Images and files in the note (stage 6).
+  const attachments = useAttachmentStore(note.id);
+  const [extensions] = useState(() => noteExtensions({ links, attachments }));
 
   const showMarkdown = () => {
     flushEditor();
@@ -388,7 +414,20 @@ export function NoteEditor({ note }: { note: Note }) {
             </span>
           </>
         )}
-        {mode === 'visual' && <span className="muted small">Ctrl+click a link to open it.</span>}
+        {mode === 'visual' && (
+          <span className="muted small">
+            Type [[ to link a note, @ for a task. Ctrl+click opens web links.
+          </span>
+        )}
+        <button
+          type="button"
+          className="btn btn--quiet note-editor__outline-toggle"
+          aria-pressed={outline.open}
+          aria-controls={outline.open ? outline.panelId : undefined}
+          onClick={outline.toggle}
+        >
+          <TableOfContents aria-hidden /> Outline
+        </button>
       </div>
 
       {notice && (
@@ -397,36 +436,65 @@ export function NoteEditor({ note }: { note: Note }) {
         </p>
       )}
 
-      {mode === 'visual' ? (
-        <DocumentEditor
-          key={visual.key}
-          className="note-editor__doc"
-          label="Note text"
-          extensions={noteExtensions()}
-          editable={!readOnly}
-          initialContent={visual.content}
-          onEdit={onVisualEdit}
-          onReady={onEditorReady}
-        />
-      ) : markdownView === 'write' ? (
-        <>
-          <label className="visually-hidden" htmlFor={`${id}-body`}>
-            Note text (Markdown)
-          </label>
-          <textarea
-            id={`${id}-body`}
-            className="textarea note-editor__body"
-            value={body}
-            readOnly={readOnly}
-            maxLength={LIMITS.description}
-            onChange={(e) => edit({ body: e.target.value })}
-          />
-        </>
-      ) : body.trim() ? (
-        <NoteMarkdown text={body} />
-      ) : (
-        <p className="muted">Nothing to preview yet. Choose Write to add text.</p>
-      )}
+      <LinkResolverContext.Provider value={links}>
+        <AttachmentContext.Provider value={attachments}>
+          <div
+            className={
+              outline.open
+                ? 'note-editor__workspace note-editor__workspace--outline'
+                : 'note-editor__workspace'
+            }
+          >
+            <div className="note-editor__content">
+              {mode === 'visual' ? (
+                <DocumentEditor
+                  key={visual.key}
+                  className="note-editor__doc"
+                  label="Note text"
+                  extensions={extensions}
+                  menus={[linkPicker, mentionPicker]}
+                  editable={!readOnly}
+                  initialContent={visual.content}
+                  onEdit={onVisualEdit}
+                  onReady={onEditorReady}
+                />
+              ) : markdownView === 'write' ? (
+                <>
+                  <label className="visually-hidden" htmlFor={`${id}-body`}>
+                    Note text (Markdown)
+                  </label>
+                  <textarea
+                    ref={bodyField}
+                    id={`${id}-body`}
+                    className="textarea note-editor__body"
+                    value={body}
+                    readOnly={readOnly}
+                    maxLength={LIMITS.description}
+                    onChange={(e) => edit({ body: e.target.value })}
+                    onSelect={(e) => outline.onCaret(e.currentTarget.selectionStart)}
+                  />
+                </>
+              ) : body.trim() ? (
+                <div ref={previewRoot}>
+                  <NoteMarkdown text={body} />
+                </div>
+              ) : (
+                <p className="muted">Nothing to preview yet. Choose Write to add text.</p>
+              )}
+            </div>
+            {outline.open && (
+              <NoteOutline
+                id={outline.panelId}
+                entries={outline.entries}
+                current={outline.current}
+                onGo={outline.go}
+              />
+            )}
+          </div>
+        </AttachmentContext.Provider>
+      </LinkResolverContext.Provider>
+
+      {!focused && <NoteBacklinks noteId={note.id} title={title.trim() || UNTITLED} />}
 
       <p className="stamp">
         Created {formatTimestamp(note.createdAt)}. Updated {formatTimestamp(note.updatedAt)}.

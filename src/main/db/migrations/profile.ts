@@ -253,4 +253,36 @@ export const profileMigrations: readonly Migration[] = [
       CREATE INDEX notes_archived ON notes (archived_at) WHERE archived_at IS NOT NULL;
     `,
   },
+  {
+    // Links from notes to notes, tasks, and projects (ADR-0017). An index derived from each
+    // note's Markdown, which stays the source of truth; targets may be missing (broken links).
+    version: 6,
+    name: 'note_links',
+    sql: `
+      CREATE TABLE note_links (
+        source_note_id TEXT NOT NULL REFERENCES notes (id) ON DELETE CASCADE,
+        target_kind TEXT NOT NULL CHECK (target_kind IN ('note', 'task', 'project')),
+        target_id TEXT NOT NULL,
+        PRIMARY KEY (source_note_id, target_kind, target_id)
+      ) STRICT;
+      CREATE INDEX note_links_target ON note_links (target_kind, target_id);
+
+      -- Images and other files in notes (ADR-0017 stage 6), kept in the database so a backup
+      -- stays one encrypted file. A file outlives the note it was added to while any note
+      -- refers to it; unused_since starts the clock for removing it.
+      CREATE TABLE attachments (
+        id TEXT PRIMARY KEY NOT NULL,
+        note_id TEXT REFERENCES notes (id) ON DELETE SET NULL,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        kind TEXT NOT NULL CHECK (kind IN ('image', 'file')),
+        mime TEXT NOT NULL,
+        size INTEGER NOT NULL CHECK (size >= 0),
+        sha256 TEXT NOT NULL,
+        data BLOB NOT NULL,
+        created_at TEXT NOT NULL,
+        unused_since TEXT
+      ) STRICT;
+      CREATE INDEX attachments_note ON attachments (note_id);
+    `,
+  },
 ];

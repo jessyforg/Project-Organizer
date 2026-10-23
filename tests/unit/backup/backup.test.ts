@@ -280,6 +280,20 @@ describe('BackupService: restore', () => {
     });
   });
 
+  it('restores images and files in notes byte for byte (ADR-0017 stage 6)', async () => {
+    const t = await setup();
+    const [note] = t.services().notes.list({ text: 'confidential' });
+    const bytes = new Uint8Array(256 * 1024).map((_, i) => (i * 31) % 251);
+    const file = t.services().attachments.add({ noteId: note!.id, name: 'scan.bin', data: bytes });
+    const manifest = await t.backups.exportActive(PASSWORD, t.backupFile);
+    expect(manifest.counts['attachments']).toBe(1);
+    const restored = await t.backups.restoreAsNew(t.backupFile, PASSWORD, 'Work');
+    await t.profiles.switchTo(restored.id);
+    const copy = t.services().attachments.read(file.id);
+    expect(copy.name).toBe('scan.bin');
+    expect(Buffer.from(copy.data).equals(Buffer.from(bytes))).toBe(true);
+  });
+
   it('replaces the open profile, keeping a verified copy of the previous data', async () => {
     const t = await setup();
     await t.backups.exportActive(PASSWORD, t.backupFile);

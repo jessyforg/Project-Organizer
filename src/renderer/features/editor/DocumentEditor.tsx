@@ -1,7 +1,8 @@
-import { useEffect, useId, useState } from 'react';
+import { Fragment, useEffect, useId, useState, type ReactNode } from 'react';
 import {
   EditorContent,
   useEditor,
+  type AnyExtension,
   type Editor,
   type Extensions,
   type JSONContent,
@@ -10,7 +11,10 @@ import { Placeholder } from '@tiptap/extensions';
 import { LIMITS } from '@shared/schemas';
 import { documentExtensions, EXTERNAL_LINK } from './editor-config';
 import { EditorToolbar } from './EditorToolbar';
+import { FlashBlock } from './flash-block';
+import { FormattingBubble } from './FormattingBubble';
 import { useSlashMenu } from './SlashMenu';
+import { TableMenu } from './TableMenu';
 
 export interface DocumentEditorProps {
   /** With `onTitleChange`, shows a title field above the body; leave both out for no title. */
@@ -33,6 +37,10 @@ export interface DocumentEditorProps {
   editable?: boolean;
   /** Typing "/" opens a menu of blocks to insert (ADR-0016). Read once. */
   slashCommands?: boolean;
+  /** More menus that open while typing, such as the note link picker (ADR-0017). Read once. */
+  menus?: { extension: AnyExtension; render: (editor: Editor | null) => ReactNode }[];
+  /** Selecting text shows a small formatting toolbar above it (ADR-0017). */
+  formattingBubble?: boolean;
   className?: string;
 }
 
@@ -52,6 +60,8 @@ export function DocumentEditor({
   label = 'Document body',
   editable = true,
   slashCommands = true,
+  menus,
+  formattingBubble = true,
   className,
 }: DocumentEditorProps) {
   const id = useId();
@@ -60,10 +70,13 @@ export function DocumentEditor({
   // Tiptap compares extensions by identity, so create them once.
   const [loaded] = useState(() => [
     ...(extensions ?? documentExtensions()),
+    FlashBlock,
     ...(slashCommands
       ? [slash.extension, Placeholder.configure({ placeholder: 'Type / for commands' })]
       : []),
+    ...(menus ?? []).map((menu) => menu.extension),
   ]);
+  const [hasTables] = useState(() => loaded.some((e) => e.name === 'table'));
   const editor = useEditor({
     extensions: loaded,
     content: initialContent ?? '',
@@ -91,7 +104,11 @@ export function DocumentEditor({
         return true;
       },
     },
-    onUpdate: ({ editor: e }) => {
+    onUpdate: ({ editor: e, transaction }) => {
+      // Only what was done to the document counts. A transaction that changed nothing itself
+      // (moving the cursor, a plugin message) can still let the editor append an empty trailing
+      // paragraph; that is not an edit, and must not mark a just-opened note unsaved.
+      if (!transaction.docChanged) return;
       onEdit?.();
       onChange?.(e.getJSON());
     },
@@ -134,7 +151,12 @@ export function DocumentEditor({
       )}
       {editor && editable && <EditorToolbar editor={editor} controls={bodyId} />}
       <EditorContent editor={editor} className="doc-editor__content" />
+      {editor && editable && formattingBubble && <FormattingBubble editor={editor} />}
+      {editor && editable && hasTables && <TableMenu editor={editor} />}
       {slash.render(editor)}
+      {menus?.map((menu, index) => (
+        <Fragment key={index}>{menu.render(editor)}</Fragment>
+      ))}
     </div>
   );
 }

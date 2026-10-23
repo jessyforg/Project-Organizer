@@ -123,7 +123,11 @@ function useTheme(): void {
 }
 
 /** The theme and colour palette together (ADR-0015). */
-export function applyAppearance({ theme, accent, surface }: ProfileSettings): void {
+export function applyAppearance({
+  theme,
+  accent,
+  surface,
+}: Pick<ProfileSettings, 'theme' | 'accent' | 'surface'>): void {
   applyTheme(theme);
   const dark =
     theme === 'dark' ||

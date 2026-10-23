@@ -42,10 +42,11 @@ const openMenu = async () => {
   return screen.getByRole('menu');
 };
 
+/** The note and trash actions called, in order (the backlinks panel's reads are not actions). */
 const channelsCalled = (backend: ReturnType<typeof installApi>) =>
   backend.calls
     .map((c) => c.channel)
-    .filter((c) => c.startsWith('notes:') || c.startsWith('trash:'));
+    .filter((c) => (c.startsWith('notes:') || c.startsWith('trash:')) && c !== 'notes:backlinks');
 
 describe('Note actions menu', () => {
   it('offers rename, duplicate, move, archive, copy, export, and trash, in that order', async () => {

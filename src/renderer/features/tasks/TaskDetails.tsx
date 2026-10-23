@@ -256,6 +256,7 @@ function TaskEditor({ task }: { task: Task }) {
 
       {task.parentTaskId === null && <Subtasks task={task} />}
       <Dependencies task={task} />
+      <MentionedIn taskId={task.id} />
 
       <div className="section">
         <p className="stamp">
@@ -449,6 +450,38 @@ function Dependencies({ task }: { task: Task }) {
           </ul>
         </>
       )}
+    </section>
+  );
+}
+
+/** The notes that mention this task (ADR-0017): each opens the note. */
+function MentionedIn({ taskId }: { taskId: string }) {
+  const { navigate, openTask } = useNavigation();
+  const notes = useQuery(`mentioned-in:${taskId}`, () =>
+    window.api.links.mentionedIn({ kind: 'task', id: taskId }),
+  );
+  const list = notes.data ?? [];
+  if (list.length === 0) return null;
+  return (
+    <section className="section" aria-label="Mentioned in">
+      <h3>Mentioned in {plural(list.length, 'note')}</h3>
+      <ul className="mini-list">
+        {list.map((note) => (
+          <li key={note.noteId} className="mentioned-in">
+            <button
+              type="button"
+              className="link"
+              onClick={() => {
+                openTask(null);
+                navigate({ name: 'notes', noteId: note.noteId });
+              }}
+            >
+              {note.title}
+            </button>
+            <span className="muted small mentioned-in__snippet">{note.snippet}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

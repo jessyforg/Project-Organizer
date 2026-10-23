@@ -35,7 +35,7 @@ describe('Markdown codec (ADR-0013)', () => {
   });
 
   it.each([
-    ['tables', '| a | b |\n|---|---|\n| 1 | 2 |\n'],
+    ['a table with an unescaped pipe in code', '| a | b |\n|---|---|\n| `1|2` | 3 |\n'],
     ['images', '![diagram](https://example.com/d.png)\n'],
     ['raw HTML', 'Hello <b>raw</b>\n'],
     ['reference-style links', '[text][1]\n\n[1]: https://example.com\n'],

@@ -32,6 +32,11 @@ export function useInvalidate(): () => void {
   return useContext(DataContext).invalidate;
 }
 
+/** Changes whenever data may have changed (after `invalidate()`), for stores outside React. */
+export function useDataVersion(): number {
+  return useContext(DataContext).version;
+}
+
 export interface QueryState<T> {
   data: T | undefined;
   error: AppErrorInfo | undefined;
