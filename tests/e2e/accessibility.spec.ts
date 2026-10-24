@@ -233,6 +233,27 @@ for (const theme of ['light', 'dark'] as const) {
       .click();
     await page.getByRole('button', { name: 'List', exact: true }).click();
 
+    // Custom fields (ADR-0023): the dialog, and the task panel's Fields section.
+    await page.getByRole('button', { name: 'More project actions' }).click();
+    await page.getByRole('menuitem', { name: 'Custom fields…' }).click();
+    const fieldsDialog = page.getByRole('dialog', { name: 'Custom fields' });
+    await fieldsDialog.getByLabel('Name', { exact: true }).fill('Area');
+    await fieldsDialog.getByLabel('Type', { exact: true }).selectOption({ label: 'Single choice' });
+    await fieldsDialog.getByLabel('Choices, separated by commas').fill('Front end, Back end');
+    await fieldsDialog.getByRole('button', { name: 'Add field' }).click();
+    await expect(fieldsDialog.getByLabel('Name of field Area')).toBeVisible();
+    await expectNoViolations(page, 'Custom fields dialog');
+    await fieldsDialog.getByRole('button', { name: 'Done' }).click();
+    await page
+      .getByRole('main')
+      .getByRole('button', { name: /^Fix layout bug/ })
+      .click();
+    await expect(
+      page.getByRole('complementary', { name: 'Task details' }).getByLabel('Area'),
+    ).toBeVisible();
+    await expectNoViolations(page, 'Task details with custom fields');
+    await page.keyboard.press('Escape');
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');

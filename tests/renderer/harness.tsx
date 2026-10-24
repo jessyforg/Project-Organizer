@@ -96,6 +96,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     subtaskCount: 0,
     completedSubtaskCount: 0,
     milestoneId: null,
+    customValues: {},
     ...overrides,
   };
 }

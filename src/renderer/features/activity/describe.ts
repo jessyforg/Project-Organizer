@@ -45,6 +45,10 @@ export function describeActivity(event: ActivityEvent, today: string): string {
     case 'attachment_removed':
       return `Removed the file ${quote(from ?? '')}`;
     case 'changed':
+      // A custom field's value, with the field's name (ADR-0023).
+      if (event.field?.startsWith('custom:')) {
+        return change(event.field.slice('custom:'.length), from, to);
+      }
       switch (event.field) {
         case 'status':
           return change('Status', from, to);

@@ -2,6 +2,35 @@
 
 Newest entries first.
 
+## 2026-10-24 — Release 0.9.0, stage 4 of 6: custom fields (schema v10)
+
+Decisions are in [ADR-0023](DECISIONS/0023-custom-fields.md).
+
+**What was built:**
+- **Schema v10:** `custom_fields` and `custom_values`, with triggers for "same project" and "values leave with a moved task". A `profile-v9.db` fixture has an upgrade test.
+- **`CustomFieldService`:**
+  - values checked by type and options;
+  - type changes that convert every value, or change nothing and name the blocking values;
+  - option edits that clean up values.
+- **Activity:** value changes are recorded as `custom:<name>`.
+- **Trash:** fields go to the trash alone or with their project.
+- **Interface:**
+  - the Custom fields dialog (⋯ menu, palette, and "Manage fields" in task details);
+  - the task panel's Fields section;
+  - field columns on project tables, with sorting, grouping by choice or checkbox fields, a field filter, and editing in place with Undo.
+
+**Defects found and fixed during the work:**
+- **Nested dialogs closed together:** a confirmation inside a dialog closed the dialog around it, because React passes a `<dialog>`'s close event up the component tree. The shared `Dialog` now reacts only to its own close. The end-to-end workflow caught it, and a regression test fails without the fix.
+- **Undo out of reach:** the trashed field's Undo was in a toast, which cannot be clicked while a modal dialog is open. It is now shown inside the dialog.
+- **Choices lagged:** checkboxes and multiple choices in the panel changed only after the save round trip. They now change at once, as text fields already did. Screenshot capture caught it.
+
+**Verification for this stage:**
+- 9 service tests.
+- 6 component tests, including the dialog regression test.
+- A new end-to-end workflow (28).
+- Axe scans of the Custom fields dialog and of task details with fields, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 613 of 613 unit and component tests pass, with no unhandled errors. 30 of 30 end-to-end tests pass, in two consecutive full runs.
+
 ## 2026-10-24 — Release 0.9.0, stage 3 of 6: tasks as a table
 
 Decisions are in [ADR-0022](DECISIONS/0022-task-table.md). There is no schema change: layouts are the profile setting `taskTables`.

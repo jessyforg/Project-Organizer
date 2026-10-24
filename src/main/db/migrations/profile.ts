@@ -397,4 +397,50 @@ export const profileMigrations: readonly Migration[] = [
       CREATE INDEX activity_at ON activity_events (at);
     `,
   },
+  {
+    // Custom fields (ADR-0023). No value row means no value. A value's field belongs to the
+    // task's project; trashing a field keeps its values, deleting it for good removes them.
+    version: 10,
+    name: 'custom_fields',
+    sql: `
+      CREATE TABLE custom_fields (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        name_key TEXT NOT NULL,
+        type TEXT NOT NULL
+          CHECK (type IN ('text', 'number', 'date', 'checkbox', 'select', 'multi_select')),
+        options_json TEXT NOT NULL DEFAULT '[]',
+        sort_key INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        deletion_batch_id TEXT,
+        CHECK ((deleted_at IS NULL) = (deletion_batch_id IS NULL))
+      ) STRICT;
+      CREATE UNIQUE INDEX custom_fields_name ON custom_fields (project_id, name_key)
+        WHERE deleted_at IS NULL;
+      CREATE INDEX custom_fields_batch ON custom_fields (deletion_batch_id)
+        WHERE deletion_batch_id IS NOT NULL;
+
+      CREATE TABLE custom_values (
+        task_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+        field_id TEXT NOT NULL REFERENCES custom_fields (id) ON DELETE CASCADE,
+        value_json TEXT NOT NULL,
+        PRIMARY KEY (task_id, field_id)
+      ) STRICT;
+      CREATE INDEX custom_values_field ON custom_values (field_id);
+
+      CREATE TRIGGER custom_values_same_project BEFORE INSERT ON custom_values BEGIN
+        SELECT RAISE(ABORT, 'a custom field belongs to another project')
+        WHERE (SELECT project_id FROM custom_fields WHERE id = NEW.field_id)
+          IS NOT (SELECT project_id FROM tasks WHERE id = NEW.task_id);
+      END;
+      -- Fields belong to a project, so a task moving away leaves its values behind.
+      CREATE TRIGGER tasks_move_drops_custom_values AFTER UPDATE OF project_id ON tasks
+      WHEN NEW.project_id IS NOT OLD.project_id BEGIN
+        DELETE FROM custom_values WHERE task_id = NEW.id;
+      END;
+    `,
+  },
 ];

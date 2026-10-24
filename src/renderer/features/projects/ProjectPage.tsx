@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  SlidersHorizontal,
   SquarePen,
   Table2,
   Trash2,
@@ -39,6 +40,7 @@ import { CoverBanner } from '../looks/Cover';
 import { LooksRow } from '../looks/LooksRow';
 import { useLooks, type LooksTarget } from '../looks/useLooks';
 import { ActivityList } from '../activity/ActivityList';
+import { FieldsDialog } from '../fields/FieldsDialog';
 import { ProjectMilestones } from '../milestones/ProjectMilestones';
 import { useCreateNote } from '../notes/useCreateNote';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
@@ -112,6 +114,7 @@ function ProjectView({
   const looks = useLooks();
   const [editing, setEditing] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
+  const [fieldsOpen, setFieldsOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [view, setView] = useState<'list' | 'board' | 'table'>('list');
   const [pageTab, setPageTab] = useState<'work' | 'activity'>('work');
@@ -121,6 +124,9 @@ function ProjectView({
   });
   const milestones = useQuery(`milestones:${project.id}`, () =>
     window.api.milestones.list({ projectId: project.id }),
+  );
+  const customFields = useQuery(`custom-fields:${project.id}`, () =>
+    window.api.customFields.list({ projectId: project.id }),
   );
   // A milestone that went to the trash (or no longer exists) stops filtering the list.
   const staleMilestone =
@@ -202,8 +208,14 @@ function ProjectView({
     editable: true,
   };
   // The ⋯ menu; the command palette offers it too, with the header's buttons (ADR-0018).
+  const fieldsItem: MenuItem = {
+    label: 'Custom fields…',
+    icon: SlidersHorizontal,
+    onSelect: () => setFieldsOpen(true),
+  };
   const moreItems: MenuItem[] = [
     ...looks.itemsFor(looksTarget),
+    fieldsItem,
     {
       ...(project.status === 'active'
         ? { label: 'Mark completed', icon: CheckCircle2, onSelect: () => setStatus('completed') }
@@ -240,7 +252,8 @@ function ProjectView({
             onSelect: () => void createNote({ projectId: project.id }),
           },
         ]),
-    ...(project.isInbox ? looks.itemsFor(looksTarget) : moreItems),
+    // The Inbox has no ⋯ menu, so its fields and looks are offered here.
+    ...(project.isInbox ? [fieldsItem, ...looks.itemsFor(looksTarget)] : moreItems),
   ]);
   const tagNames = project.tagIds
     .map((t) => lookups.tags.get(t)?.name)
@@ -434,6 +447,7 @@ function ProjectView({
                   {view === 'table' && tasks.data && tasks.data.length > 0 && (
                     <TaskTable
                       view="project"
+                      fields={customFields.data ?? []}
                       tasks={tasks.data}
                       label={`Tasks in ${project.name}`}
                     />
@@ -471,6 +485,12 @@ function ProjectView({
       </Tabs>
 
       <ProjectDialog open={editing} project={project} onClose={() => setEditing(false)} />
+      <FieldsDialog
+        open={fieldsOpen}
+        projectId={project.id}
+        projectName={project.name}
+        onClose={() => setFieldsOpen(false)}
+      />
       {looks.dialogs}
       <StatusManager
         open={workflowOpen}

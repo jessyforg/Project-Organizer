@@ -112,6 +112,38 @@ export interface Task {
   completedSubtaskCount: number;
   /** The task's milestone (ADR-0020); null when it has none or its milestone is in the trash. */
   milestoneId: string | null;
+  /** Values of the project's live custom fields, by field ID (ADR-0023). */
+  customValues: Record<string, CustomValue>;
+}
+
+export const CUSTOM_FIELD_TYPES = [
+  'text',
+  'number',
+  'date',
+  'checkbox',
+  'select',
+  'multi_select',
+] as const;
+export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
+
+/** Text, a number, a YYYY-MM-DD date, true (a ticked checkbox), an option ID, or option IDs. */
+export type CustomValue = string | number | boolean | string[];
+
+export interface CustomFieldOption {
+  id: string;
+  label: string;
+}
+
+/** A task field a project defines (ADR-0023). */
+export interface CustomField {
+  id: string;
+  projectId: string;
+  name: string;
+  type: CustomFieldType;
+  options: CustomFieldOption[];
+  sortKey: number;
+  /** How many tasks have a value. */
+  valueCount: number;
 }
 
 /** A checkpoint in a project (ADR-0020). Tasks belong to at most one milestone. */
@@ -169,9 +201,9 @@ export interface TaskTrashPreview {
 
 export interface TrashEntry {
   batchId: string;
-  kind: 'project' | 'task' | 'note' | 'milestone';
+  kind: 'project' | 'task' | 'note' | 'milestone' | 'custom_field';
   title: string;
-  /** For task, note, and milestone entries: the project the item belongs to. */
+  /** For task, note, milestone, and field entries: the project the item belongs to. */
   projectName: string | null;
   itemCount: number;
   deletedAt: string;
@@ -183,6 +215,7 @@ export interface RestoreResult {
   restoredTasks: number;
   restoredNotes: number;
   restoredMilestones: number;
+  restoredFields: number;
   /** Dependencies of restored tasks whose prerequisite is still in the trash. */
   unresolvedDependencies: { taskId: string; prerequisiteId: string }[];
 }
@@ -332,7 +365,14 @@ export type ActivityAction =
 
 /** What `changed` events change (ADR-0021). */
 export type ActivityField =
-  'status' | 'priority' | 'due_date' | 'milestone' | 'folder' | 'target_date';
+  | 'status'
+  | 'priority'
+  | 'due_date'
+  | 'milestone'
+  | 'folder'
+  | 'target_date'
+  /** A custom field's value, with the field's name (ADR-0023). */
+  | `custom:${string}`;
 
 /** One recorded change (ADR-0021). Values are stored as people saw them. */
 export interface ActivityEvent {

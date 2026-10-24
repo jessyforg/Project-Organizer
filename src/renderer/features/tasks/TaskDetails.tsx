@@ -10,6 +10,7 @@ import { TagPicker } from '../../components/TagPicker';
 import { ConfirmDialog, ErrorNotice, Loading } from '../../components/ui';
 import { CATEGORY_LABEL, formatTimestamp, plural, PRIORITY_LABEL } from '../../lib/format';
 import { ActivityList } from '../activity/ActivityList';
+import { TaskFields } from '../fields/TaskFields';
 import { CompleteCheckbox } from './CompleteCheckbox';
 import { useLookups } from './useLookups';
 import { useTaskActions } from './useTaskActions';
@@ -92,11 +93,18 @@ function TaskEditor({ task }: { task: Task }) {
     invalidate();
     if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
     const removed = result.data.removedDependencies;
+    const values = result.data.removedFieldValues;
     toast({
-      message:
+      message: [
+        'Task moved.',
         removed > 0
-          ? `Task moved. ${plural(removed, 'dependency', 'dependencies')} to tasks in the old project removed.`
-          : 'Task moved.',
+          ? `${plural(removed, 'dependency', 'dependencies')} to tasks in the old project removed.`
+          : '',
+        // Custom fields belong to the old project (ADR-0023).
+        values > 0 ? `${plural(values, 'custom field value')} from the old project removed.` : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
     });
   };
 
@@ -288,6 +296,10 @@ function TaskEditor({ task }: { task: Task }) {
             )}
 
             <TaskTags task={task} />
+            <TaskFields
+              task={task}
+              projectName={lookups.projects.get(task.projectId)?.name ?? 'this project'}
+            />
 
             <div className="field">
               <label htmlFor={`${id}-description`}>Description</label>

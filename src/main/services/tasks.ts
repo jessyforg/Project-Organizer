@@ -284,18 +284,25 @@ export class TaskService {
    * Moves a top-level task (and all its subtasks, including trashed ones) to another project.
    * Statuses are mapped by category; dependencies that would cross projects are removed.
    */
-  move(input: MoveTaskInput): { task: Task; removedDependencies: number } {
+  move(input: MoveTaskInput): {
+    task: Task;
+    removedDependencies: number;
+    removedFieldValues: number;
+  } {
     const task = this.get(input.id);
     if (task.parentTaskId !== null) {
       throw new AppError('VALIDATION_FAILED', 'Move the parent task; its subtasks move with it.');
     }
-    if (task.projectId === input.projectId) return { task, removedDependencies: 0 };
+    if (task.projectId === input.projectId) {
+      return { task, removedDependencies: 0, removedFieldValues: 0 };
+    }
     const { db } = this.ctx;
     const target = requireLiveProject(db, input.projectId);
     if (target.archived_at !== null) {
       throw new AppError('CONFLICT', 'Unarchive the project before moving tasks to it.');
     }
 
+    let removedFieldValues = 0;
     const removed = db.transaction(() => {
       const children = db
         .prepare(
@@ -305,6 +312,12 @@ export class TaskService {
         .all(task.id) as { id: string; completed_at: string | null; category: StatusCategory }[];
       const movedIds = [task.id, ...children.map((c) => c.id)];
       const inList = placeholders(movedIds.length);
+      // Custom fields belong to the old project; a trigger removes the values (ADR-0023).
+      removedFieldValues = (
+        db
+          .prepare(`SELECT count(*) AS n FROM custom_values WHERE task_id IN (${inList})`)
+          .get(...movedIds) as { n: number }
+      ).n;
       const removedDeps = db
         .prepare(
           `DELETE FROM task_dependencies
@@ -362,7 +375,7 @@ export class TaskService {
       return removedDeps;
     })();
 
-    return { task: this.get(task.id), removedDependencies: removed };
+    return { task: this.get(task.id), removedDependencies: removed, removedFieldValues };
   }
 
   /** Records each listed field that changed (ADR-0021), inside the caller's transaction. */

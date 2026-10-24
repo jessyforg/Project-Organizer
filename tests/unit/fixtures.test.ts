@@ -83,6 +83,25 @@ function fillV8(db: ReturnType<typeof openDatabase>) {
   ).run(V8_MILESTONE, V8_PROJECT);
 }
 
+// Built at 0.9.0 stage 2: the activity log. Its upgrade to v10 adds custom fields.
+const V9_TASK = '2d3e4f5a-6b7c-4d8e-8f9a-0b1c2d3e4f5a';
+function fillV9(db: ReturnType<typeof openDatabase>) {
+  const ctx = { db, clock, newId: randomUUID };
+  ensureInbox(ctx);
+  const inbox = db.prepare('SELECT id FROM projects WHERE is_inbox = 1').get() as { id: string };
+  const status = db
+    .prepare('SELECT id FROM project_statuses WHERE project_id = ? AND is_default = 1')
+    .get(inbox.id) as { id: string };
+  db.prepare(
+    `INSERT INTO tasks (id, project_id, status_id, title, sort_key, created_at, updated_at)
+     VALUES (?, ?, ?, 'Write copy', 1024, 'x', 'x')`,
+  ).run(V9_TASK, inbox.id, status.id);
+  db.prepare(
+    `INSERT INTO activity_events (at, item_kind, item_id, project_id, title, action)
+     VALUES ('2026-10-24T00:00:00.000Z', 'task', ?, ?, 'Write copy', 'created')`,
+  ).run(V9_TASK, inbox.id);
+}
+
 async function build(
   file: string,
   migrations: typeof profileMigrations,
@@ -170,6 +189,7 @@ if (process.env['REGENERATE_FIXTURES']) {
     await build(path.join(DIR, 'profile-v6.db'), profileMigrations.slice(0, 6), fillV6);
     await build(path.join(DIR, 'profile-v7.db'), profileMigrations.slice(0, 7), fillV7);
     await build(path.join(DIR, 'profile-v8.db'), profileMigrations.slice(0, 8), fillV8);
+    await build(path.join(DIR, 'profile-v9.db'), profileMigrations.slice(0, 9), fillV9);
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -189,6 +209,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['profile-v6.db', profileMigrations],
       ['profile-v7.db', profileMigrations],
       ['profile-v8.db', profileMigrations],
+      ['profile-v9.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -369,6 +390,31 @@ if (process.env['REGENERATE_FIXTURES']) {
       expect(s.activity.forProject({ projectId: V8_PROJECT, limit: 10 })).toEqual([
         expect.objectContaining({ itemKind: 'milestone', action: 'completed', title: 'Beta' }),
       ]);
+      db.close();
+    });
+
+    it('keeps profile v9 activity, and adds custom fields (schema v10)', async () => {
+      const db = openDatabase(copy('profile-v9.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      const ctx = { db, clock, newId: randomUUID };
+      runProfileMaintenance(ctx, nullLogger);
+      const s = createProfileServices(ctx);
+      const task = s.tasks.get(V9_TASK);
+      expect(task.customValues).toEqual({});
+      expect(s.activity.forItem({ kind: 'task', id: V9_TASK, limit: 5 })).toHaveLength(1);
+      const field = s.customFields.create({
+        projectId: task.projectId,
+        name: 'Estimate',
+        type: 'number',
+      });
+      s.customFields.setValue({ taskId: V9_TASK, fieldId: field.id, value: 3 });
+      expect(s.tasks.get(V9_TASK).customValues).toEqual({ [field.id]: 3 });
       db.close();
     });
 

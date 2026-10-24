@@ -15,6 +15,7 @@ const lookups: Lookups = {
   milestones: new Map(),
   projects: new Map([['p1', makeProject()]]),
   tags: new Map(),
+  fields: new Map(),
   today: '2026-03-10',
 };
 

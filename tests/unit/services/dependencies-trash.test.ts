@@ -80,6 +80,7 @@ describe('TrashService', () => {
       restoredTasks: 2,
       restoredNotes: 0,
       restoredMilestones: 0,
+      restoredFields: 0,
       unresolvedDependencies: [],
     });
     expect(p.tasks.get(child.id).parentTaskId).toBe(parent.id);
@@ -129,6 +130,7 @@ describe('TrashService', () => {
       restoredTasks: 1,
       restoredNotes: 0,
       restoredMilestones: 0,
+      restoredFields: 0,
       unresolvedDependencies: [],
     });
     expect(p.tasks.get(kept.id).title).toBe('Kept');

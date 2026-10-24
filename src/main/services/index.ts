@@ -2,6 +2,7 @@ import { pruneSnapshots, takeDailySnapshot } from '../backup/snapshots';
 import type { Logger } from '../platform/logger';
 import type { ServiceContext } from './context';
 import { ActivityService } from './activity';
+import { CustomFieldService } from './custom-fields';
 import { DashboardService } from './dashboard';
 import { DependencyService } from './dependencies';
 import { FavouriteService } from './favourites';
@@ -25,6 +26,7 @@ export type { ServiceContext } from './context';
 
 export interface ProfileServices {
   activity: ActivityService;
+  customFields: CustomFieldService;
   folders: FolderService;
   tags: TagService;
   projects: ProjectService;
@@ -48,6 +50,7 @@ export interface ProfileServices {
 export function createProfileServices(ctx: ServiceContext): ProfileServices {
   return {
     activity: new ActivityService(ctx),
+    customFields: new CustomFieldService(ctx),
     folders: new FolderService(ctx),
     tags: new TagService(ctx),
     projects: new ProjectService(ctx),

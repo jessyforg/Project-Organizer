@@ -217,6 +217,25 @@ Since schema v7, a file can also be a cover image (`note_id` is null for a proje
 - **Removal:** events go after the retention period (the `activityRetentionDays` setting, 365 days by default), and with their item when it is deleted for good. A project's purge removes everything recorded under it.
 - **Indexes:** `(item_kind, item_id, at)`, `(project_id, at)`, and `(at)`.
 
+**custom_fields** (schema v10, [ADR-0023](DECISIONS/0023-custom-fields.md))
+| Column | Type | Notes |
+|---|---|---|
+| id | TEXT PK | |
+| project_id | TEXT NOT NULL → projects(id) ON DELETE CASCADE | At most 30 live fields per project |
+| name, name_key | TEXT NOT NULL | `name_key` unique per project among live fields |
+| type | TEXT NOT NULL CHECK IN ('text', 'number', 'date', 'checkbox', 'select', 'multi_select') | |
+| options_json | TEXT NOT NULL DEFAULT '[]' | Choices as `[{ id, label }]`, at most 50 |
+| sort_key | INTEGER NOT NULL | |
+| created_at, updated_at | TEXT NOT NULL | |
+| deleted_at, deletion_batch_id | TEXT NULL | Trash; a project's batch includes its fields |
+
+**custom_values** (v10)
+- **Columns:** `task_id` (→ tasks, cascading), `field_id` (→ custom_fields, cascading), and `value_json`, with `(task_id, field_id)` as the key.
+- **No row means no value.**
+- **Triggers:**
+  - one refuses a value whose field belongs to another project;
+  - another deletes a task's values when the task moves to another project.
+
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
 ### Database guards

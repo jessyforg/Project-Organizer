@@ -23,6 +23,8 @@ export const COUNTED_TABLES = [
   'favourites',
   'milestones',
   'activity_events',
+  'custom_fields',
+  'custom_values',
   'settings',
 ] as const;
 
@@ -51,6 +53,7 @@ export const INCLUDES = [
   'Favourites, icons, and covers',
   'Milestones, including those in the trash',
   'The activity log',
+  'Custom fields and their values',
   'Profile settings',
 ];
 export const OMITS = ['The profile’s automatic snapshots', 'App-wide settings outside the profile'];

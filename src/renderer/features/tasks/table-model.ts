@@ -1,6 +1,7 @@
 import {
   PRIORITIES,
   STATUS_CATEGORIES,
+  type CustomField,
   type Milestone,
   type Project,
   type Tag,
@@ -9,11 +10,14 @@ import {
   type WorkflowStatus,
 } from '@shared/domain';
 import { formatDate, formatTimestamp, PRIORITY_LABEL } from '../../lib/format';
+import { fieldSortValue, fieldText } from '../fields/field-values';
 
 /** Which table: project tables share one layout, My tasks has its own (ADR-0022). */
 export type TableView = 'project' | 'myTasks';
 
+/** Built-in columns, and a project's custom fields as `field:<id>` (ADR-0023). */
 export type ColumnId =
+  | `field:${string}`
   | 'title'
   | 'status'
   | 'priority'
@@ -25,7 +29,7 @@ export type ColumnId =
   | 'createdAt'
   | 'updatedAt';
 
-export type Editor = 'text' | 'status' | 'priority' | 'milestone' | 'date';
+export type Editor = 'text' | 'status' | 'priority' | 'milestone' | 'date' | 'field';
 
 export interface ColumnDef {
   id: ColumnId;
@@ -34,6 +38,8 @@ export interface ColumnDef {
   shown: boolean;
   editor: Editor | null;
   views: TableView[];
+  /** For a custom field's column. */
+  field?: CustomField;
 }
 
 const BOTH: TableView[] = ['project', 'myTasks'];
@@ -62,12 +68,29 @@ export const COLUMNS: ColumnDef[] = [
 export const MIN_WIDTH = 60;
 export const MAX_WIDTH = 800;
 
-export function columnsFor(view: TableView): ColumnDef[] {
-  return COLUMNS.filter((c) => c.views.includes(view));
+/** A custom field's column; multiple choices are edited in the task panel only. */
+export function fieldColumn(field: CustomField): ColumnDef {
+  return {
+    id: `field:${field.id}`,
+    label: field.name,
+    width: 140,
+    shown: true,
+    editor: field.type === 'multi_select' ? null : 'field',
+    views: ['project'],
+    field,
+  };
 }
 
-export function defaultLayout(view: TableView): TaskTableColumn[] {
-  return columnsFor(view).map((c) => ({ id: c.id, width: c.width, hidden: !c.shown }));
+/** Fields differ between projects, so only project tables have their columns. */
+export function columnsFor(view: TableView, fields: CustomField[] = []): ColumnDef[] {
+  return [
+    ...COLUMNS.filter((c) => c.views.includes(view)),
+    ...(view === 'project' ? fields.map(fieldColumn) : []),
+  ];
+}
+
+export function defaultLayout(view: TableView, fields: CustomField[] = []): TaskTableColumn[] {
+  return columnsFor(view, fields).map((c) => ({ id: c.id, width: c.width, hidden: !c.shown }));
 }
 
 /**
@@ -77,8 +100,9 @@ export function defaultLayout(view: TableView): TaskTableColumn[] {
 export function normalizeLayout(
   view: TableView,
   saved: TaskTableColumn[] | undefined,
+  fields: CustomField[] = [],
 ): TaskTableColumn[] {
-  const known = new Map(columnsFor(view).map((c) => [c.id as string, c]));
+  const known = new Map(columnsFor(view, fields).map((c) => [c.id as string, c]));
   const seen = new Set<string>();
   const result: TaskTableColumn[] = [];
   for (const column of saved ?? []) {
@@ -90,7 +114,7 @@ export function normalizeLayout(
       hidden: column.id === 'title' ? false : column.hidden,
     });
   }
-  for (const column of defaultLayout(view)) if (!seen.has(column.id)) result.push(column);
+  for (const column of defaultLayout(view, fields)) if (!seen.has(column.id)) result.push(column);
   const title = result.findIndex((c) => c.id === 'title');
   if (title > 0) result.unshift(...result.splice(title, 1));
   return result;
@@ -102,11 +126,20 @@ export interface Lookups {
   milestones: Map<string, Milestone>;
   projects: Map<string, Project>;
   tags: Map<string, Tag>;
+  /** The project's custom fields (ADR-0023). */
+  fields: Map<string, CustomField>;
   today: string;
 }
 
+const fieldOf = (column: ColumnId, lookups: Lookups) =>
+  column.startsWith('field:') ? lookups.fields.get(column.slice('field:'.length)) : undefined;
+
 /** The text a cell shows; empty values are ''. */
 export function cellText(task: Task, column: ColumnId, lookups: Lookups): string {
+  if (column.startsWith('field:')) {
+    const field = fieldOf(column, lookups);
+    return field ? fieldText(field, task.customValues[field.id], lookups.today) : '';
+  }
   switch (column) {
     case 'title':
       return task.title;
@@ -131,11 +164,15 @@ export function cellText(task: Task, column: ColumnId, lookups: Lookups): string
       return formatTimestamp(task.createdAt);
     case 'updatedAt':
       return formatTimestamp(task.updatedAt);
+    default:
+      return '';
   }
 }
 
 /** A value that sorts in the column's natural order, or null for an empty cell. */
 function sortValue(task: Task, column: ColumnId, lookups: Lookups): string | number | null {
+  const field = fieldOf(column, lookups);
+  if (field) return fieldSortValue(field, task.customValues[field.id]);
   switch (column) {
     case 'priority':
       return task.priority ? PRIORITIES.indexOf(task.priority) : null;
@@ -185,18 +222,25 @@ export function sortTasks(
     .map((entry) => entry.task);
 }
 
-export type GroupBy = 'none' | 'status' | 'priority' | 'milestone' | 'project';
+/** Built-in groupings, and choice and checkbox fields (ADR-0023). */
+export type GroupBy = 'none' | 'status' | 'priority' | 'milestone' | 'project' | `field:${string}`;
 
 export type TableRow =
   { kind: 'group'; key: string; label: string; count: number } | { kind: 'task'; task: Task };
 
 /** Rows for the table: tasks, with a header row before each group when grouped. */
-export function tableRows(tasks: Task[], groupBy: GroupBy, lookups: Lookups): TableRow[] {
+export function tableRows(
+  tasks: Task[],
+  groupBy: GroupBy,
+  lookups: Lookups,
+  /** What tasks without a value are grouped as, such as "No priority". */
+  emptyLabel = `No ${groupBy}`,
+): TableRow[] {
   if (groupBy === 'none') return tasks.map((task) => ({ kind: 'task', task }));
   const column: ColumnId = groupBy;
   const groups = new Map<string, { label: string; order: string | number | null; tasks: Task[] }>();
   for (const task of tasks) {
-    const label = cellText(task, column, lookups) || `No ${column}`;
+    const label = cellText(task, column, lookups) || emptyLabel;
     const group = groups.get(label) ?? {
       label,
       order: sortValue(task, column, lookups),

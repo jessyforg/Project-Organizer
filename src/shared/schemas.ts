@@ -11,6 +11,7 @@ import {
   THEMES,
   ACCENTS,
   ACTIVITY_KINDS,
+  CUSTOM_FIELD_TYPES,
   ACTIVITY_RETENTION_DAYS,
   SURFACES,
 } from './domain';
@@ -159,6 +160,37 @@ export const taskListQuerySchema = z.strictObject({
   sort: z.enum(TASK_SORTS).optional(),
   limit: z.number().int().min(1).max(LIMITS.listPageSize).optional(),
   offset: z.number().int().min(0).optional(),
+});
+
+// Custom fields (ADR-0023)
+const fieldName = z
+  .string()
+  .trim()
+  .min(1, 'Enter a name for the field.')
+  .max(60, 'Field names can be up to 60 characters.');
+const optionLabel = z.string().trim().min(1).max(60);
+export const createCustomFieldSchema = z.strictObject({
+  projectId: id,
+  name: fieldName,
+  type: z.enum(CUSTOM_FIELD_TYPES),
+  options: z.array(optionLabel).max(50).optional(),
+});
+export const updateCustomFieldSchema = z.strictObject({
+  id,
+  name: fieldName.optional(),
+  options: z
+    .array(z.strictObject({ id: id.optional(), label: optionLabel }))
+    .max(50)
+    .optional(),
+});
+export const changeCustomFieldTypeSchema = z.strictObject({ id, type: z.enum(CUSTOM_FIELD_TYPES) });
+export const reorderCustomFieldsSchema = z.strictObject({ projectId: id, ids: idList });
+export const setCustomValueSchema = z.strictObject({
+  taskId: id,
+  fieldId: id,
+  value: z
+    .union([z.string().max(1000), z.number().finite(), z.boolean(), z.array(id).max(50)])
+    .nullable(),
 });
 
 // Activity (ADR-0021)
@@ -314,6 +346,9 @@ export const emptySchema = z.strictObject({});
 export type SwitcherQuery = z.output<typeof switcherSearchSchema>;
 export type FavouriteTarget = z.output<typeof favouriteTargetSchema>;
 export type CreateMilestoneInput = z.output<typeof createMilestoneSchema>;
+export type CreateCustomFieldInput = z.output<typeof createCustomFieldSchema>;
+export type UpdateCustomFieldInput = z.output<typeof updateCustomFieldSchema>;
+export type SetCustomValueInput = z.output<typeof setCustomValueSchema>;
 export type UpdateMilestoneInput = z.output<typeof updateMilestoneSchema>;
 export type SetIconInput = z.output<typeof setIconSchema>;
 /** A project or note, whose icon and cover can change (ADR-0019). */

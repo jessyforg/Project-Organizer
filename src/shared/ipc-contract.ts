@@ -3,6 +3,7 @@ import type {
   ActivityEvent,
   AppLinkInfo,
   AttachmentInfo,
+  CustomField,
   Backlink,
   Dashboard,
   FavouriteItem,
@@ -143,6 +144,12 @@ export const ipcContract = {
   'milestones:create': s.createMilestoneSchema,
   'milestones:update': s.updateMilestoneSchema,
   'milestones:setCompleted': s.setCompletedSchema,
+  'customFields:list': s.projectIdSchema,
+  'customFields:create': s.createCustomFieldSchema,
+  'customFields:update': s.updateCustomFieldSchema,
+  'customFields:changeType': s.changeCustomFieldTypeSchema,
+  'customFields:reorder': s.reorderCustomFieldsSchema,
+  'customFields:setValue': s.setCustomValueSchema,
   'notes:list': s.noteListQuerySchema,
   'notes:get': s.idSchema,
   'notes:create': s.createNoteSchema,
@@ -177,6 +184,7 @@ export const ipcContract = {
   'trash:trashProject': s.idSchema,
   'trash:trashNote': s.idSchema,
   'trash:trashMilestone': s.idSchema,
+  'trash:trashCustomField': s.idSchema,
   'trash:restore': s.batchSchema,
   'trash:deletePermanently': s.batchSchema,
   'trash:empty': s.emptySchema,
@@ -256,7 +264,7 @@ export interface IpcResponses {
   'tasks:create': Task;
   'tasks:update': TaskUpdateResult;
   'tasks:setCompleted': TaskUpdateResult;
-  'tasks:move': { task: Task; removedDependencies: number };
+  'tasks:move': { task: Task; removedDependencies: number; removedFieldValues: number };
   'tasks:reorder': Task;
   'tasks:moveOnBoard': TaskUpdateResult;
   'milestones:list': Milestone[];
@@ -265,6 +273,12 @@ export interface IpcResponses {
   'milestones:create': Milestone;
   'milestones:update': Milestone;
   'milestones:setCompleted': Milestone;
+  'customFields:list': CustomField[];
+  'customFields:create': CustomField;
+  'customFields:update': CustomField;
+  'customFields:changeType': CustomField;
+  'customFields:reorder': CustomField[];
+  'customFields:setValue': null;
   'notes:list': NoteSummary[];
   'notes:get': Note;
   'notes:create': Note;
@@ -299,6 +313,7 @@ export interface IpcResponses {
   'trash:trashProject': { batchId: string };
   'trash:trashNote': { batchId: string };
   'trash:trashMilestone': { batchId: string };
+  'trash:trashCustomField': { batchId: string };
   'trash:restore': RestoreResult;
   'trash:deletePermanently': null;
   'trash:empty': { removed: number };

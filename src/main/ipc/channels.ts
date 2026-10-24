@@ -185,6 +185,15 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'milestones:create': (input) => s().milestones.create(input),
     'milestones:update': (input) => s().milestones.update(input),
     'milestones:setCompleted': ({ id, completed }) => s().milestones.setCompleted(id, completed),
+    'customFields:list': ({ projectId }) => s().customFields.list(projectId),
+    'customFields:create': (input) => s().customFields.create(input),
+    'customFields:update': (input) => s().customFields.update(input),
+    'customFields:changeType': (input) => s().customFields.changeType(input),
+    'customFields:reorder': (input) => s().customFields.reorder(input),
+    'customFields:setValue': (input) => {
+      s().customFields.setValue(input);
+      return null;
+    },
 
     'notes:list': (query) => s().notes.list(query),
     'notes:get': ({ id }) => s().notes.get(id),
@@ -264,6 +273,7 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'trash:trashProject': ({ id }) => s().trash.trashProject(id),
     'trash:trashNote': ({ id }) => s().trash.trashNote(id),
     'trash:trashMilestone': ({ id }) => s().trash.trashMilestone(id),
+    'trash:trashCustomField': ({ id }) => s().trash.trashCustomField(id),
     'trash:restore': ({ batchId }) => s().trash.restore(batchId),
     'trash:deletePermanently': ({ batchId }) => (s().trash.deletePermanently(batchId), null),
     'trash:empty': () => ({ removed: s().trash.empty() }),

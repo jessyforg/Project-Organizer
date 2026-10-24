@@ -413,7 +413,10 @@ export function Dialog({
       ref={ref}
       className={['dialog', wide && 'dialog--wide', className].filter(Boolean).join(' ')}
       aria-label={label}
-      onClose={onClose}
+      // React passes a nested dialog's close up the component tree; only this one's counts.
+      onClose={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
       {open && children}
     </dialog>

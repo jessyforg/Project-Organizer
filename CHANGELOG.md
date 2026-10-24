@@ -44,6 +44,18 @@ Built in stages on one branch; this list grows with each stage.
 - **Keyboard:** the arrow keys move between cells; Enter or F2 edits; Enter on a title opens the task.
 - **Large lists:** large tables stay fast, because only the rows in view are drawn.
 
+### Custom fields
+
+- **Adding fields:** give a project its own task fields from ⋯ → **Custom fields…**. A field can be text, a number, a date, a checkbox, a single choice, or a multiple choice.
+- **Setting values:** set them in a task's details, under **Fields**.
+- **In the table:** each field is a column on the project's table. You can sort and group by it, filter with **Field filter**, and edit it in place.
+- **Changing a field's type** keeps every value. If a value does not fit the new type, nothing changes, and the message says which tasks to fix first.
+- **Trash:** a field moved to the trash keeps its values until it is deleted for good, and Undo or Restore brings everything back.
+- **Activity:** changes to field values appear in a task's Activity.
+- **Moving a task** to another project removes its field values, and the move message says so.
+- **Fixed:** confirming inside a dialog no longer closes the dialog around it.
+- Profile data schema version 10.
+
 ## 0.8.0 — Favourites, icons, and covers (2026-10-23, not yet publicly released)
 
 - **Favourites:** star a project or note from its ⋯ menu, its right-click menu, or the command palette.

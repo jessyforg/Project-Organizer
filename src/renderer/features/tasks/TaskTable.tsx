@@ -8,7 +8,14 @@ import {
   type PointerEvent,
 } from 'react';
 import { ArrowDown, ArrowUp, Columns3 } from 'lucide-react';
-import { PRIORITIES, type Priority, type Task, type TaskTableColumn } from '@shared/domain';
+import {
+  PRIORITIES,
+  type CustomField,
+  type CustomValue,
+  type Priority,
+  type Task,
+  type TaskTableColumn,
+} from '@shared/domain';
 import type { UpdateTaskInput } from '@shared/schemas';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
@@ -17,7 +24,6 @@ import { Dialog } from '../../components/ui';
 import { localToday, PRIORITY_LABEL } from '../../lib/format';
 import {
   cellText,
-  COLUMNS,
   columnsFor,
   defaultLayout,
   MAX_WIDTH,
@@ -32,6 +38,7 @@ import {
   type SortDirection,
   type TableView,
 } from './table-model';
+import { fieldEditValue, fieldMatches, parseFieldEdit } from '../fields/field-values';
 import { useLookups } from './useLookups';
 import { useTaskActions } from './useTaskActions';
 
@@ -42,8 +49,6 @@ export const TABLE_LIMIT = 5000;
 export const ROW_HEIGHT = 40;
 const OVERSCAN = 10;
 const RESIZE_STEP = 16;
-
-const DEF = new Map(COLUMNS.map((c) => [c.id as string, c]));
 
 const GROUPS: { id: GroupBy; label: string; views: TableView[] }[] = [
   { id: 'none', label: 'None', views: ['project', 'myTasks'] },
@@ -101,10 +106,13 @@ export function TaskTable({
   view,
   tasks,
   label,
+  fields = [],
 }: {
   view: TableView;
   tasks: Task[];
   label: string;
+  /** The project's custom fields, shown as columns on project tables (ADR-0023). */
+  fields?: CustomField[];
 }) {
   const id = useId();
   const settings = useQuery('settings', () => window.api.settings.get());
@@ -118,6 +126,8 @@ export function TaskTable({
 
   const [sort, setSort] = useState<{ column: ColumnId; direction: SortDirection } | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy>('none');
+  /** The field filter (ADR-0023): a field and the value wanted. */
+  const [fieldFilter, setFieldFilter] = useState({ fieldId: '', value: '' });
   const [columnsOpen, setColumnsOpen] = useState(false);
   /** A width being dragged, before it is saved. */
   const [dragWidth, setDragWidth] = useState<{ id: string; width: number } | null>(null);
@@ -134,17 +144,32 @@ export function TaskTable({
     milestones: new Map((milestones.data ?? []).map((m) => [m.id, m])),
     projects: lookupsData.projects,
     tags: lookupsData.tags,
+    fields: new Map(fields.map((f) => [f.id, f])),
     today: localToday(),
   };
+  const DEF = new Map(columnsFor(view, fields).map((c) => [c.id as string, c]));
   // A change shows at once; the saved layout takes over once the setting has reloaded.
-  const saved = normalizeLayout(view, settings.data?.taskTables[view]);
+  const saved = normalizeLayout(view, settings.data?.taskTables[view], fields);
   const layout = (pending ?? saved).map((c) =>
     dragWidth?.id === c.id ? { ...c, width: dragWidth.width } : c,
   );
   const shown = layout.filter((c) => !c.hidden);
   const defs = shown.map((c) => DEF.get(c.id)!);
   const template = shown.map((c) => `${c.width}px`).join(' ');
-  const rows = tableRows(sortTasks(tasks, sort, lookups), groupBy, lookups);
+  const filterField = lookups.fields.get(fieldFilter.fieldId);
+  const filtered = filterField
+    ? tasks.filter((t) =>
+        fieldMatches(filterField, t.customValues[filterField.id], fieldFilter.value),
+      )
+    : tasks;
+  const groupLabel = DEF.get(groupBy)?.label.toLocaleLowerCase() ?? groupBy;
+  const rows = tableRows(sortTasks(filtered, sort, lookups), groupBy, lookups, `No ${groupLabel}`);
+  const groups = [
+    ...GROUPS.filter((g) => g.views.includes(view)),
+    ...fields
+      .filter((f) => f.type === 'select' || f.type === 'checkbox')
+      .map((f) => ({ id: `field:${f.id}` as GroupBy, label: f.name, views: [view] })),
+  ];
 
   // Keep the focused cell inside the table when rows or columns change.
   const row = Math.min(focus.row, Math.max(0, rows.length - 1));
@@ -184,7 +209,12 @@ export function TaskTable({
     setPending(next);
     setDragWidth(null);
     const tables = settings.data?.taskTables ?? {};
-    const result = await window.api.settings.update({ taskTables: { ...tables, [view]: next } });
+    // Keep other projects' field columns, newest first, within the 40 columns allowed.
+    const others = (tables[view] ?? []).filter(
+      (c) => c.id.startsWith('field:') && !next.some((n) => n.id === c.id),
+    );
+    const merged = [...next, ...others].slice(0, 40);
+    const result = await window.api.settings.update({ taskTables: { ...tables, [view]: merged } });
     if (!result.ok) {
       setPending(null);
       toast({ message: result.error.message, tone: 'error' });
@@ -219,6 +249,8 @@ export function TaskTable({
   const commit = async (task: Task, column: ColumnId, value: string) => {
     setEditing(null);
     wantFocus.current = true;
+    const field = DEF.get(column)?.field;
+    if (field) return commitField(task, field, value);
     const before = editValue(task, column);
     if (value === before || (column === 'title' && !value.trim())) return;
     const ok = applyUpdate(
@@ -237,6 +269,31 @@ export function TaskTable({
           },
         },
       ],
+    });
+  };
+
+  /** A custom field's cell saves through its own channel, with the same Undo (ADR-0023). */
+  const commitField = async (task: Task, field: CustomField, text: string) => {
+    const before = task.customValues[field.id];
+    if (text === fieldEditValue(field, before)) return;
+    const value = parseFieldEdit(field, text);
+    if (value === undefined) {
+      return toast({ message: `“${field.name}” needs a number.`, tone: 'error' });
+    }
+    const save = async (next: CustomValue | null) => {
+      const result = await window.api.customFields.setValue({
+        taskId: task.id,
+        fieldId: field.id,
+        value: next,
+      });
+      invalidate();
+      if (!result.ok) toast({ message: result.error.message, tone: 'error' });
+      return result.ok;
+    };
+    if (!(await save(value))) return;
+    toast({
+      message: `Changed ${field.name} of “${task.title}”.`,
+      actions: [{ label: 'Undo', run: async () => void (await save(before ?? null)) }],
     });
   };
 
@@ -314,13 +371,16 @@ export function TaskTable({
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as GroupBy)}
           >
-            {GROUPS.filter((g) => g.views.includes(view)).map((g) => (
+            {groups.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.label}
               </option>
             ))}
           </select>
         </div>
+        {fields.length > 0 && (
+          <FieldFilter fields={fields} value={fieldFilter} onChange={setFieldFilter} />
+        )}
         <button type="button" className="btn btn--small" onClick={() => setColumnsOpen(true)}>
           <Columns3 aria-hidden /> Columns
         </button>
@@ -479,6 +539,7 @@ export function TaskTable({
         open={columnsOpen}
         view={view}
         layout={layout}
+        fields={fields}
         onClose={() => setColumnsOpen(false)}
         onChange={(next) => void saveLayout(next)}
       />
@@ -500,7 +561,11 @@ function CellEditor({
   onCommit: (value: string) => void;
   onCancel: () => void;
 }) {
-  const [value, setValue] = useState(editValue(task, def.id));
+  const [value, setValue] = useState(
+    def.field
+      ? fieldEditValue(def.field, task.customValues[def.field.id])
+      : editValue(task, def.id),
+  );
   const done = useRef(false);
   const finish = (commit: boolean, next = value) => {
     if (done.current) return;
@@ -524,11 +589,22 @@ function CellEditor({
     className: 'task-table__editor',
     onKeyDown,
   };
-  if (def.editor === 'text' || def.editor === 'date') {
+  const field = def.field;
+  const inputType =
+    def.editor === 'date' || field?.type === 'date'
+      ? 'date'
+      : field?.type === 'number'
+        ? 'number'
+        : 'text';
+  if (
+    def.editor === 'text' ||
+    def.editor === 'date' ||
+    (field && field.type !== 'select' && field.type !== 'checkbox')
+  ) {
     return (
       <input
         {...common}
-        type={def.editor === 'date' ? 'date' : 'text'}
+        type={inputType}
         value={value}
         maxLength={500}
         onChange={(e) => setValue(e.target.value)}
@@ -536,8 +612,14 @@ function CellEditor({
       />
     );
   }
-  const options =
-    def.editor === 'priority'
+  const options = field
+    ? field.type === 'checkbox'
+      ? [
+          { value: '', label: 'No' },
+          { value: 'yes', label: 'Yes' },
+        ]
+      : [{ value: '', label: '—' }, ...field.options.map((o) => ({ value: o.id, label: o.label }))]
+    : def.editor === 'priority'
       ? [
           { value: '', label: 'No priority' },
           ...PRIORITIES.map((p) => ({ value: p, label: PRIORITY_LABEL[p] })),
@@ -576,12 +658,14 @@ function ColumnsDialog({
   open,
   view,
   layout,
+  fields,
   onClose,
   onChange,
 }: {
   open: boolean;
   view: TableView;
   layout: TaskTableColumn[];
+  fields: CustomField[];
   onClose: () => void;
   onChange: (next: TaskTableColumn[]) => void;
 }) {
@@ -591,7 +675,7 @@ function ColumnsDialog({
     next.splice(index + step, 0, column!);
     onChange(next);
   };
-  const labels = new Map(columnsFor(view).map((c) => [c.id as string, c.label]));
+  const labels = new Map(columnsFor(view, fields).map((c) => [c.id as string, c.label]));
   return (
     <Dialog open={open} onClose={onClose} label="Table columns">
       {open && (
@@ -647,7 +731,7 @@ function ColumnsDialog({
             <button
               type="button"
               className="btn dialog__actions-start"
-              onClick={() => onChange(defaultLayout(view))}
+              onClick={() => onChange(defaultLayout(view, fields))}
             >
               Reset columns
             </button>
@@ -658,5 +742,69 @@ function ColumnsDialog({
         </div>
       )}
     </Dialog>
+  );
+}
+
+/** Choose a field and the value wanted (ADR-0023). */
+function FieldFilter({
+  fields,
+  value,
+  onChange,
+}: {
+  fields: CustomField[];
+  value: { fieldId: string; value: string };
+  onChange: (next: { fieldId: string; value: string }) => void;
+}) {
+  const id = useId();
+  const field = fields.find((f) => f.id === value.fieldId);
+  const choices = field
+    ? field.type === 'checkbox'
+      ? [
+          { value: 'yes', label: 'Yes' },
+          { value: 'no', label: 'No' },
+        ]
+      : field.type === 'select' || field.type === 'multi_select'
+        ? field.options.map((o) => ({ value: o.id, label: o.label }))
+        : null
+    : null;
+  return (
+    <div className="inline-field task-table__filter">
+      <label htmlFor={`${id}-field`}>Field filter</label>
+      <select
+        id={`${id}-field`}
+        value={value.fieldId}
+        onChange={(e) => onChange({ fieldId: e.target.value, value: '' })}
+      >
+        <option value="">None</option>
+        {fields.map((f) => (
+          <option key={f.id} value={f.id}>
+            {f.name}
+          </option>
+        ))}
+      </select>
+      {field && choices && (
+        <select
+          aria-label={`Value of ${field.name}`}
+          value={value.value}
+          onChange={(e) => onChange({ ...value, value: e.target.value })}
+        >
+          <option value="">Any</option>
+          {choices.map((c) => (
+            <option key={c.value} value={c.value}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      )}
+      {field && !choices && (
+        <input
+          aria-label={`Value of ${field.name}`}
+          className="input input--small"
+          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+          value={value.value}
+          onChange={(e) => onChange({ ...value, value: e.target.value })}
+        />
+      )}
+    </div>
   );
 }

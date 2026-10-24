@@ -18,6 +18,7 @@ import './styles/looks.css';
 import './styles/milestones.css';
 import './styles/activity.css';
 import './styles/table.css';
+import './styles/fields.css';
 import { App } from './app/App';
 
 const container = document.getElementById('root');
