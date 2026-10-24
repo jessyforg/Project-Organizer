@@ -2,6 +2,48 @@
 
 Newest entries first.
 
+## 2026-10-24 — Release 0.9.0, milestones (schema v8), awaiting the product owner's check before merging
+
+**Approval:** the product owner said "merge and push then continue 0.9.0". 0.8.0 was squash-merged and pushed as `2ad76b4`. The branch is `feature/milestones-0.9`, and decisions are recorded in [ADR-0020](DECISIONS/0020-milestones.md).
+
+**What was built:**
+- **Schema v8:**
+  - a `milestones` table;
+  - `tasks.milestone_id`, with database guards for "same project" and "top-level tasks only";
+  - the `favourites` table rebuilt so milestones can be starred.
+  - A committed `profile-v7.db` fixture has an upgrade test.
+- **`MilestoneService`:** R13 progress over the milestone's tasks and their subtasks; the dashboard and calendar queries.
+- **Trash:** milestones in the trash, alone or with their project.
+- **Task service:** assigning, filtering, and clearing on move.
+- **Interface:**
+  - the project page's Milestones section and dialog;
+  - the Milestone filter and the task details field;
+  - board cards, the Today section, and calendar entries;
+  - starred milestones, which open their filtered project.
+
+**Defects found and fixed during the work:**
+- **A stale milestone filter:** trashing a milestone while the list was filtered to it left an empty list. The end-to-end workflow caught it, and a milestone that is no longer shown now stops filtering.
+- **The backup workflow's one-off hang (first noted in 0.6.0), explained:**
+  - The test pressed Ctrl+, in the frame between the "Task added." toast and the New task dialog closing, while shortcuts are ignored because a dialog is open.
+  - The test now waits for the dialog to close. For a person the window is one frame, so the app is unchanged.
+- **The formatting-bubble workflow:** it failed twice in full runs with "inactive", because the window lost focus to another window. It now brings the window to the front before checking focus.
+
+**Open item: a zod advisory.**
+- `npm audit --omit=dev` now reports GHSA-mrhx-c7xc-m3w5 (high): zod below 4.6.6 can exhaust memory validating oversized constrained collections. It was published after the 0.8.0 check.
+- The fix, zod 4.6.6 or 4.6.7, was released on 2026-10-11 and 12, so it does not yet meet the two-week rule (SECURITY.md §6).
+- **Exposure:** zod checks input from the app's own sandboxed window and from backup files the user chooses, so the worst case is the app crashing on a crafted file.
+- **Recommendation:** upgrade to 4.6.7 on or after 2026-10-26, before 0.9.0 is merged.
+
+**Verification:**
+- **Checks:** typecheck, lint, and formatting are clean. 574 of 574 unit and component tests pass (25 new), with no unhandled errors, in the final runs.
+- **One unhandled error, not reproduced:** one earlier full run reported an unhandled error. It did not come back in 4 more runs, and its source was not captured.
+- **End to end:** 27 of 27 pass, in two consecutive clean full runs. That includes one new workflow (25), and axe scans of the milestone dialog, a project with an overdue milestone, and Today with milestones, in light and dark.
+- **Audit:** 1 high finding, the open item above.
+- **Screenshots:** reviewed in light and dark. One change came out of it: the flags in Today's Milestones list were resized.
+- **Test environment:** the laptop was very slow today, so the switcher's speed test now seeds its 5,000 tasks with SQL, and the My tasks paging test allows 30 s.
+  - Both measured the same on 0.8.0's code, so the app has not slowed down.
+  - The 100 ms search limit is unchanged.
+
 ## 2026-10-23 — Release 0.8.0, favourites, icons, and covers (schema v7), awaiting the product owner's check before merging
 
 **Approval:** the product owner said "merge and push then continue to 0.8.0". 0.7.0 was squash-merged and pushed as `51bd8ec`. The branch is `feature/personal-0.8`, and decisions are recorded in [ADR-0019](DECISIONS/0019-favourites-icons-covers.md).

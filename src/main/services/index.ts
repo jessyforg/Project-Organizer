@@ -8,6 +8,7 @@ import { FolderService } from './folders';
 import { AttachmentService } from './attachments';
 import { LinkService } from './links';
 import { LooksService } from './looks';
+import { MilestoneService } from './milestones';
 import { NoteFolderService } from './note-folders';
 import { NoteService } from './notes';
 import { ensureInbox, ProjectService } from './projects';
@@ -33,6 +34,7 @@ export interface ProfileServices {
   attachments: AttachmentService;
   favourites: FavouriteService;
   looks: LooksService;
+  milestones: MilestoneService;
   dependencies: DependencyService;
   trash: TrashService;
   search: SearchService;
@@ -54,6 +56,7 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
     attachments: new AttachmentService(ctx),
     favourites: new FavouriteService(ctx),
     looks: new LooksService(ctx),
+    milestones: new MilestoneService(ctx),
     dependencies: new DependencyService(ctx),
     trash: new TrashService(ctx),
     search: new SearchService(ctx),

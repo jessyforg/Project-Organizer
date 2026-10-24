@@ -15,6 +15,7 @@ import './styles/calendar.css';
 import './styles/editor.css';
 import './styles/palette.css';
 import './styles/looks.css';
+import './styles/milestones.css';
 import { App } from './app/App';
 
 const container = document.getElementById('root');

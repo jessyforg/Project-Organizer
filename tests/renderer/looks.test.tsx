@@ -148,6 +148,7 @@ const fav = (overrides: Partial<FavouriteItem>): FavouriteItem => ({
   icon: null,
   color: null,
   archived: false,
+  projectId: null,
   ...overrides,
 });
 

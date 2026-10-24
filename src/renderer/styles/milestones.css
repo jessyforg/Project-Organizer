@@ -1,0 +1,127 @@
+/* Milestones (ADR-0020). */
+
+.label--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.milestone-list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.milestone-list > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.milestone-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(120px, 180px) 132px auto;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
+}
+
+.milestone-row__flag {
+  width: 16px;
+  height: 16px;
+  color: var(--ink-faint);
+}
+
+.milestone-row__main {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.milestone-row__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+
+.milestone-row__description {
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.milestone-row__date {
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.milestone-row .meter {
+  gap: 2px;
+}
+
+.milestone-row .meter__text {
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 1100px) {
+  .milestone-row {
+    grid-template-columns: auto minmax(0, 1fr) minmax(100px, 140px) auto;
+  }
+
+  .milestone-row__date {
+    display: none;
+  }
+}
+
+/* A milestone on a Kanban card, in the calendar, and on the dashboard. */
+.milestone-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.milestone-chip svg {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+/* A milestone on the calendar: a flag instead of the project's colour. */
+.cal-item__flag {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  color: var(--accent-text);
+}
+
+.cal-item--milestone {
+  font-weight: 600;
+}
+
+.cal-items--day {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The dashboard's milestones share the project progress list; a small flag, like a swatch. */
+.project-progress .link > svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  color: var(--ink-faint);
+}

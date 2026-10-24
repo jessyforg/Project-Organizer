@@ -151,6 +151,7 @@ export interface TaskRow {
   prerequisite_ids: string;
   subtask_count: number;
   completed_subtask_count: number;
+  milestone_id: string | null;
 }
 
 export const TASK_SELECT = `
@@ -164,7 +165,10 @@ export const TASK_SELECT = `
            AS subtask_count,
          (SELECT count(*) FROM tasks c JOIN project_statuses cs ON cs.id = c.status_id
            WHERE c.parent_task_id = t.id AND c.deleted_at IS NULL AND cs.category = 'done')
-           AS completed_subtask_count
+           AS completed_subtask_count,
+         -- A milestone in the trash is not shown; its link comes back when it is restored.
+         (SELECT m.id FROM milestones m WHERE m.id = t.milestone_id AND m.deleted_at IS NULL)
+           AS milestone_id
   FROM tasks t
   JOIN project_statuses s ON s.id = t.status_id
   JOIN projects p ON p.id = t.project_id`;
@@ -189,6 +193,7 @@ export function toTask(row: TaskRow): Task {
     prerequisiteIds: idList(row.prerequisite_ids),
     subtaskCount: row.subtask_count,
     completedSubtaskCount: row.completed_subtask_count,
+    milestoneId: row.milestone_id,
   };
 }
 

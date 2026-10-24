@@ -64,6 +64,7 @@ describe('DashboardPage', () => {
           recentlyUpdated: [makeTask({ title: 'Touched' })],
           recentlyCompleted: [],
           activeProjects: [],
+          milestones: [],
           openTaskCount: 1,
           completedThisWeek: 0,
         }),

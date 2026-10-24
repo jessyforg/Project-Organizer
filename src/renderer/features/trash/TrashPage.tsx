@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FolderKanban, ListChecks, NotebookPen, RotateCcw, Trash2 } from 'lucide-react';
+import { Flag, FolderKanban, ListChecks, NotebookPen, RotateCcw, Trash2 } from 'lucide-react';
 import type { TrashEntry } from '@shared/domain';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useToast } from '../../app/toasts';
@@ -10,9 +10,10 @@ const KIND_LABEL: Record<TrashEntry['kind'], string> = {
   project: 'Project',
   task: 'Task',
   note: 'Note',
+  milestone: 'Milestone',
 };
 
-const KIND_ICON = { project: FolderKanban, task: ListChecks, note: NotebookPen };
+const KIND_ICON = { project: FolderKanban, task: ListChecks, note: NotebookPen, milestone: Flag };
 
 /** Recoverable deletion (R14): restore, delete permanently, or empty the trash. */
 export function TrashPage() {

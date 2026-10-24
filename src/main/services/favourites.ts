@@ -6,19 +6,34 @@ import { notFound, nowIso, type ServiceContext } from './context';
 
 interface Row {
   id: string;
-  kind: 'project' | 'note';
+  kind: 'project' | 'note' | 'milestone';
   item_id: string;
+  project_id: string | null;
   title: string;
   icon: string | null;
   color: string | null;
   archived: number;
 }
 
-const COLUMN = { project: 'project_id', note: 'note_id' } as const;
+const COLUMN = { project: 'project_id', note: 'note_id', milestone: 'milestone_id' } as const;
+
+const LIVE: Record<FavouriteTarget['kind'], { sql: string; what: string }> = {
+  project: { sql: 'SELECT 1 FROM projects WHERE id = ? AND deleted_at IS NULL', what: 'Project' },
+  note: {
+    sql: `SELECT 1 FROM notes n JOIN projects p ON p.id = n.project_id
+          WHERE n.id = ? AND n.deleted_at IS NULL AND p.deleted_at IS NULL`,
+    what: 'Note',
+  },
+  milestone: {
+    sql: `SELECT 1 FROM milestones m JOIN projects p ON p.id = m.project_id
+          WHERE m.id = ? AND m.deleted_at IS NULL AND p.deleted_at IS NULL`,
+    what: 'Milestone',
+  },
+};
 
 /**
- * Starred projects and notes, in the sidebar's order (ADR-0019). A favourite whose item, or
- * whose note's project, is in the trash keeps its row but is not listed, so restoring the item
+ * Starred projects, notes, and milestones (ADR-0020), in the sidebar's order (ADR-0019). A
+ * favourite whose item, or whose item's project, is in the trash keeps its row but is not listed, so restoring the item
  * brings the star back; deleting the item for good deletes the favourite with it.
  */
 export class FavouriteService {
@@ -28,15 +43,21 @@ export class FavouriteService {
     const rows = this.ctx.db
       .prepare(
         `SELECT * FROM (
-           SELECT f.id, 'project' AS kind, p.id AS item_id, p.name AS title, p.icon, p.color,
-                  p.archived_at IS NOT NULL AS archived, f.sort_key
+           SELECT f.id, 'project' AS kind, p.id AS item_id, NULL AS project_id, p.name AS title,
+                  p.icon, p.color, p.archived_at IS NOT NULL AS archived, f.sort_key
            FROM favourites f JOIN projects p ON p.id = f.project_id
            WHERE p.deleted_at IS NULL
            UNION ALL
-           SELECT f.id, 'note', n.id, n.title, n.icon, NULL,
+           SELECT f.id, 'note', n.id, NULL, n.title, n.icon, NULL,
                   n.archived_at IS NOT NULL OR p.archived_at IS NOT NULL, f.sort_key
            FROM favourites f JOIN notes n ON n.id = f.note_id JOIN projects p ON p.id = n.project_id
-           WHERE n.deleted_at IS NULL AND p.deleted_at IS NULL)
+           WHERE n.deleted_at IS NULL AND p.deleted_at IS NULL
+           UNION ALL
+           SELECT f.id, 'milestone', m.id, m.project_id, m.name, NULL, p.color,
+                  p.archived_at IS NOT NULL, f.sort_key
+           FROM favourites f JOIN milestones m ON m.id = f.milestone_id
+           JOIN projects p ON p.id = m.project_id
+           WHERE m.deleted_at IS NULL AND p.deleted_at IS NULL)
          ORDER BY sort_key, id`,
       )
       .all() as Row[];
@@ -44,6 +65,7 @@ export class FavouriteService {
       id: row.id,
       kind: row.kind,
       itemId: row.item_id,
+      projectId: row.project_id,
       title: row.title,
       icon: row.icon,
       color: row.color as ColorToken | null,
@@ -103,11 +125,6 @@ export class FavouriteService {
   }
 
   private requireLive({ kind, id }: FavouriteTarget): void {
-    const sql =
-      kind === 'project'
-        ? 'SELECT 1 FROM projects WHERE id = ? AND deleted_at IS NULL'
-        : `SELECT 1 FROM notes n JOIN projects p ON p.id = n.project_id
-           WHERE n.id = ? AND n.deleted_at IS NULL AND p.deleted_at IS NULL`;
-    if (!this.ctx.db.prepare(sql).get(id)) throw notFound(kind === 'project' ? 'Project' : 'Note');
+    if (!this.ctx.db.prepare(LIVE[kind].sql).get(id)) throw notFound(LIVE[kind].what);
   }
 }

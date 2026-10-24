@@ -113,6 +113,11 @@ export class TaskService {
       case undefined:
         break;
     }
+    // A subtask belongs to its parent's milestone (ADR-0020); a trashed milestone counts as none.
+    const milestone = `(SELECT m.id FROM milestones m WHERE m.deleted_at IS NULL AND m.id =
+      coalesce(t.milestone_id, (SELECT pt.milestone_id FROM tasks pt WHERE pt.id = t.parent_task_id)))`;
+    if (query.milestoneId === null) add(`${milestone} IS NULL`);
+    else if (query.milestoneId) add(`${milestone} = ?`, query.milestoneId);
     if (query.dueFrom) add('t.due_date >= ?', query.dueFrom);
     if (query.dueTo) add('t.due_date <= ?', query.dueTo);
     const fts = query.text === undefined ? null : toFtsQuery(query.text);
@@ -151,6 +156,8 @@ export class TaskService {
         throw new AppError('CONFLICT', 'Unarchive the project before adding tasks to it.');
       }
       const status = this.resolveStatus(projectId, input.statusId);
+      const milestoneId = input.milestoneId ?? null;
+      if (milestoneId !== null) this.requireMilestone(milestoneId, projectId, parentId);
       const startDate = input.startDate ?? null;
       const dueDate = input.dueDate ?? null;
       assertDateOrder(startDate, dueDate);
@@ -162,8 +169,8 @@ export class TaskService {
       const now = nowIso(this.ctx);
       db.prepare(
         `INSERT INTO tasks (id, project_id, parent_task_id, status_id, title, description, priority,
-           start_date, due_date, sort_key, completed_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           start_date, due_date, sort_key, completed_at, created_at, updated_at, milestone_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         id,
         projectId,
@@ -178,6 +185,7 @@ export class TaskService {
         status.category === 'done' ? now : null,
         now,
         now,
+        milestoneId,
       );
       this.insertTags(id, input.tagIds ?? []);
     })();
@@ -201,6 +209,9 @@ export class TaskService {
       dueDate: pick('dueDate'),
     };
     assertDateOrder(next.startDate, next.dueDate);
+    if (input.milestoneId) {
+      this.requireMilestone(input.milestoneId, current.projectId, current.parentTaskId);
+    }
 
     const now = nowIso(this.ctx);
     const wasDone = current.statusCategory === 'done';
@@ -223,6 +234,12 @@ export class TaskService {
         now,
         input.id,
       );
+    // Only when asked: a link to a milestone in the trash is kept until it is changed.
+    if (input.milestoneId !== undefined) {
+      this.ctx.db
+        .prepare('UPDATE tasks SET milestone_id = ? WHERE id = ?')
+        .run(input.milestoneId, input.id);
+    }
 
     const task = this.get(input.id);
     return { task, notices: this.noticesAfterStatusChange(current, task) };
@@ -297,7 +314,7 @@ export class TaskService {
         .get(input.projectId) as { k: number | null };
       const update = db.prepare(
         `UPDATE tasks SET project_id = ?, status_id = ?, completed_at = ?, sort_key = ?,
-           updated_at = ? WHERE id = ?`,
+           updated_at = ?, milestone_id = NULL WHERE id = ?`,
       );
       const moveOne = (
         id: string,
@@ -320,6 +337,23 @@ export class TaskService {
     })();
 
     return { task: this.get(task.id), removedDependencies: removed };
+  }
+
+  /** A live milestone of the task's project, for a top-level task (ADR-0020). */
+  private requireMilestone(milestoneId: string, projectId: string, parentId: string | null): void {
+    if (parentId !== null) {
+      throw new AppError(
+        'VALIDATION_FAILED',
+        'Subtasks follow their parent task’s milestone; set it on the parent.',
+      );
+    }
+    const milestone = this.ctx.db
+      .prepare('SELECT project_id FROM milestones WHERE id = ? AND deleted_at IS NULL')
+      .get(milestoneId) as { project_id: string } | undefined;
+    if (!milestone) throw notFound('Milestone');
+    if (milestone.project_id !== projectId) {
+      throw new AppError('VALIDATION_FAILED', 'Choose a milestone of the task’s project.');
+    }
   }
 
   /** Manual ordering among siblings: before `beforeTaskId`, or last when null. */

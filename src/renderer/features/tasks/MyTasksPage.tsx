@@ -16,6 +16,7 @@ export const MY_TASKS_DEFAULTS: TaskFilters = {
   due: '',
   tagId: '',
   projectId: '',
+  milestone: '',
   sort: 'priority',
 };
 

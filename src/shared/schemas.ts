@@ -113,6 +113,8 @@ export const createTaskSchema = z.strictObject({
   startDate: isoDateSchema.nullable().optional(),
   dueDate: isoDateSchema.nullable().optional(),
   tagIds: idList.optional(),
+  /** Top-level tasks only (ADR-0020). */
+  milestoneId: id.nullable().optional(),
 });
 export const updateTaskSchema = z.strictObject({
   id,
@@ -122,6 +124,7 @@ export const updateTaskSchema = z.strictObject({
   priority: priority.nullable().optional(),
   startDate: isoDateSchema.nullable().optional(),
   dueDate: isoDateSchema.nullable().optional(),
+  milestoneId: id.nullable().optional(),
 });
 export const moveTaskSchema = z.strictObject({ id, projectId: id });
 /** Places the task before `beforeTaskId` among its siblings, or last when null. */
@@ -148,11 +151,30 @@ export const taskListQuerySchema = z.strictObject({
   dueFrom: isoDateSchema.optional(),
   dueTo: isoDateSchema.optional(),
   text: z.string().max(LIMITS.searchText).optional(),
+  /** A milestone's tasks, or null for tasks without a (live) milestone (ADR-0020). */
+  milestoneId: id.nullable().optional(),
   includeArchived: z.boolean().optional(),
   sort: z.enum(TASK_SORTS).optional(),
   limit: z.number().int().min(1).max(LIMITS.listPageSize).optional(),
   offset: z.number().int().min(0).optional(),
 });
+
+// Milestones (ADR-0020)
+export const createMilestoneSchema = z.strictObject({
+  projectId: id,
+  name,
+  description: description.nullable().optional(),
+  targetDate: isoDateSchema.nullable().optional(),
+});
+export const updateMilestoneSchema = z.strictObject({
+  id,
+  name: name.optional(),
+  description: description.nullable().optional(),
+  targetDate: isoDateSchema.nullable().optional(),
+});
+export const milestoneRangeSchema = z
+  .strictObject({ from: isoDateSchema, to: isoDateSchema })
+  .refine((r) => r.from <= r.to, 'The range must end on or after its start.');
 
 // Notes
 /** Newest update first, newest created first, or title A–Z. */
@@ -226,8 +248,12 @@ export const switcherSearchSchema = z.strictObject({
 export const switcherRecentSchema = z.strictObject({ includeArchived: z.boolean().optional() });
 /** Favourites, icons, and covers belong to a project or a note (ADR-0019). */
 const looksTarget = { kind: z.enum(['project', 'note']), id };
-export const favouriteTargetSchema = z.strictObject(looksTarget);
-export const setFavouriteSchema = z.strictObject({ ...looksTarget, starred: z.boolean() });
+/** Milestones can be starred too (ADR-0020), but have no icon or cover. */
+export const favouriteTargetSchema = z.strictObject({
+  kind: z.enum(['project', 'note', 'milestone']),
+  id,
+});
+export const setFavouriteSchema = favouriteTargetSchema.extend({ starred: z.boolean() });
 export const setIconSchema = z.strictObject({
   ...looksTarget,
   value: z.enum(ICON_VALUES).nullable(),
@@ -259,7 +285,11 @@ export const emptySchema = z.strictObject({});
 
 export type SwitcherQuery = z.output<typeof switcherSearchSchema>;
 export type FavouriteTarget = z.output<typeof favouriteTargetSchema>;
+export type CreateMilestoneInput = z.output<typeof createMilestoneSchema>;
+export type UpdateMilestoneInput = z.output<typeof updateMilestoneSchema>;
 export type SetIconInput = z.output<typeof setIconSchema>;
+/** A project or note, whose icon and cover can change (ADR-0019). */
+export type LooksTarget = Pick<SetIconInput, 'kind' | 'id'>;
 export type SetCoverInput = z.output<typeof setCoverSchema>;
 export type AddCoverImageInput = z.output<typeof addCoverImageSchema>;
 export type CreateFolderInput = z.output<typeof createFolderSchema>;

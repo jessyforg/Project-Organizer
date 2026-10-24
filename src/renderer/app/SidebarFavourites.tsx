@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ExternalLink, NotebookPen, StarOff } from 'lucide-react';
+import { ArrowDown, ArrowUp, ExternalLink, Flag, NotebookPen, StarOff } from 'lucide-react';
 import type { FavouriteItem } from '@shared/domain';
 import { Swatch, useContextMenu, type MenuItem } from '../components/ui';
 import { ItemIcon } from '../features/looks/ItemIcon';
@@ -7,11 +7,16 @@ import { useInvalidate, useQuery } from './data';
 import { useNavigation, type Route } from './navigation';
 import { useToast } from './toasts';
 
+/** A milestone opens its project, filtered to it (ADR-0020). */
 const routeOf = (f: FavouriteItem): Route =>
-  f.kind === 'project' ? { name: 'project', id: f.itemId } : { name: 'notes', noteId: f.itemId };
+  f.kind === 'project'
+    ? { name: 'project', id: f.itemId }
+    : f.kind === 'milestone'
+      ? { name: 'project', id: f.projectId!, milestoneId: f.itemId }
+      : { name: 'notes', noteId: f.itemId };
 
 /**
- * Starred projects and notes at the top of the sidebar (ADR-0019), shown once anything is
+ * Starred projects, notes, and milestones at the top of the sidebar (ADR-0019), shown once anything is
  * starred. Reordered by drag and drop, or with Move up and Move down in each row's right-click
  * menu (also Shift+F10).
  */
@@ -48,8 +53,10 @@ export function SidebarFavourites() {
 
   const isCurrent = (f: FavouriteItem) =>
     f.kind === 'project'
-      ? route.name === 'project' && route.id === f.itemId
-      : route.name === 'notes' && route.noteId === f.itemId;
+      ? route.name === 'project' && route.id === f.itemId && !route.milestoneId
+      : f.kind === 'milestone'
+        ? route.name === 'project' && route.milestoneId === f.itemId
+        : route.name === 'notes' && route.noteId === f.itemId;
 
   const menuFor = (f: FavouriteItem, index: number): MenuItem[] => [
     { label: 'Open', icon: ExternalLink, onSelect: () => navigate(routeOf(f)) },
@@ -117,6 +124,8 @@ export function SidebarFavourites() {
                 <ItemIcon value={f.icon} />
               ) : f.kind === 'project' ? (
                 <Swatch color={f.color} />
+              ) : f.kind === 'milestone' ? (
+                <Flag aria-hidden />
               ) : (
                 <NotebookPen aria-hidden />
               )}

@@ -7,11 +7,12 @@ import {
 import { daysAfter, daysBefore } from '../domain/dates';
 import { AppError } from '../errors';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
+import { MilestoneService } from './milestones';
 import { requireLiveProject } from './projects';
 
 interface BatchRow {
   batch_id: string;
-  kind: 'project' | 'task' | 'note';
+  kind: 'project' | 'task' | 'note' | 'milestone';
   title: string;
   project_name: string | null;
   deleted_at: string;
@@ -75,7 +76,23 @@ export class TrashService {
     return { batchId };
   }
 
-  /** Moves a project and all its live tasks and notes to the trash as one batch. */
+  /**
+   * Moves a milestone to the trash (ADR-0020). Its tasks stay in the project and keep their link,
+   * which shows again when the milestone is restored.
+   */
+  trashMilestone(milestoneId: string): { batchId: string } {
+    new MilestoneService(this.ctx).requireEditable(milestoneId);
+    const batchId = this.ctx.newId();
+    const now = nowIso(this.ctx);
+    this.ctx.db
+      .prepare(
+        'UPDATE milestones SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE id = ?',
+      )
+      .run(now, batchId, now, milestoneId);
+    return { batchId };
+  }
+
+  /** Moves a project and all its live tasks, notes, and milestones to the trash as one batch. */
   trashProject(projectId: string): { batchId: string } {
     const { db } = this.ctx;
     const project = requireLiveProject(db, projectId);
@@ -92,6 +109,9 @@ export class TrashService {
         'UPDATE notes SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE project_id = ? AND deleted_at IS NULL',
       ).run(now, batchId, now, projectId);
       db.prepare(
+        'UPDATE milestones SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE project_id = ? AND deleted_at IS NULL',
+      ).run(now, batchId, now, projectId);
+      db.prepare(
         'UPDATE projects SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE id = ?',
       ).run(now, batchId, now, projectId);
     })();
@@ -105,6 +125,7 @@ export class TrashService {
                 NULL AS project_name, p.deleted_at,
                 1 + (SELECT count(*) FROM tasks t WHERE t.deletion_batch_id = p.deletion_batch_id)
                   + (SELECT count(*) FROM notes n WHERE n.deletion_batch_id = p.deletion_batch_id)
+                  + (SELECT count(*) FROM milestones m WHERE m.deletion_batch_id = p.deletion_batch_id)
                   AS item_count
          FROM projects p WHERE p.deleted_at IS NOT NULL
          UNION ALL
@@ -121,6 +142,11 @@ export class TrashService {
          FROM notes n JOIN projects p ON p.id = n.project_id
          WHERE n.deleted_at IS NOT NULL
            AND NOT EXISTS (SELECT 1 FROM projects bp WHERE bp.deletion_batch_id = n.deletion_batch_id)
+         UNION ALL
+         SELECT m.deletion_batch_id, 'milestone', m.name, p.name, m.deleted_at, 1
+         FROM milestones m JOIN projects p ON p.id = m.project_id
+         WHERE m.deleted_at IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM projects bp WHERE bp.deletion_batch_id = m.deletion_batch_id)
          ORDER BY deleted_at DESC, batch_id`,
       )
       .all() as BatchRow[];
@@ -168,10 +194,23 @@ export class TrashService {
            FROM notes n WHERE n.deletion_batch_id = ?`,
         )
         .all(batchId) as { id: string; project_trashed: number }[];
-      if (projects.length === 0 && tasks.length === 0 && notes.length === 0) {
+      const milestones = db
+        .prepare(
+          `SELECT m.id,
+                  (SELECT p.deleted_at IS NOT NULL AND p.deletion_batch_id IS NOT m.deletion_batch_id
+                   FROM projects p WHERE p.id = m.project_id) AS project_trashed
+           FROM milestones m WHERE m.deletion_batch_id = ?`,
+        )
+        .all(batchId) as { id: string; project_trashed: number }[];
+      if (
+        projects.length === 0 &&
+        tasks.length === 0 &&
+        notes.length === 0 &&
+        milestones.length === 0
+      ) {
         throw notFound('Trash item');
       }
-      if ([...tasks, ...notes].some((item) => item.project_trashed === 1)) {
+      if ([...tasks, ...notes, ...milestones].some((item) => item.project_trashed === 1)) {
         throw new AppError('CONFLICT', 'Restore the project first; it is also in the trash.');
       }
       if (tasks.some((t) => t.parent_trashed === 1)) {
@@ -188,6 +227,9 @@ export class TrashService {
       db.prepare(
         'UPDATE notes SET deleted_at = NULL, deletion_batch_id = NULL, updated_at = ? WHERE deletion_batch_id = ?',
       ).run(now, batchId);
+      db.prepare(
+        'UPDATE milestones SET deleted_at = NULL, deletion_batch_id = NULL, updated_at = ? WHERE deletion_batch_id = ?',
+      ).run(now, batchId);
 
       const unresolved = tasks.length
         ? (db
@@ -203,6 +245,7 @@ export class TrashService {
         restoredProjects: projects.length,
         restoredTasks: tasks.length,
         restoredNotes: notes.length,
+        restoredMilestones: milestones.length,
         unresolvedDependencies: unresolved.map((u) => ({
           taskId: u.task_id,
           prerequisiteId: u.depends_on_task_id,
@@ -229,14 +272,16 @@ export class TrashService {
 
   private allBatchIds(deletedBefore?: string): string[] {
     const filter = deletedBefore === undefined ? '' : 'AND deleted_at < ?';
-    const args = deletedBefore === undefined ? [] : [deletedBefore, deletedBefore, deletedBefore];
+    const args = deletedBefore === undefined ? [] : Array<string>(4).fill(deletedBefore);
     const rows = this.ctx.db
       .prepare(
         `SELECT deletion_batch_id AS id FROM projects WHERE deleted_at IS NOT NULL ${filter}
          UNION
          SELECT deletion_batch_id FROM tasks WHERE deleted_at IS NOT NULL ${filter}
          UNION
-         SELECT deletion_batch_id FROM notes WHERE deleted_at IS NOT NULL ${filter}`,
+         SELECT deletion_batch_id FROM notes WHERE deleted_at IS NOT NULL ${filter}
+         UNION
+         SELECT deletion_batch_id FROM milestones WHERE deleted_at IS NOT NULL ${filter}`,
       )
       .all(...args) as { id: string }[];
     return rows.map((r) => r.id);
@@ -254,11 +299,15 @@ export class TrashService {
       const deleteProjects = db.prepare('DELETE FROM projects WHERE deletion_batch_id = ?');
       const deleteTasks = db.prepare('DELETE FROM tasks WHERE deletion_batch_id = ?');
       const deleteNotes = db.prepare('DELETE FROM notes WHERE deletion_batch_id = ?');
+      const deleteMilestones = db.prepare('DELETE FROM milestones WHERE deletion_batch_id = ?');
       for (const batchId of batchIds) {
+        // Milestones before their project, so the count includes them; deleting one clears
+        // its tasks' links (ON DELETE SET NULL).
         const changes =
-          deleteProjects.run(batchId).changes +
           deleteTasks.run(batchId).changes +
-          deleteNotes.run(batchId).changes;
+          deleteNotes.run(batchId).changes +
+          deleteMilestones.run(batchId).changes +
+          deleteProjects.run(batchId).changes;
         if (changes > 0) purged++;
       }
       return purged;

@@ -42,6 +42,8 @@ test('backup: export encrypted, test restore, restore into a new profile, JSON e
   await page.getByRole('dialog').getByLabel('Title').fill('Secret launch plan');
   await page.keyboard.press('Enter');
   await expect(page.getByText('Task added.')).toBeVisible();
+  // Shortcuts are ignored while a dialog is open, and the dialog closes a frame after the toast.
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 
   // Export an encrypted backup.
   await page.keyboard.press('Control+,');

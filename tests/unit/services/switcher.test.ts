@@ -1,7 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { RECENT_LIMIT } from '../../../src/main/services/switcher';
 import { ipcContract } from '../../../src/shared/ipc-contract';
-import { setupProfile } from './setup';
+import { setupProfile, statusOf } from './setup';
 
 const MISSING = '9f8e7d6c-5b4a-4392-8170-6f5e4d3c2b1a';
 
@@ -120,12 +121,20 @@ describe('quick switcher search (ADR-0018)', () => {
 
   it('answers within 100 ms with 5,000 tasks', async () => {
     const p = await setupProfile();
-    const insert = p.db.transaction(() => {
+    // Seeded with SQL (the search index fills through its triggers): only the search is timed,
+    // and creating 5,000 tasks through the service takes too long on a slow machine.
+    const status = statusOf(p, p.inboxId, 'todo').id;
+    const row = p.db.prepare(
+      `INSERT INTO tasks (id, project_id, status_id, title, description, sort_key, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'Body text', ?, 'x', ?)`,
+    );
+    p.db.transaction(() => {
       for (let i = 0; i < 5000; i += 1) {
-        p.tasks.create({ title: `Task ${i} about invoices and reports`, description: 'Body text' });
+        const at = `2026-03-10T09:00:${String(i % 60).padStart(2, '0')}.000Z`;
+        row.run(randomUUID(), p.inboxId, status, `Task ${i} about invoices and reports`, i, at);
       }
-    });
-    insert();
+    })();
+    expect(p.db.prepare('SELECT count(*) AS n FROM tasks_fts').get()).toEqual({ n: 5000 });
     p.switcher.search({ text: 'warm up' });
     // Best of three per query, so a pause from another test worker or garbage collection does
     // not count; a slow query (say, a missed index) is slow every time. Typical: 3–40 ms.

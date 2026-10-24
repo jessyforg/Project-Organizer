@@ -1,6 +1,7 @@
 import type { Dashboard } from '@shared/domain';
 import { daysBefore } from '../domain/dates';
 import { today, type ServiceContext } from './context';
+import { MilestoneService } from './milestones';
 import { ProjectService } from './projects';
 import { TaskService } from './tasks';
 
@@ -58,6 +59,7 @@ export class DashboardService {
       activeProjects: this.projects
         .listWithProgress()
         .filter((p) => p.status === 'active' && !p.isInbox),
+      milestones: new MilestoneService(this.ctx).dueSoon(),
       openTaskCount: counts.open_count ?? 0,
       completedThisWeek: counts.completed_week ?? 0,
     };

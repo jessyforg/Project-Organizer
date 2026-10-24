@@ -5,6 +5,8 @@ import type {
   Backlink,
   Dashboard,
   FavouriteItem,
+  Milestone,
+  MilestoneEntry,
   Folder,
   Note,
   NoteBacklinks,
@@ -133,6 +135,11 @@ export const ipcContract = {
   'tasks:move': s.moveTaskSchema,
   'tasks:reorder': s.reorderTaskSchema,
   'tasks:moveOnBoard': s.moveOnBoardSchema,
+  'milestones:list': s.projectIdSchema,
+  'milestones:inRange': s.milestoneRangeSchema,
+  'milestones:create': s.createMilestoneSchema,
+  'milestones:update': s.updateMilestoneSchema,
+  'milestones:setCompleted': s.setCompletedSchema,
   'notes:list': s.noteListQuerySchema,
   'notes:get': s.idSchema,
   'notes:create': s.createNoteSchema,
@@ -166,6 +173,7 @@ export const ipcContract = {
   'trash:trashTask': s.idSchema,
   'trash:trashProject': s.idSchema,
   'trash:trashNote': s.idSchema,
+  'trash:trashMilestone': s.idSchema,
   'trash:restore': s.batchSchema,
   'trash:deletePermanently': s.batchSchema,
   'trash:empty': s.emptySchema,
@@ -244,6 +252,11 @@ export interface IpcResponses {
   'tasks:move': { task: Task; removedDependencies: number };
   'tasks:reorder': Task;
   'tasks:moveOnBoard': TaskUpdateResult;
+  'milestones:list': Milestone[];
+  'milestones:inRange': MilestoneEntry[];
+  'milestones:create': Milestone;
+  'milestones:update': Milestone;
+  'milestones:setCompleted': Milestone;
   'notes:list': NoteSummary[];
   'notes:get': Note;
   'notes:create': Note;
@@ -277,6 +290,7 @@ export interface IpcResponses {
   'trash:trashTask': { batchId: string };
   'trash:trashProject': { batchId: string };
   'trash:trashNote': { batchId: string };
+  'trash:trashMilestone': { batchId: string };
   'trash:restore': RestoreResult;
   'trash:deletePermanently': null;
   'trash:empty': { removed: number };

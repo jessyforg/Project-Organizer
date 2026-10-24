@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { Search, X } from 'lucide-react';
 import {
   PRIORITIES,
+  type Milestone,
   type Priority,
   type Project,
   type StatusCategory,
@@ -20,6 +21,8 @@ export interface TaskFilters {
   due: DueFilter;
   tagId: string;
   projectId: string;
+  /** '' for any, 'none' for tasks without one, or a milestone's ID (ADR-0020). */
+  milestone: string;
   sort: SortKey;
 }
 
@@ -33,6 +36,9 @@ export function filtersToQuery(filters: TaskFilters): TaskListQuery {
     ...(filters.due ? { due: filters.due } : {}),
     ...(filters.tagId ? { tagIds: [filters.tagId] } : {}),
     ...(filters.projectId ? { projectId: filters.projectId } : {}),
+    ...(filters.milestone
+      ? { milestoneId: filters.milestone === 'none' ? null : filters.milestone }
+      : {}),
   };
 }
 
@@ -48,10 +54,20 @@ interface Props {
   onChange: (next: TaskFilters) => void;
   tags: Tag[];
   projects?: Project[];
+  /** The project's milestones, to filter by (ADR-0020). */
+  milestones?: Milestone[];
   allowManualSort?: boolean;
 }
 
-export function FilterBar({ value, defaults, onChange, tags, projects, allowManualSort }: Props) {
+export function FilterBar({
+  value,
+  defaults,
+  onChange,
+  tags,
+  projects,
+  milestones,
+  allowManualSort,
+}: Props) {
   const id = useId();
   const set = <K extends keyof TaskFilters>(key: K, next: TaskFilters[K]) =>
     onChange({ ...value, [key]: next });
@@ -101,6 +117,24 @@ export function FilterBar({ value, defaults, onChange, tags, projects, allowManu
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {milestones && (milestones.length > 0 || value.milestone) && (
+          <div className="inline-field">
+            <label htmlFor={`${id}-milestone`}>Milestone</label>
+            <select
+              id={`${id}-milestone`}
+              value={value.milestone}
+              onChange={(e) => set('milestone', e.target.value)}
+            >
+              <option value="">Any milestone</option>
+              <option value="none">No milestone</option>
+              {milestones.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
                 </option>
               ))}
             </select>

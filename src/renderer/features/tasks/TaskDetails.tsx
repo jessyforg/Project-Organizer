@@ -50,6 +50,9 @@ function TaskEditor({ task }: { task: Task }) {
   const statuses = useQuery(`statuses:${task.projectId}`, () =>
     window.api.statuses.list({ projectId: task.projectId }),
   );
+  const milestones = useQuery(`milestones:${task.projectId}`, () =>
+    window.api.milestones.list({ projectId: task.projectId }),
+  );
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? '');
   const [trashPreview, setTrashPreview] = useState<TaskTrashPreview | null>(null);
@@ -240,6 +243,27 @@ function TaskEditor({ task }: { task: Task }) {
           </p>
         )}
       </div>
+
+      {/* Only top-level tasks have a milestone; subtasks count through their parent (ADR-0020). */}
+      {task.parentTaskId === null && (milestones.data ?? []).length > 0 && (
+        <div className="field">
+          <label htmlFor={`${id}-milestone`}>Milestone</label>
+          <select
+            id={`${id}-milestone`}
+            className="select"
+            value={task.milestoneId ?? ''}
+            onChange={(e) => void update({ milestoneId: e.target.value || null })}
+          >
+            <option value="">No milestone</option>
+            {(milestones.data ?? []).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+                {m.completedAt ? ' (done)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <TaskTags task={task} />
 

@@ -184,6 +184,21 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(nav.getByRole('list', { name: 'Favourites' })).toBeVisible();
     await expectNoViolations(page, 'Project with an icon, a cover, and favourites');
 
+    // Milestones (ADR-0020): the dialog, an overdue one, and where they appear.
+    await page.getByRole('button', { name: 'New milestone' }).click();
+    await expectNoViolations(page, 'New milestone dialog');
+    const milestoneDialog = page.getByRole('dialog', { name: 'New milestone' });
+    await milestoneDialog.getByLabel('Name').fill('Beta');
+    await milestoneDialog.getByLabel('Target date').fill('2020-01-15');
+    await milestoneDialog.getByRole('button', { name: 'Create milestone' }).click();
+    await expect(page.getByRole('list', { name: 'Milestones in Website' })).toContainText(
+      'Overdue',
+    );
+    await expectNoViolations(page, 'Project with an overdue milestone');
+    await nav.getByRole('button', { name: 'Today' }).click();
+    await expect(page.getByRole('region', { name: 'Milestones' })).toBeVisible();
+    await expectNoViolations(page, 'Today with milestones');
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');

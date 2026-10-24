@@ -12,7 +12,8 @@ export type Route =
   | { name: 'dashboard' }
   | { name: 'tasks' }
   | { name: 'projects' }
-  | { name: 'project'; id: string }
+  /** `milestoneId` opens the project filtered to that milestone (ADR-0020). */
+  | { name: 'project'; id: string; milestoneId?: string }
   /** `focus` opens the note in focus mode (Ctrl+click on a note link, ADR-0017). */
   | { name: 'notes'; noteId: string | null; projectId?: string; focus?: boolean }
   | { name: 'calendar' }

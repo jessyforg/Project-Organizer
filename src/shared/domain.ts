@@ -110,6 +110,29 @@ export interface Task {
   prerequisiteIds: string[];
   subtaskCount: number;
   completedSubtaskCount: number;
+  /** The task's milestone (ADR-0020); null when it has none or its milestone is in the trash. */
+  milestoneId: string | null;
+}
+
+/** A checkpoint in a project (ADR-0020). Tasks belong to at most one milestone. */
+export interface Milestone {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  targetDate: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** R13 rules over the milestone's top-level tasks and their subtasks. */
+  progress: Progress;
+  favourite: boolean;
+}
+
+/** A milestone with its project, for the calendar and the dashboard. */
+export interface MilestoneEntry extends Milestone {
+  projectName: string;
+  projectColor: ColorToken | null;
 }
 
 /** Calculated progress. `ratio` is null when nothing is countable (shown as "—"). */
@@ -146,9 +169,9 @@ export interface TaskTrashPreview {
 
 export interface TrashEntry {
   batchId: string;
-  kind: 'project' | 'task' | 'note';
+  kind: 'project' | 'task' | 'note' | 'milestone';
   title: string;
-  /** For task and note entries: the project the item belongs to. */
+  /** For task, note, and milestone entries: the project the item belongs to. */
   projectName: string | null;
   itemCount: number;
   deletedAt: string;
@@ -159,6 +182,7 @@ export interface RestoreResult {
   restoredProjects: number;
   restoredTasks: number;
   restoredNotes: number;
+  restoredMilestones: number;
   /** Dependencies of restored tasks whose prerequisite is still in the trash. */
   unresolvedDependencies: { taskId: string; prerequisiteId: string }[];
 }
@@ -207,8 +231,10 @@ export interface Note {
 export interface FavouriteItem {
   /** The favourite's own ID, used to reorder. */
   id: string;
-  kind: 'project' | 'note';
+  kind: 'project' | 'note' | 'milestone';
   itemId: string;
+  /** A milestone's project, which opens filtered to it (ADR-0020); null otherwise. */
+  projectId: string | null;
   title: string;
   icon: string | null;
   /** A project's colour, shown when it has no icon. */
@@ -340,6 +366,8 @@ export interface Dashboard {
   recentlyUpdated: Task[];
   recentlyCompleted: Task[];
   activeProjects: ProjectListItem[];
+  /** Open milestones: overdue first, then due within the upcoming days (ADR-0020). */
+  milestones: MilestoneEntry[];
   openTaskCount: number;
   completedThisWeek: number;
 }

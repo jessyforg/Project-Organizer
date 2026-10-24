@@ -162,16 +162,17 @@ PK (source_note_id, target_kind, target_id).
 
 Since schema v7, a file can also be a cover image (`note_id` is null for a project's cover). Clean-up counts a file named by any project's or note's `cover` as in use.
 
-**favourites** (schema v7, [ADR-0019](DECISIONS/0019-favourites-icons-covers.md))
+**favourites** (schema v7, [ADR-0019](DECISIONS/0019-favourites-icons-covers.md); rebuilt in v8 for milestones)
 | Column | Type | Notes |
 |---|---|---|
 | id | TEXT PK | |
 | project_id | TEXT NULL → projects(id) ON DELETE CASCADE | Unique when set |
 | note_id | TEXT NULL → notes(id) ON DELETE CASCADE | Unique when set |
+| milestone_id | TEXT NULL → milestones(id) ON DELETE CASCADE | Unique when set (v8) |
 | sort_key | INTEGER NOT NULL | Order in the sidebar |
 | created_at | TEXT NOT NULL | |
 
-`CHECK ((project_id IS NULL) <> (note_id IS NULL))`: each favourite names exactly one item.
+`CHECK` (since v8): exactly one of `project_id`, `note_id`, and `milestone_id` is set, so each favourite names one item.
 - **Trash:** a favourite whose item, or whose note's project, is in the trash is not listed. Restoring the item brings it back.
 - **Reordering:** the listed favourites swap their keys among themselves, so hidden ones keep their place.
 
@@ -179,6 +180,24 @@ Since schema v7, a file can also be a cover image (`note_id` is null for a proje
 - **Icons:** `emoji:<character>` or `lucide:<name>`, checked against the 60 values in `src/shared/icons.ts`.
 - **Covers:** `preset:<name>` (16 presets in `src/shared/covers.ts`) or `image:<attachment id>`.
 - Null means the usual look.
+
+**milestones** (schema v8, [ADR-0020](DECISIONS/0020-milestones.md))
+| Column | Type | Notes |
+|---|---|---|
+| id | TEXT PK | |
+| project_id | TEXT NOT NULL → projects(id) ON DELETE CASCADE | |
+| name | TEXT NOT NULL CHECK(length(trim(name)) > 0) | |
+| description | TEXT NULL | |
+| target_date | TEXT NULL CHECK(YYYY-MM-DD) | Overdue when before today and not complete |
+| completed_at | TEXT NULL | Completing never changes the tasks |
+| created_at, updated_at | TEXT NOT NULL | |
+| deleted_at, deletion_batch_id | TEXT NULL | Trash, set together; a project's trash batch includes its milestones |
+
+**tasks.milestone_id** (v8): a nullable TEXT referencing `milestones(id) ON DELETE SET NULL`.
+- **Database guards:** triggers keep a task's milestone within the task's project, and give milestones only to top-level tasks.
+- **Trash:** while the milestone is in the trash, the link is kept but not shown, so restoring brings it back. Deleting the milestone for good clears the link.
+- **Moving:** moving a task to another project clears its milestone.
+- **Progress:** R13 rules over the milestone's live top-level tasks and their live subtasks.
 
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
@@ -197,7 +216,7 @@ Only top-level tasks move between projects; their subtasks (including trashed on
 - `tasks(project_id, deleted_at)`, `tasks(parent_task_id)`, `tasks(status_id)`, `tasks(due_date) WHERE deleted_at IS NULL`, `tasks(updated_at)`, `tasks(deletion_batch_id)`.
 - `projects(deleted_at, archived_at)`, `projects(folder_id)`, `projects(deletion_batch_id)`.
 - `task_dependencies(depends_on_task_id)`, `task_tags(tag_id)`, `project_tags(tag_id)`, `note_tags(tag_id)`.
-- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(archived_at)` (partial, archived only), `notes(updated_at)`, `notes(deletion_batch_id)`, `note_links(target_kind, target_id)` (backlinks), and the two partial unique indexes on `favourites`. Note lists read only the first 600 characters of each body (for the excerpt).
+- `notes(project_id, deleted_at)`, `notes(folder_id, deleted_at)`, `notes(archived_at)` (partial, archived only), `notes(updated_at)`, `notes(deletion_batch_id)`, `note_links(target_kind, target_id)` (backlinks), and the three partial unique indexes on `favourites`; `milestones(project_id, deleted_at)`, `milestones(target_date)` (live only), `milestones(deletion_batch_id)`, and `tasks(milestone_id)` (partial). Note lists read only the first 600 characters of each body (for the excerpt).
 - Full-text search: FTS5 tables `tasks_fts` (title, description), `projects_fts` (name, description), and `notes_fts` (title, body) with the `unicode61 remove_diacritics 2` tokenizer, so "cafe" finds "Café". Each keeps its own copy keyed by ID rather than rowid, so it stays correct even if SQLite renumbers rowids; triggers keep it in sync. User input is converted to quoted prefix terms, so search text is never interpreted as query syntax.
 - Measured in Phase 3 with 6,250 tasks: list, filter, and search queries 3–38 ms; progress for 20 projects 21 ms.
 

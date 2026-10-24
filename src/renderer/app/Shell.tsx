@@ -85,7 +85,9 @@ export function Shell({
         {route.name === 'dashboard' && <DashboardPage />}
         {route.name === 'tasks' && <MyTasksPage />}
         {route.name === 'projects' && <ProjectsPage />}
-        {route.name === 'project' && <ProjectPage projectId={route.id} />}
+        {route.name === 'project' && (
+          <ProjectPage projectId={route.id} milestoneId={route.milestoneId} />
+        )}
         {route.name === 'calendar' && <CalendarPage />}
         {route.name === 'notes' && <NotesPage noteId={route.noteId} projectId={route.projectId} />}
         {route.name === 'search' && <SearchPage text={route.text} />}

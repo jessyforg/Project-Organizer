@@ -1,4 +1,4 @@
-import { useDeferredValue, useState, type FormEvent } from 'react';
+import { useDeferredValue, useRef, useState, type FormEvent } from 'react';
 import {
   Archive,
   ArchiveRestore,
@@ -36,6 +36,7 @@ import { ProjectNotes } from '../notes/ProjectNotes';
 import { CoverBanner } from '../looks/Cover';
 import { LooksRow } from '../looks/LooksRow';
 import { useLooks, type LooksTarget } from '../looks/useLooks';
+import { ProjectMilestones } from '../milestones/ProjectMilestones';
 import { useCreateNote } from '../notes/useCreateNote';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
@@ -51,11 +52,19 @@ const PROJECT_DEFAULTS: TaskFilters = {
   due: '',
   tagId: '',
   projectId: '',
+  milestone: '',
   sort: 'priority',
 };
 
 /** Overview first (progress, dates, actions), then the project's tasks (R17). */
-export function ProjectPage({ projectId }: { projectId: string }) {
+export function ProjectPage({
+  projectId,
+  milestoneId,
+}: {
+  projectId: string;
+  /** Opens the task list filtered to this milestone (ADR-0020). */
+  milestoneId?: string | undefined;
+}) {
   const details = useQuery(`project:${projectId}`, () =>
     window.api.projects.get({ id: projectId }),
   );
@@ -73,10 +82,22 @@ export function ProjectPage({ projectId }: { projectId: string }) {
       </div>
     );
   }
-  return <ProjectView key={projectId} details={details.data} />;
+  return (
+    <ProjectView
+      key={`${projectId}:${milestoneId ?? ''}`}
+      details={details.data}
+      milestoneId={milestoneId}
+    />
+  );
 }
 
-function ProjectView({ details }: { details: ProjectDetails }) {
+function ProjectView({
+  details,
+  milestoneId,
+}: {
+  details: ProjectDetails;
+  milestoneId: string | undefined;
+}) {
   const { project, progress, statuses, suggestCompletion } = details;
   const today = localToday();
   const invalidate = useInvalidate();
@@ -89,7 +110,28 @@ function ProjectView({ details }: { details: ProjectDetails }) {
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [view, setView] = useState<'list' | 'board'>('list');
-  const [filters, setFilters] = useState(PROJECT_DEFAULTS);
+  const [chosenFilters, setFilters] = useState({
+    ...PROJECT_DEFAULTS,
+    milestone: milestoneId ?? '',
+  });
+  const milestones = useQuery(`milestones:${project.id}`, () =>
+    window.api.milestones.list({ projectId: project.id }),
+  );
+  // A milestone that went to the trash (or no longer exists) stops filtering the list.
+  const staleMilestone =
+    milestones.data !== undefined &&
+    chosenFilters.milestone !== '' &&
+    chosenFilters.milestone !== 'none' &&
+    !milestones.data.some((m) => m.id === chosenFilters.milestone);
+  const filters = staleMilestone ? { ...chosenFilters, milestone: '' } : chosenFilters;
+  const tasksSection = useRef<HTMLElement>(null);
+  /** From the Milestones section: the list view, filtered to that milestone. */
+  const showMilestoneTasks = (id: string) => {
+    setView('list');
+    setFilters({ ...PROJECT_DEFAULTS, milestone: id });
+    setLimit(PAGE_SIZE);
+    tasksSection.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  };
   const [limit, setLimit] = useState(PAGE_SIZE);
   const deferred = useDeferredValue(filters);
   const query = {
@@ -297,7 +339,9 @@ function ProjectView({ details }: { details: ProjectDetails }) {
         </div>
       )}
 
-      <section className="section" aria-labelledby="project-tasks">
+      <ProjectMilestones project={project} onShowTasks={showMilestoneTasks} />
+
+      <section className="section" aria-labelledby="project-tasks" ref={tasksSection}>
         <div className="section__header">
           <h2 id="project-tasks">Tasks</h2>
           <div className="segmented" role="group" aria-label="Task view">
@@ -310,7 +354,9 @@ function ProjectView({ details }: { details: ProjectDetails }) {
           </div>
         </div>
         {!archived && <InlineAdd projectId={project.id} />}
-        {view === 'board' && <TaskBoard project={project} statuses={statuses} />}
+        {view === 'board' && (
+          <TaskBoard project={project} statuses={statuses} milestones={milestones.data ?? []} />
+        )}
         {view === 'list' && (
           <>
             <FilterBar
@@ -321,6 +367,7 @@ function ProjectView({ details }: { details: ProjectDetails }) {
                 setLimit(PAGE_SIZE);
               }}
               tags={lookups.tagList}
+              milestones={milestones.data ?? []}
               allowManualSort
             />
             {tasks.error && <ErrorNotice error={tasks.error} onRetry={tasks.reload} />}

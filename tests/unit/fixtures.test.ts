@@ -55,6 +55,20 @@ function fillV6(db: ReturnType<typeof openDatabase>) {
   db.prepare("INSERT INTO note_links VALUES (?, 'note', ?)").run(V6_NOTE, V6_NOTE);
 }
 
+// Released in 0.8.0: favourites, icons, and covers. Its upgrade to v8 rebuilds the favourites
+// table for milestones and must keep this favourite.
+const V7_PROJECT = '9a8b7c6d-5e4f-4a3b-9c2d-1e0f9a8b7c6e';
+function fillV7(db: ReturnType<typeof openDatabase>) {
+  ensureInbox({ db, clock, newId: randomUUID });
+  db.prepare(
+    `INSERT INTO projects (id, name, icon, cover, created_at, updated_at)
+     VALUES (?, 'Website', 'emoji:🚀', 'preset:ocean', 'x', 'x')`,
+  ).run(V7_PROJECT);
+  db.prepare(
+    `INSERT INTO favourites (id, project_id, sort_key, created_at) VALUES (?, ?, 1024, 'x')`,
+  ).run(randomUUID(), V7_PROJECT);
+}
+
 async function build(
   file: string,
   migrations: typeof profileMigrations,
@@ -140,6 +154,7 @@ if (process.env['REGENERATE_FIXTURES']) {
     });
     await build(path.join(DIR, 'profile-v5.db'), profileMigrations.slice(0, 5), fillV5);
     await build(path.join(DIR, 'profile-v6.db'), profileMigrations.slice(0, 6), fillV6);
+    await build(path.join(DIR, 'profile-v7.db'), profileMigrations.slice(0, 7), fillV7);
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -157,6 +172,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['profile-v4.db', profileMigrations],
       ['profile-v5.db', profileMigrations],
       ['profile-v6.db', profileMigrations],
+      ['profile-v7.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -292,6 +308,30 @@ if (process.env['REGENERATE_FIXTURES']) {
       expect(s.favourites.list()).toEqual([
         expect.objectContaining({ itemId: V6_NOTE, icon: 'emoji:✈️' }),
       ]);
+      db.close();
+    });
+
+    it('keeps profile v7 favourites, icons, and covers, and adds milestones (schema v8)', async () => {
+      const db = openDatabase(copy('profile-v7.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      const ctx = { db, clock, newId: randomUUID };
+      runProfileMaintenance(ctx, nullLogger);
+      const s = createProfileServices(ctx);
+      expect(s.projects.get(V7_PROJECT)).toMatchObject({
+        icon: 'emoji:🚀',
+        cover: 'preset:ocean',
+        favourite: true,
+      });
+      const milestone = s.milestones.create({ projectId: V7_PROJECT, name: 'Launch' });
+      s.favourites.set({ kind: 'milestone', id: milestone.id, starred: true });
+      expect(s.favourites.list().map((f) => f.kind)).toEqual(['project', 'milestone']);
+      expect(db.pragma('foreign_key_check')).toEqual([]);
       db.close();
     });
 

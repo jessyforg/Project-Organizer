@@ -249,7 +249,9 @@ test('notes: the formatting bubble formats a selection, turns blocks, and adds l
   await page.getByRole('textbox', { name: 'Link address' }).fill('example.com');
   await page.keyboard.press('Enter');
 
-  // Keyboard: Alt+F10 moves into the bubble; "Turn into" opens with Arrow Down.
+  // Keyboard: Alt+F10 moves into the bubble; "Turn into" opens with Arrow Down. The focus check
+  // needs the window in front: in a full run, another window can take it ("inactive").
+  await page.bringToFront();
   await page.keyboard.press('Alt+F10');
   await expect(bubble.getByRole('button', { name: 'Turn into: Text' })).toBeFocused();
   await page.keyboard.press('ArrowDown');

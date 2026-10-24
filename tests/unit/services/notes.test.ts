@@ -122,6 +122,7 @@ describe('Notes in the trash', () => {
       restoredProjects: 0,
       restoredTasks: 0,
       restoredNotes: 1,
+      restoredMilestones: 0,
       unresolvedDependencies: [],
     });
     expect(p.notes.get(note.id).title).toBe('Scratch');

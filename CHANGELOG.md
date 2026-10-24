@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.9.0 — Milestones (2026-10-24, not yet publicly released)
+
+- **Milestones:** a project can have milestones, such as "Beta" or "Launch", each with a name, description, and target date.
+  - Create them in the new Milestones section of a project page.
+  - Each shows its progress over its tasks, counted like project progress, and is marked "Overdue" when its date has passed.
+  - "Mark completed" and "Reopen" do not change the milestone's tasks.
+- **Tasks in a milestone:** choose a task's milestone in its details. Subtasks count through their parent task.
+- **Filter:** the project's task list has a Milestone filter. Choosing a milestone's name shows its tasks.
+- **Where milestones appear:**
+  - on the Today screen (overdue, and due within 7 days);
+  - on the calendar, on their target dates;
+  - on board cards.
+- **Favourites:** milestones can be starred. Opening one shows its project, filtered to its tasks.
+- **Trash:** trashing a milestone keeps its tasks. Restoring it brings their links back. Trashing a project takes its milestones with it.
+- **Moving a task to another project** removes its milestone.
+- Profile data schema version 8. Existing profiles upgrade automatically after a verified snapshot.
+
 ## 0.8.0 — Favourites, icons, and covers (2026-10-23, not yet publicly released)
 
 - **Favourites:** star a project or note from its ⋯ menu, its right-click menu, or the command palette.

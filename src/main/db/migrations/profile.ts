@@ -310,4 +310,68 @@ export const profileMigrations: readonly Migration[] = [
       ALTER TABLE notes ADD COLUMN cover TEXT;
     `,
   },
+  {
+    // Milestones (ADR-0020). A task's milestone belongs to the task's project, and only
+    // top-level tasks have one (subtasks count through their parent). Trashing a milestone
+    // keeps the links, so restoring it brings them back; deleting it for good clears them.
+    version: 8,
+    name: 'milestones',
+    sql: `
+      CREATE TABLE milestones (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        description TEXT,
+        target_date TEXT CHECK (target_date IS NULL OR target_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+        completed_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        deletion_batch_id TEXT,
+        CHECK ((deleted_at IS NULL) = (deletion_batch_id IS NULL))
+      ) STRICT;
+      CREATE INDEX milestones_project ON milestones (project_id, deleted_at);
+      CREATE INDEX milestones_target ON milestones (target_date) WHERE deleted_at IS NULL;
+      CREATE INDEX milestones_batch ON milestones (deletion_batch_id)
+        WHERE deletion_batch_id IS NOT NULL;
+
+      ALTER TABLE tasks ADD COLUMN milestone_id TEXT REFERENCES milestones (id) ON DELETE SET NULL;
+      CREATE INDEX tasks_milestone ON tasks (milestone_id) WHERE milestone_id IS NOT NULL;
+
+      CREATE TRIGGER tasks_milestone_insert BEFORE INSERT ON tasks
+      WHEN NEW.milestone_id IS NOT NULL BEGIN
+        SELECT RAISE(ABORT, 'a milestone must belong to the task''s project, and only top-level tasks have one')
+        WHERE NEW.parent_task_id IS NOT NULL
+           OR (SELECT project_id FROM milestones WHERE id = NEW.milestone_id) IS NOT NEW.project_id;
+      END;
+      CREATE TRIGGER tasks_milestone_update
+      BEFORE UPDATE OF milestone_id, project_id, parent_task_id ON tasks
+      WHEN NEW.milestone_id IS NOT NULL BEGIN
+        SELECT RAISE(ABORT, 'a milestone must belong to the task''s project, and only top-level tasks have one')
+        WHERE NEW.parent_task_id IS NOT NULL
+           OR (SELECT project_id FROM milestones WHERE id = NEW.milestone_id) IS NOT NEW.project_id;
+      END;
+
+      -- Milestones can be starred (ADR-0019): the favourites table gains a third item column.
+      -- SQLite cannot change a CHECK in place, so the table is rebuilt and its rows copied.
+      CREATE TABLE favourites_v8 (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT REFERENCES projects (id) ON DELETE CASCADE,
+        note_id TEXT REFERENCES notes (id) ON DELETE CASCADE,
+        milestone_id TEXT REFERENCES milestones (id) ON DELETE CASCADE,
+        sort_key INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        CHECK ((project_id IS NOT NULL) + (note_id IS NOT NULL) + (milestone_id IS NOT NULL) = 1)
+      ) STRICT;
+      INSERT INTO favourites_v8 (id, project_id, note_id, sort_key, created_at)
+        SELECT id, project_id, note_id, sort_key, created_at FROM favourites;
+      DROP TABLE favourites;
+      ALTER TABLE favourites_v8 RENAME TO favourites;
+      CREATE UNIQUE INDEX favourites_project ON favourites (project_id)
+        WHERE project_id IS NOT NULL;
+      CREATE UNIQUE INDEX favourites_note ON favourites (note_id) WHERE note_id IS NOT NULL;
+      CREATE UNIQUE INDEX favourites_milestone ON favourites (milestone_id)
+        WHERE milestone_id IS NOT NULL;
+    `,
+  },
 ];
