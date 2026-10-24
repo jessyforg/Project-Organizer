@@ -85,8 +85,8 @@ Priority for the next feature work (product owner, 2026-10-20): Notes (L1.5), th
 | L3.5 | Reminders: pre-deadline, recurring, optional overdue; recalculated on deadline change; no duplicates; DST- and time-zone-aware | Should | L3.4 | Never claims delivery that cannot be confirmed | Correctness |
 | L3.6 | Windows desktop notifications with permission handling; in-app notification centre with read/unread, priorities, preferences | Should | L3.5 | — | Low |
 | **L4 — organisation** |||||
-| L4.1 | Starter templates: software development, personal productivity, study and learning | Should | R04, R09 | Creating from template never modifies template | Low |
-| L4.2 | Save a project structure as a reusable template | Should | L4.1 | — | Low |
+| L4.1 | Starter templates: software development, personal productivity, study and learning | Should | R04, R09 | Creating from template never modifies template. Implemented in 0.9.0 ([ADR-0024](DECISIONS/0024-project-templates.md)) | Low |
+| L4.2 | Save a project structure as a reusable template | Should | L4.1 | Implemented in 0.9.0, with export and import ([ADR-0024](DECISIONS/0024-project-templates.md)) | Low |
 | L4.3 | Bugs as specialised tasks: severity, reproduction steps, expected, actual; link to tasks and milestones | Should | R08, L1.2 | — | Low |
 | L4.4 | Smart collections with simple rules | Could | R07 | Auto-update when projects change | Low |
 | L4.5 | Saved views: filters, sorting, grouping, visible fields, view settings | Should | R18 | — | Low |

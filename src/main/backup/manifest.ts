@@ -25,6 +25,7 @@ export const COUNTED_TABLES = [
   'activity_events',
   'custom_fields',
   'custom_values',
+  'templates',
   'settings',
 ] as const;
 
@@ -54,6 +55,7 @@ export const INCLUDES = [
   'Milestones, including those in the trash',
   'The activity log',
   'Custom fields and their values',
+  'Saved project templates',
   'Profile settings',
 ];
 export const OMITS = ['The profile’s automatic snapshots', 'App-wide settings outside the profile'];

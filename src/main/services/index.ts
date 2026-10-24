@@ -20,6 +20,7 @@ import { StatusService } from './statuses';
 import { SwitcherService } from './switcher';
 import { TagService } from './tags';
 import { TaskService } from './tasks';
+import { TemplateService } from './templates';
 import { TrashService } from './trash';
 
 export type { ServiceContext } from './context';
@@ -27,6 +28,7 @@ export type { ServiceContext } from './context';
 export interface ProfileServices {
   activity: ActivityService;
   customFields: CustomFieldService;
+  templates: TemplateService;
   folders: FolderService;
   tags: TagService;
   projects: ProjectService;
@@ -51,6 +53,7 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
   return {
     activity: new ActivityService(ctx),
     customFields: new CustomFieldService(ctx),
+    templates: new TemplateService(ctx),
     folders: new FolderService(ctx),
     tags: new TagService(ctx),
     projects: new ProjectService(ctx),

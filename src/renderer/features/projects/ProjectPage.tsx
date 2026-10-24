@@ -10,6 +10,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  LayoutTemplate,
   SlidersHorizontal,
   SquarePen,
   Table2,
@@ -41,6 +42,7 @@ import { LooksRow } from '../looks/LooksRow';
 import { useLooks, type LooksTarget } from '../looks/useLooks';
 import { ActivityList } from '../activity/ActivityList';
 import { FieldsDialog } from '../fields/FieldsDialog';
+import { SaveTemplateDialog } from '../templates/TemplateDialogs';
 import { ProjectMilestones } from '../milestones/ProjectMilestones';
 import { useCreateNote } from '../notes/useCreateNote';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
@@ -115,6 +117,7 @@ function ProjectView({
   const [editing, setEditing] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [fieldsOpen, setFieldsOpen] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [view, setView] = useState<'list' | 'board' | 'table'>('list');
   const [pageTab, setPageTab] = useState<'work' | 'activity'>('work');
@@ -216,6 +219,7 @@ function ProjectView({
   const moreItems: MenuItem[] = [
     ...looks.itemsFor(looksTarget),
     fieldsItem,
+    { label: 'Save as template…', icon: LayoutTemplate, onSelect: () => setSavingTemplate(true) },
     {
       ...(project.status === 'active'
         ? { label: 'Mark completed', icon: CheckCircle2, onSelect: () => setStatus('completed') }
@@ -485,6 +489,12 @@ function ProjectView({
       </Tabs>
 
       <ProjectDialog open={editing} project={project} onClose={() => setEditing(false)} />
+      <SaveTemplateDialog
+        open={savingTemplate}
+        projectId={project.id}
+        projectName={project.name}
+        onClose={() => setSavingTemplate(false)}
+      />
       <FieldsDialog
         open={fieldsOpen}
         projectId={project.id}

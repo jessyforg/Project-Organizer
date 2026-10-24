@@ -164,3 +164,4 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0021](DECISIONS/0021-activity-log.md) | Activity log (0.9.0 stage 2, schema v9) |
 | [0022](DECISIONS/0022-task-table.md) | Tasks as a table (0.9.0 stage 3) |
 | [0023](DECISIONS/0023-custom-fields.md) | Custom fields (0.9.0 stage 4, schema v10) |
+| [0024](DECISIONS/0024-project-templates.md) | Project templates (0.9.0 stage 5, schema v11) |

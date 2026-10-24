@@ -38,6 +38,7 @@ export interface ChannelDeps {
 const BACKUP_FILTER = { name: 'ProjectForge backup', extension: 'pfbackup' };
 const JSON_FILTER = { name: 'JSON export', extension: 'json' };
 const MARKDOWN_FILTER = { name: 'Markdown', extension: 'md' };
+const TEMPLATE_FILTER = { name: 'ProjectForge template', extension: 'json' };
 const ANY_FILE = { name: 'All files', extension: '*' };
 
 /** A default file name that is safe on Windows. */
@@ -194,6 +195,24 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
       s().customFields.setValue(input);
       return null;
     },
+    'templates:list': () => s().templates.list(),
+    'templates:get': ({ id }) => s().templates.get(id),
+    'templates:saveFromProject': (input) => s().templates.saveFromProject(input),
+    'templates:rename': (input) => s().templates.rename(input),
+    'templates:delete': ({ id }) => {
+      s().templates.delete(id);
+      return null;
+    },
+    'templates:export': async ({ id }) => {
+      const document = s().templates.exportDocument(id);
+      const name = markdownFileName(document.name).replace(/\.md$/, '.pftemplate.json');
+      const destination = await dialogs.saveFile(name, TEMPLATE_FILTER);
+      if (!destination) return { saved: false };
+      writeFileAtomic(destination, new TextEncoder().encode(JSON.stringify(document, null, 2)));
+      return { saved: true, fileName: path.basename(destination) };
+    },
+    'templates:import': ({ text }) => s().templates.import(text),
+    'templates:createProject': (input) => s().templates.createProject(input),
 
     'notes:list': (query) => s().notes.list(query),
     'notes:get': ({ id }) => s().notes.get(id),

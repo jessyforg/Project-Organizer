@@ -31,6 +31,7 @@ import type {
   WorkflowStatus,
 } from './domain';
 import type { IpcChannel } from './ipc-channels';
+import type { TemplateDetails, TemplateSummary } from './templates';
 import * as s from './schemas';
 import type {
   AppInfo,
@@ -150,6 +151,14 @@ export const ipcContract = {
   'customFields:changeType': s.changeCustomFieldTypeSchema,
   'customFields:reorder': s.reorderCustomFieldsSchema,
   'customFields:setValue': s.setCustomValueSchema,
+  'templates:list': s.emptySchema,
+  'templates:get': s.templateIdSchema,
+  'templates:saveFromProject': s.saveTemplateSchema,
+  'templates:rename': s.renameTemplateSchema,
+  'templates:delete': s.idSchema,
+  'templates:export': s.templateIdSchema,
+  'templates:import': s.importTemplateSchema,
+  'templates:createProject': s.createFromTemplateSchema,
   'notes:list': s.noteListQuerySchema,
   'notes:get': s.idSchema,
   'notes:create': s.createNoteSchema,
@@ -279,6 +288,14 @@ export interface IpcResponses {
   'customFields:changeType': CustomField;
   'customFields:reorder': CustomField[];
   'customFields:setValue': null;
+  'templates:list': TemplateSummary[];
+  'templates:get': TemplateDetails;
+  'templates:saveFromProject': TemplateSummary;
+  'templates:rename': TemplateSummary;
+  'templates:delete': null;
+  'templates:export': SaveResult;
+  'templates:import': TemplateSummary;
+  'templates:createProject': Project;
   'notes:list': NoteSummary[];
   'notes:get': Note;
   'notes:create': Note;

@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Folder as FolderIcon, FolderKanban, FolderPlus, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+  CopyPlus,
+  Folder as FolderIcon,
+  FolderKanban,
+  FolderPlus,
+  LayoutTemplate,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import type { Folder, ProjectListItem } from '@shared/domain';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
@@ -17,11 +26,14 @@ import {
 } from '../../components/ui';
 import { formatDate, localToday } from '../../lib/format';
 import { ItemIcon } from '../looks/ItemIcon';
+import { NewFromTemplateDialog, TemplatesDialog } from '../templates/TemplateDialogs';
 import { ProjectDialog } from './ProjectDialog';
 import { useProjectMenu } from './useProjectMenu';
 
 export function ProjectsPage() {
   const [showArchived, setShowArchived] = useState(false);
+  const [fromTemplate, setFromTemplate] = useState(false);
+  const [managingTemplates, setManagingTemplates] = useState(false);
   const [creating, setCreating] = useState(false);
   const [folderDialog, setFolderDialog] = useState<{ folder?: Folder } | null>(null);
   const [deleting, setDeleting] = useState<Folder | null>(null);
@@ -66,6 +78,12 @@ export function ProjectsPage() {
             </label>
             <button type="button" className="btn" onClick={() => setFolderDialog({})}>
               <FolderPlus aria-hidden /> New folder
+            </button>
+            <button type="button" className="btn" onClick={() => setManagingTemplates(true)}>
+              <LayoutTemplate aria-hidden /> Templates…
+            </button>
+            <button type="button" className="btn" onClick={() => setFromTemplate(true)}>
+              <CopyPlus aria-hidden /> New from template
             </button>
             <button type="button" className="btn btn--primary" onClick={() => setCreating(true)}>
               <Plus aria-hidden /> New project
@@ -132,6 +150,8 @@ export function ProjectsPage() {
           ),
         )}
       <ProjectDialog open={creating} onClose={() => setCreating(false)} />
+      <NewFromTemplateDialog open={fromTemplate} onClose={() => setFromTemplate(false)} />
+      <TemplatesDialog open={managingTemplates} onClose={() => setManagingTemplates(false)} />
       <FolderNameDialog
         state={folderDialog && { name: folderDialog.folder?.name }}
         onSave={(name) =>

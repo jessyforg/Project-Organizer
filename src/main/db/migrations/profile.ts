@@ -443,4 +443,21 @@ export const profileMigrations: readonly Migration[] = [
       END;
     `,
   },
+  {
+    // Project templates saved or imported by the user (ADR-0024); built-in ones live in code.
+    // The content is versioned JSON, checked against a schema whenever it is read or written.
+    version: 11,
+    name: 'templates',
+    sql: `
+      CREATE TABLE templates (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        name_key TEXT NOT NULL UNIQUE,
+        description TEXT,
+        content_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+    `,
+  },
 ];

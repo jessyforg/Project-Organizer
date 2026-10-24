@@ -4,6 +4,7 @@ import {
   FolderKanban,
   FolderPlus,
   Keyboard,
+  LayoutTemplate,
   ListChecks,
   Moon,
   NotebookPen,
@@ -16,6 +17,7 @@ import {
 import type { ProfileSettings, SwitcherItem } from '@shared/domain';
 import { useCreateNote } from '../features/notes/useCreateNote';
 import { ProjectDialog } from '../features/projects/ProjectDialog';
+import { NewFromTemplateDialog } from '../features/templates/TemplateDialogs';
 import { CommandPalette, type PaletteMode, type PaletteOption } from './CommandPalette';
 import { useInvalidate } from './data';
 import { useFocusMode } from './focus';
@@ -43,6 +45,7 @@ export function PaletteHost({
   const { route, navigate, openTask } = useNavigation();
   const { setFocused } = useFocusMode();
   const [creatingProject, setCreatingProject] = useState(false);
+  const [fromTemplate, setFromTemplate] = useState(false);
   const createNote = useCreateNote();
   const sources = usePaletteSources();
   const invalidate = useInvalidate();
@@ -105,6 +108,7 @@ export function PaletteHost({
       action('Create', 'New task', Plus, newTask, 'Ctrl+N'),
       action('Create', 'New note', SquarePen, () => void createNote()),
       action('Create', 'New project', FolderPlus, () => setCreatingProject(true)),
+      action('Create', 'New project from a template', LayoutTemplate, () => setFromTemplate(true)),
       go('Today', Sun, { name: 'dashboard' }, 'Ctrl+1'),
       go('My tasks', ListChecks, { name: 'tasks' }, 'Ctrl+2'),
       go('Calendar', CalendarDays, { name: 'calendar' }),
@@ -141,6 +145,7 @@ export function PaletteHost({
         search={(text) => navigate({ name: 'search', text })}
       />
       <ProjectDialog open={creatingProject} onClose={() => setCreatingProject(false)} />
+      <NewFromTemplateDialog open={fromTemplate} onClose={() => setFromTemplate(false)} />
     </>
   );
 }

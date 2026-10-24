@@ -2,6 +2,34 @@
 
 Newest entries first.
 
+## 2026-10-24 — Release 0.9.0, stage 5 of 6: project templates (schema v11)
+
+Decisions are in [ADR-0024](DECISIONS/0024-project-templates.md).
+
+**What was built:**
+- **The template format:** `templateContentSchema`, a versioned and bounded format for template content.
+- **Built-in templates:** Software development, Personal productivity, and Study and learning.
+- **`TemplateService`:**
+  - lists and previews templates;
+  - saves a project as a template (without completion, with optional day offsets);
+  - renames, deletes, exports, and imports templates (checked, with " (2)" for a taken name);
+  - creates a project from a template in one transaction, through the usual services.
+- **Schema v11:** the `templates` table, with a `profile-v10.db` fixture and an upgrade test.
+- **Interface:**
+  - the New from template picker, with its preview, start date, and name;
+  - the Templates dialog;
+  - "Save as template…" in the project ⋯ menu;
+  - "New project from a template" in the palette.
+
+**Found during the work:** the preview scrolls but could not be reached from the keyboard. Axe caught it (scrollable-region-focusable), and the preview is now a Tab stop.
+
+**Verification for this stage:**
+- 8 service tests, including all-or-nothing creation: a template whose last task is invalid leaves no project, task, tag, or activity behind.
+- 3 component tests.
+- A new end-to-end workflow (29).
+- Axe scans of the three template dialogs, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 626 of 626 unit and component tests pass, with no unhandled errors. 31 of 31 end-to-end tests pass, in two consecutive full runs.
+
 ## 2026-10-24 — Release 0.9.0, stage 4 of 6: custom fields (schema v10)
 
 Decisions are in [ADR-0023](DECISIONS/0023-custom-fields.md).

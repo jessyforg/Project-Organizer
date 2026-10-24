@@ -162,6 +162,30 @@ export const taskListQuerySchema = z.strictObject({
   offset: z.number().int().min(0).optional(),
 });
 
+// Templates (ADR-0024). Built-in template IDs are not UUIDs (`builtin:software`).
+const templateId = z.string().min(1).max(60);
+const templateName = z
+  .string()
+  .trim()
+  .min(1, 'Enter a name for the template.')
+  .max(100, 'Template names can be up to 100 characters.');
+export const templateIdSchema = z.strictObject({ id: templateId });
+export const saveTemplateSchema = z.strictObject({
+  projectId: id,
+  name: templateName,
+  description: z.string().max(1000).nullable().optional(),
+  keepDates: z.boolean(),
+});
+export const renameTemplateSchema = z.strictObject({ id, name: templateName });
+/** An exported template file's text; the service parses and checks it. */
+export const importTemplateSchema = z.strictObject({ text: z.string().max(4 * 1024 * 1024) });
+export const createFromTemplateSchema = z.strictObject({
+  templateId,
+  name,
+  startDate: isoDateSchema.nullable().optional(),
+  folderId: id.nullable().optional(),
+});
+
 // Custom fields (ADR-0023)
 const fieldName = z
   .string()

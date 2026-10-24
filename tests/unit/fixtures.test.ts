@@ -102,6 +102,29 @@ function fillV9(db: ReturnType<typeof openDatabase>) {
   ).run(V9_TASK, inbox.id);
 }
 
+// Built at 0.9.0 stage 4: custom fields. Its upgrade to v11 adds templates.
+const V10_TASK = '3e4f5a6b-7c8d-4e9f-9a0b-1c2d3e4f5a6b';
+const V10_FIELD = '4f5a6b7c-8d9e-4f0a-8b1c-2d3e4f5a6b7c';
+function fillV10(db: ReturnType<typeof openDatabase>) {
+  ensureInbox({ db, clock, newId: randomUUID });
+  const inbox = db.prepare('SELECT id FROM projects WHERE is_inbox = 1').get() as { id: string };
+  const status = db
+    .prepare('SELECT id FROM project_statuses WHERE project_id = ? AND is_default = 1')
+    .get(inbox.id) as { id: string };
+  db.prepare(
+    `INSERT INTO tasks (id, project_id, status_id, title, sort_key, created_at, updated_at)
+     VALUES (?, ?, ?, 'Estimate me', 1024, 'x', 'x')`,
+  ).run(V10_TASK, inbox.id, status.id);
+  db.prepare(
+    `INSERT INTO custom_fields (id, project_id, name, name_key, type, sort_key, created_at, updated_at)
+     VALUES (?, ?, 'Estimate', 'estimate', 'number', 1024, 'x', 'x')`,
+  ).run(V10_FIELD, inbox.id);
+  db.prepare("INSERT INTO custom_values (task_id, field_id, value_json) VALUES (?, ?, '3')").run(
+    V10_TASK,
+    V10_FIELD,
+  );
+}
+
 async function build(
   file: string,
   migrations: typeof profileMigrations,
@@ -190,6 +213,7 @@ if (process.env['REGENERATE_FIXTURES']) {
     await build(path.join(DIR, 'profile-v7.db'), profileMigrations.slice(0, 7), fillV7);
     await build(path.join(DIR, 'profile-v8.db'), profileMigrations.slice(0, 8), fillV8);
     await build(path.join(DIR, 'profile-v9.db'), profileMigrations.slice(0, 9), fillV9);
+    await build(path.join(DIR, 'profile-v10.db'), profileMigrations.slice(0, 10), fillV10);
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -210,6 +234,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['profile-v7.db', profileMigrations],
       ['profile-v8.db', profileMigrations],
       ['profile-v9.db', profileMigrations],
+      ['profile-v10.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -415,6 +440,32 @@ if (process.env['REGENERATE_FIXTURES']) {
       });
       s.customFields.setValue({ taskId: V9_TASK, fieldId: field.id, value: 3 });
       expect(s.tasks.get(V9_TASK).customValues).toEqual({ [field.id]: 3 });
+      db.close();
+    });
+
+    it('keeps profile v10 custom fields, and adds templates (schema v11)', async () => {
+      const db = openDatabase(copy('profile-v10.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      const ctx = { db, clock, newId: randomUUID };
+      runProfileMaintenance(ctx, nullLogger);
+      const s = createProfileServices(ctx);
+      const task = s.tasks.get(V10_TASK);
+      expect(task.customValues).toEqual({ [V10_FIELD]: 3 });
+      const saved = s.templates.saveFromProject({
+        projectId: task.projectId,
+        name: 'Inbox copy',
+        keepDates: false,
+      });
+      expect(s.templates.get(saved.id).content.tasks[0]).toMatchObject({
+        title: 'Estimate me',
+        fields: { f1: 3 },
+      });
       db.close();
     });
 

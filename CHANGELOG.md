@@ -56,6 +56,15 @@ Built in stages on one branch; this list grows with each stage.
 - **Fixed:** confirming inside a dialog no longer closes the dialog around it.
 - Profile data schema version 10.
 
+### Project templates
+
+- **Starting from a template:** **New from template** on the Projects page starts a project from a template. You see a preview of its workflow, milestones, fields, tags, tasks, and notes first, and dates are counted from the start date you choose.
+- **Three built-in templates:** Software development, Personal productivity, and Study and learning.
+- **Your own templates:** save any project as a template from its ⋯ menu (**Save as template…**). You can keep its dates, counted from the start. Tasks always start as not done.
+- **Managing templates:** **Templates…** on the Projects page renames, deletes, exports, and imports templates. Exported templates are `.pftemplate.json` files, and an imported file is checked before it is used.
+- Creating a project from a template is all or nothing, and the template itself never changes.
+- Profile data schema version 11.
+
 ## 0.8.0 — Favourites, icons, and covers (2026-10-23, not yet publicly released)
 
 - **Favourites:** star a project or note from its ⋯ menu, its right-click menu, or the command palette.

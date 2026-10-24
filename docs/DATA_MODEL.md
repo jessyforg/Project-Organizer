@@ -236,6 +236,13 @@ Since schema v7, a file can also be a cover image (`note_id` is null for a proje
   - one refuses a value whose field belongs to another project;
   - another deletes a task's values when the task moves to another project.
 
+**templates** (schema v11, [ADR-0024](DECISIONS/0024-project-templates.md))
+- **Columns:** `id`, `name` with `name_key` (unique), `description`, `content_json`, `created_at`, and `updated_at`.
+- **Content:** `content_json` is a version 1 template, checked by `templateContentSchema` (`src/shared/templates.ts`) on every read and write.
+  - It holds statuses, tags, milestones, fields, tasks with subtasks (dates as day offsets, choices by label), and notes.
+  - It has no completion state and no IDs.
+- **Built-in templates** live in code (`src/main/templates/builtin.ts`), not in this table.
+
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
 ### Database guards

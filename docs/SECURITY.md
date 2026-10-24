@@ -107,6 +107,13 @@ Implemented in Phase 5 (`src/main/backup/`); see [ADR-0006](DECISIONS/0006-backu
 - **Permanent deletion:** deleting an item from the trash removes its history too, so a deleted title does not linger.
 - The log is read through three zod-checked channels, with a limit of at most 500 entries.
 
+### Imported templates (ADR-0024)
+
+- A template file is untrusted input. The window refuses files over 4 MB, and the IPC schema refuses longer text.
+- **Checking:** the main process only parses the file as JSON and checks it against `templateFileSchema`, which bounds every count and string length. It needs exactly one valid default status, a done status, and references that exist.
+- **Storage:** nothing in a template is executed or rendered as HTML. Note bodies are stored as Markdown and shown like any other note.
+- **Exports** are written atomically through the save dialog.
+
 ## 6. Dependency policy
 
 Before adding a dependency: purpose, whether a built-in suffices, licence, maintenance status, and security relevance are recorded in the pull request or ADR. Versions are pinned exactly in `package.json` and locked via `package-lock.json`, and must have been published at least two weeks earlier. `npm audit` is run at every phase checkpoint and findings are reported.

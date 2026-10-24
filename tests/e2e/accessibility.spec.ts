@@ -254,6 +254,23 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoViolations(page, 'Task details with custom fields');
     await page.keyboard.press('Escape');
 
+    // Templates (ADR-0024): saving, the picker with its preview, and the manager.
+    await page.getByRole('button', { name: 'More project actions' }).click();
+    await page.getByRole('menuitem', { name: 'Save as template…' }).click();
+    await expectNoViolations(page, 'Save as template dialog');
+    await page
+      .getByRole('dialog', { name: 'Save as template' })
+      .getByRole('button', { name: 'Cancel' })
+      .click();
+    await nav.getByRole('button', { name: 'Projects', exact: true }).click();
+    await page.getByRole('button', { name: 'New from template' }).click();
+    await expect(page.getByRole('region', { name: 'Preview' })).toContainText('Backlog');
+    await expectNoViolations(page, 'New project from a template');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Templates…' }).click();
+    await expectNoViolations(page, 'Templates dialog');
+    await page.keyboard.press('Escape');
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');
