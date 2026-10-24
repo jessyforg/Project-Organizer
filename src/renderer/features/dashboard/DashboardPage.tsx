@@ -13,6 +13,7 @@ import {
 } from '../../components/ui';
 import { formatDate, formatLongDate, plural } from '../../lib/format';
 import { isOverdue } from '../milestones/ProjectMilestones';
+import { ActivityList } from '../activity/ActivityList';
 import { TaskRow } from '../tasks/TaskList';
 import { useLookups } from '../tasks/useLookups';
 
@@ -105,7 +106,22 @@ export function DashboardPage() {
               </EmptyState>
             </div>
           )}
-          {list('Recently updated', d.recentlyUpdated)}
+          {/* The profile-wide activity feed (ADR-0021). */}
+          <section className="dash-section" aria-label="Recent activity">
+            <div className="dash-section__header">
+              <h2>Recent activity</h2>
+            </div>
+            <div className="panel activity-panel">
+              <ActivityList
+                queryKey="recent"
+                load={(limit) => window.api.activity.recent({ limit })}
+                label="Recent activity"
+                showItem
+                pageSize={10}
+                more={false}
+              />
+            </div>
+          </section>
         </div>
 
         <div className="section" style={{ gap: 'var(--space-5)' }}>

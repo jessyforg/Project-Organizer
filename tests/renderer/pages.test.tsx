@@ -5,7 +5,7 @@ import { applyTheme } from '../../src/renderer/app/Shell';
 import { DashboardPage } from '../../src/renderer/features/dashboard/DashboardPage';
 import { TrashPage } from '../../src/renderer/features/trash/TrashPage';
 import { describeDue, describeProgress } from '../../src/renderer/lib/format';
-import { installApi, makeTask, ok, renderWithApp } from './harness';
+import { installApi, ok, renderWithApp } from './harness';
 
 const entry = {
   batchId: 'b1',
@@ -61,19 +61,35 @@ describe('DashboardPage', () => {
           overdue: [],
           dueToday: [],
           upcoming: [],
-          recentlyUpdated: [makeTask({ title: 'Touched' })],
           recentlyCompleted: [],
           activeProjects: [],
           milestones: [],
           openTaskCount: 1,
           completedThisWeek: 0,
         }),
+      'activity:recent': () =>
+        ok([
+          {
+            id: 1,
+            at: '2026-03-10T09:00:00.000Z',
+            itemKind: 'task',
+            itemId: 't1',
+            projectId: 'p1',
+            title: 'Touched',
+            action: 'renamed',
+            field: null,
+            oldValue: 'Old',
+            newValue: 'Touched',
+            live: true,
+          },
+        ]),
     });
     renderWithApp(<DashboardPage />);
     expect(await screen.findByText(/1 open task · 0 completed/)).toBeInTheDocument();
     expect(screen.getByText('Nothing is due in the next week.')).toBeInTheDocument();
     expect(screen.getByText('No active projects.')).toBeInTheDocument();
-    expect(screen.getByText('Touched')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Touched' })).toBeInTheDocument();
+    expect(screen.getByText('Renamed from “Old” to “Touched”')).toBeInTheDocument();
   });
 });
 

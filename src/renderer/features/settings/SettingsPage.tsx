@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import {
   ACCENTS,
+  ACTIVITY_RETENTION_DAYS,
   SURFACES,
   THEMES,
   type Accent,
+  type ActivityRetention,
   type ProfileSettings as Appearance,
   type Surface,
   type Theme,
@@ -19,6 +21,14 @@ import { ProfileSettings } from '../profiles/ProfileSettings';
 import { ACCENT_PALETTES } from '@shared/palettes';
 import { AboutPanel } from './AboutPanel';
 import { TagsPanel } from './TagsPanel';
+
+const RETENTION_LABEL: Record<ActivityRetention, string> = {
+  90: '3 months',
+  180: '6 months',
+  365: '1 year',
+  730: '2 years',
+  1825: '5 years',
+};
 
 const THEME_LABEL: Record<Theme, string> = {
   system: 'Match Windows',
@@ -46,6 +56,7 @@ const DEFAULTS: Appearance = {
   accent: 'blue',
   surface: 'cool',
   noteOutline: false,
+  activityRetentionDays: 365,
 };
 
 export function SettingsPage({
@@ -149,6 +160,32 @@ export function SettingsPage({
         </fieldset>
       </section>
       <TagsPanel />
+      <section className="panel settings-card" aria-labelledby="activity-heading">
+        <div className="settings-card__intro">
+          <h2 id="activity-heading">Activity history</h2>
+          <p>
+            Changes to tasks, projects, notes, and milestones are listed in their Activity tabs and
+            on Today. Older entries are removed automatically.
+          </p>
+        </div>
+        <div className="field">
+          <label htmlFor="activity-retention">Keep activity for</label>
+          <select
+            id="activity-retention"
+            className="select"
+            value={current.activityRetentionDays}
+            onChange={(e) =>
+              void choose({ activityRetentionDays: Number(e.target.value) as ActivityRetention })
+            }
+          >
+            {ACTIVITY_RETENTION_DAYS.map((days) => (
+              <option key={days} value={days}>
+                {RETENTION_LABEL[days]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </section>
       <ProfileSettings active={active} profiles={profiles} onChanged={onProfilesChanged} />
       <BackupPanel onProfilesChanged={onProfilesChanged} />
       <section className="panel settings-card" aria-labelledby="shortcuts-heading">

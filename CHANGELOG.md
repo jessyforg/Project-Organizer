@@ -1,6 +1,10 @@
 # Changelog
 
-## 0.9.0 — Milestones (2026-10-24, not yet publicly released)
+## 0.9.0 — Milestones, activity log, task table, custom fields, and templates (in progress, not yet publicly released)
+
+Built in stages on one branch; this list grows with each stage.
+
+### Milestones
 
 - **Milestones:** a project can have milestones, such as "Beta" or "Launch", each with a name, description, and target date.
   - Create them in the new Milestones section of a project page.
@@ -16,6 +20,17 @@
 - **Trash:** trashing a milestone keeps its tasks. Restoring it brings their links back. Trashing a project takes its milestones with it.
 - **Moving a task to another project** removes its milestone.
 - Profile data schema version 8. Existing profiles upgrade automatically after a verified snapshot.
+
+### Activity log
+
+- **Every change is recorded.** That covers creating, renaming, changes of status, priority, due date, milestone, and folder, archiving, moving, the trash, and files added to or removed from notes.
+- **Where to see it:**
+  - Tasks and projects have an **Activity** tab, in plain sentences, newest first. A project's tab includes its tasks, notes, and milestones.
+  - **Recent activity** on Today replaces "Recently updated". Each entry opens its item.
+- **Note editing:** autosaves are not listed one by one. Edits to a note within 10 minutes count as one.
+- **Retention:** choose how long activity is kept in Settings → Activity history (1 year by default). It is included in backups.
+- **Permanent deletion:** deleting something permanently from the trash also removes its history.
+- Profile data schema version 9.
 
 ## 0.8.0 — Favourites, icons, and covers (2026-10-23, not yet publicly released)
 

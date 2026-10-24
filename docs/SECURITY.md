@@ -100,6 +100,13 @@ Implemented in Phase 5 (`src/main/backup/`); see [ADR-0006](DECISIONS/0006-backu
 - **Content Security Policy:** unchanged.
 - **Stored values:** a stored cover value is parsed before use. An unknown value, or an image ID that is not a UUID, is ignored.
 
+### Activity log (ADR-0021)
+
+- The log keeps item titles and changed values, such as old titles, so it is personal data like the items themselves. It is stored like the rest of the profile: in the profile database, which is not yet encrypted at rest (see §1), and in encrypted backups.
+- **Retention:** entries are removed after the retention period (1 year by default, set per profile).
+- **Permanent deletion:** deleting an item from the trash removes its history too, so a deleted title does not linger.
+- The log is read through three zod-checked channels, with a limit of at most 500 entries.
+
 ## 6. Dependency policy
 
 Before adding a dependency: purpose, whether a built-in suffices, licence, maintenance status, and security relevance are recorded in the pull request or ADR. Versions are pinned exactly in `package.json` and locked via `package-lock.json`, and must have been published at least two weeks earlier. `npm audit` is run at every phase checkpoint and findings are reported.

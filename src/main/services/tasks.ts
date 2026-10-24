@@ -14,6 +14,7 @@ import type {
   UpdateTaskInput,
 } from '@shared/schemas';
 import { addDays } from '../domain/dates';
+import { recordActivity } from './activity';
 import { toFtsQuery } from '../domain/fts';
 import { evenlySpacedKeys, keyAfter, keyBetween } from '../domain/sort-keys';
 import { AppError } from '../errors';
@@ -188,6 +189,13 @@ export class TaskService {
         milestoneId,
       );
       this.insertTags(id, input.tagIds ?? []);
+      recordActivity(this.ctx, {
+        kind: 'task',
+        id,
+        projectId,
+        title: input.title,
+        action: 'created',
+      });
     })();
     return this.get(id);
   }
@@ -217,29 +225,38 @@ export class TaskService {
     const wasDone = current.statusCategory === 'done';
     const isDone = status.category === 'done';
     const completedAt = isDone ? (wasDone ? current.completedAt : now) : null;
-    this.ctx.db
-      .prepare(
-        `UPDATE tasks SET title = ?, description = ?, priority = ?, start_date = ?, due_date = ?,
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare(
+          `UPDATE tasks SET title = ?, description = ?, priority = ?, start_date = ?, due_date = ?,
            status_id = ?, completed_at = ?, updated_at = ?
          WHERE id = ?`,
-      )
-      .run(
-        next.title,
-        next.description,
-        next.priority,
-        next.startDate,
-        next.dueDate,
-        status.id,
-        completedAt,
-        now,
-        input.id,
-      );
-    // Only when asked: a link to a milestone in the trash is kept until it is changed.
-    if (input.milestoneId !== undefined) {
-      this.ctx.db
-        .prepare('UPDATE tasks SET milestone_id = ? WHERE id = ?')
-        .run(input.milestoneId, input.id);
-    }
+        )
+        .run(
+          next.title,
+          next.description,
+          next.priority,
+          next.startDate,
+          next.dueDate,
+          status.id,
+          completedAt,
+          now,
+          input.id,
+        );
+      // Only when asked: a link to a milestone in the trash is kept until it is changed.
+      if (input.milestoneId !== undefined) {
+        this.ctx.db
+          .prepare('UPDATE tasks SET milestone_id = ? WHERE id = ?')
+          .run(input.milestoneId, input.id);
+      }
+      this.recordChanges(current, {
+        title: next.title,
+        statusId: status.id,
+        priority: next.priority,
+        dueDate: next.dueDate,
+        ...(input.milestoneId !== undefined ? { milestoneId: input.milestoneId } : {}),
+      });
+    })();
 
     const task = this.get(input.id);
     return { task, notices: this.noticesAfterStatusChange(current, task) };
@@ -333,10 +350,95 @@ export class TaskService {
         const { sort_key } = childKeys.get(child.id) as { sort_key: number };
         moveOne(child.id, child.category, child.completed_at, sort_key);
       }
+      recordActivity(this.ctx, {
+        kind: 'task',
+        id: task.id,
+        projectId: input.projectId,
+        title: task.title,
+        action: 'moved',
+        oldValue: this.projectName(task.projectId),
+        newValue: this.projectName(input.projectId),
+      });
       return removedDeps;
     })();
 
     return { task: this.get(task.id), removedDependencies: removed };
+  }
+
+  /** Records each listed field that changed (ADR-0021), inside the caller's transaction. */
+  private recordChanges(
+    current: Task,
+    next: {
+      title: string;
+      statusId: string;
+      priority: Task['priority'];
+      dueDate: string | null;
+      milestoneId?: string | null;
+    },
+  ): void {
+    const base = {
+      kind: 'task' as const,
+      id: current.id,
+      projectId: current.projectId,
+      title: next.title,
+    };
+    const name = (table: 'project_statuses' | 'milestones', id: string | null) =>
+      id === null
+        ? null
+        : ((
+            this.ctx.db.prepare(`SELECT name FROM ${table} WHERE id = ?`).get(id) as
+              { name: string } | undefined
+          )?.name ?? null);
+    if (next.title !== current.title) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'renamed',
+        oldValue: current.title,
+        newValue: next.title,
+      });
+    }
+    if (next.statusId !== current.statusId) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'status',
+        oldValue: name('project_statuses', current.statusId),
+        newValue: name('project_statuses', next.statusId),
+      });
+    }
+    if (next.priority !== current.priority) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'priority',
+        oldValue: current.priority,
+        newValue: next.priority,
+      });
+    }
+    if (next.dueDate !== current.dueDate) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'due_date',
+        oldValue: current.dueDate,
+        newValue: next.dueDate,
+      });
+    }
+    if (next.milestoneId !== undefined && next.milestoneId !== current.milestoneId) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'milestone',
+        oldValue: name('milestones', current.milestoneId),
+        newValue: name('milestones', next.milestoneId),
+      });
+    }
+  }
+
+  private projectName(id: string): string {
+    return (
+      this.ctx.db.prepare('SELECT name FROM projects WHERE id = ?').get(id) as { name: string }
+    ).name;
   }
 
   /** A live milestone of the task's project, for a top-level task (ADR-0020). */

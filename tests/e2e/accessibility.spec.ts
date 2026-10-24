@@ -199,6 +199,22 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.getByRole('region', { name: 'Milestones' })).toBeVisible();
     await expectNoViolations(page, 'Today with milestones');
 
+    // The activity log (ADR-0021): tabs on a project and in task details.
+    await nav.getByLabel('Projects list').getByRole('button', { name: 'Website' }).click();
+    await page.getByRole('tab', { name: 'Activity' }).click();
+    await expect(page.getByRole('tabpanel', { name: 'Activity' })).toBeVisible();
+    await expectNoViolations(page, 'Project activity');
+    await page.getByRole('tab', { name: 'Work' }).click();
+    await page
+      .getByRole('main')
+      .getByRole('button', { name: /^Fix layout bug/ })
+      .click();
+    const taskPanel = page.getByRole('complementary', { name: 'Task details' });
+    await taskPanel.getByRole('tab', { name: 'Activity' }).click();
+    await expect(taskPanel.getByRole('tabpanel', { name: 'Activity' })).toBeVisible();
+    await expectNoViolations(page, 'Task activity');
+    await page.keyboard.press('Escape');
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');

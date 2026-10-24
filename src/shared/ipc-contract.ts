@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type {
+  ActivityEvent,
   AppLinkInfo,
   AttachmentInfo,
   Backlink,
@@ -178,6 +179,9 @@ export const ipcContract = {
   'trash:deletePermanently': s.batchSchema,
   'trash:empty': s.emptySchema,
   'search:query': s.searchSchema,
+  'activity:forItem': s.activityForItemSchema,
+  'activity:forProject': s.activityForProjectSchema,
+  'activity:recent': s.activityRecentSchema,
   'switcher:search': s.switcherSearchSchema,
   'switcher:recent': s.switcherRecentSchema,
   'switcher:recordOpened': s.linkTargetSchema,
@@ -295,6 +299,9 @@ export interface IpcResponses {
   'trash:deletePermanently': null;
   'trash:empty': { removed: number };
   'search:query': SearchResults;
+  'activity:forItem': ActivityEvent[];
+  'activity:forProject': ActivityEvent[];
+  'activity:recent': ActivityEvent[];
   'switcher:search': SwitcherItem[];
   'switcher:recent': SwitcherItem[];
   'switcher:recordOpened': null;

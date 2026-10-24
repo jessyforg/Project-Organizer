@@ -1,4 +1,9 @@
-import { appLinkMarkdown, extractAppLinks, findPlainMention } from '@shared/app-links';
+import {
+  appLinkMarkdown,
+  extractAppLinks,
+  extractFileIds,
+  findPlainMention,
+} from '@shared/app-links';
 import type { Backlink, Note, NoteBacklinks, NoteSummary } from '@shared/domain';
 import {
   LIMITS,
@@ -14,6 +19,7 @@ import {
 import { toFtsQuery } from '../domain/fts';
 import { AppError } from '../errors';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
+import { recordActivity, type ActivityInput } from './activity';
 import { LinkService, toBacklink, type BacklinkRow } from './links';
 import { ensureInbox, requireLiveProject } from './projects';
 import { NOTE_SELECT, NOTE_SUMMARY_SELECT, toNote, toNoteSummary, type NoteRow } from './rows';
@@ -123,18 +129,24 @@ export class NoteService {
     const current = this.get(id);
     if (current.archivedAt !== null) return current;
     const now = nowIso(this.ctx);
-    this.ctx.db
-      .prepare('UPDATE notes SET archived_at = ?, updated_at = ? WHERE id = ?')
-      .run(now, now, id);
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare('UPDATE notes SET archived_at = ?, updated_at = ? WHERE id = ?')
+        .run(now, now, id);
+      this.record(current, { action: 'archived' });
+    })();
     return this.get(id);
   }
 
   unarchive(id: string): Note {
     const current = this.get(id);
     if (current.archivedAt === null) return current;
-    this.ctx.db
-      .prepare('UPDATE notes SET archived_at = NULL, updated_at = ? WHERE id = ?')
-      .run(nowIso(this.ctx), id);
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare('UPDATE notes SET archived_at = NULL, updated_at = ? WHERE id = ?')
+        .run(nowIso(this.ctx), id);
+      this.record(current, { action: 'unarchived' });
+    })();
     return this.get(id);
   }
 
@@ -143,9 +155,25 @@ export class NoteService {
     const current = this.get(input.id);
     if (current.folderId === input.folderId) return current;
     if (input.folderId !== null) this.requireFolder(input.folderId);
-    this.ctx.db
-      .prepare('UPDATE notes SET folder_id = ?, updated_at = ? WHERE id = ?')
-      .run(input.folderId, nowIso(this.ctx), input.id);
+    const folder = (id: string | null) =>
+      id === null
+        ? null
+        : (
+            this.ctx.db.prepare('SELECT name FROM note_folders WHERE id = ?').get(id) as {
+              name: string;
+            }
+          ).name;
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare('UPDATE notes SET folder_id = ?, updated_at = ? WHERE id = ?')
+        .run(input.folderId, nowIso(this.ctx), input.id);
+      this.record(current, {
+        action: 'changed',
+        field: 'folder',
+        oldValue: folder(current.folderId),
+        newValue: folder(input.folderId),
+      });
+    })();
     return this.get(input.id);
   }
 
@@ -163,6 +191,22 @@ export class NoteService {
         .prepare('UPDATE notes SET title = ?, body = ?, updated_at = ? WHERE id = ?')
         .run(title, body, nowIso(this.ctx), input.id);
       if (body !== current.body) this.syncLinks(input.id, body);
+      // Renames and edits within 10 minutes merge into one event each (ADR-0021).
+      const renamed = { ...current, title };
+      if (title !== current.title) {
+        this.record(renamed, { action: 'renamed', oldValue: current.title, newValue: title });
+      }
+      if (body !== current.body) {
+        this.record(renamed, { action: 'edited' });
+        const kept = new Set(extractFileIds(body));
+        const removed = [...new Set(extractFileIds(current.body))].filter((id) => !kept.has(id));
+        for (const fileId of removed) {
+          const file = this.ctx.db
+            .prepare('SELECT name FROM attachments WHERE id = ?')
+            .get(fileId) as { name: string } | undefined;
+          if (file) this.record(renamed, { action: 'attachment_removed', oldValue: file.name });
+        }
+      }
     })();
     return this.get(input.id);
   }
@@ -249,9 +293,22 @@ export class NoteService {
     const current = this.get(input.id);
     if (current.projectId === input.projectId) return current;
     this.requireOpenProject(input.projectId, 'Notes cannot be moved into an archived project.');
-    this.ctx.db
-      .prepare('UPDATE notes SET project_id = ?, updated_at = ? WHERE id = ?')
-      .run(input.projectId, nowIso(this.ctx), input.id);
+    const projectName = (id: string) =>
+      (this.ctx.db.prepare('SELECT name FROM projects WHERE id = ?').get(id) as { name: string })
+        .name;
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare('UPDATE notes SET project_id = ?, updated_at = ? WHERE id = ?')
+        .run(input.projectId, nowIso(this.ctx), input.id);
+      this.record(
+        { ...current, projectId: input.projectId },
+        {
+          action: 'moved',
+          oldValue: projectName(current.projectId),
+          newValue: projectName(input.projectId),
+        },
+      );
+    })();
     return this.get(input.id);
   }
 
@@ -276,7 +333,22 @@ export class NoteService {
       if (!db.prepare('SELECT 1 FROM tags WHERE id = ?').get(tagId)) throw notFound('Tag');
       insertTag.run(id, tagId);
     }
+    recordActivity(this.ctx, { kind: 'note', id, projectId, title: note.title, action: 'created' });
     return id;
+  }
+
+  /** Records an action on a note (ADR-0021), inside the caller's transaction. */
+  private record(
+    note: Pick<Note, 'id' | 'projectId' | 'title'>,
+    event: Omit<ActivityInput, 'kind' | 'id' | 'projectId' | 'title'>,
+  ): void {
+    recordActivity(this.ctx, {
+      kind: 'note',
+      id: note.id,
+      projectId: note.projectId,
+      title: note.title,
+      ...event,
+    });
   }
 
   private requireFolder(folderId: string): void {

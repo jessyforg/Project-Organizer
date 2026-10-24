@@ -19,6 +19,7 @@ import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { usePaletteActions } from '../../app/palette-registry';
 import { useToast } from '../../app/toasts';
+import { Tabs } from '../../components/Tabs';
 import {
   ConfirmDialog,
   EmptyState,
@@ -36,6 +37,7 @@ import { ProjectNotes } from '../notes/ProjectNotes';
 import { CoverBanner } from '../looks/Cover';
 import { LooksRow } from '../looks/LooksRow';
 import { useLooks, type LooksTarget } from '../looks/useLooks';
+import { ActivityList } from '../activity/ActivityList';
 import { ProjectMilestones } from '../milestones/ProjectMilestones';
 import { useCreateNote } from '../notes/useCreateNote';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
@@ -110,6 +112,7 @@ function ProjectView({
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
   const [view, setView] = useState<'list' | 'board'>('list');
+  const [pageTab, setPageTab] = useState<'work' | 'activity'>('work');
   const [chosenFilters, setFilters] = useState({
     ...PROJECT_DEFAULTS,
     milestone: milestoneId ?? '',
@@ -282,133 +285,167 @@ function ProjectView({
         }
       />
 
-      <div className="panel project-head__summary">
-        <dl className="facts">
-          <div>
-            <dt>Type</dt>
-            <dd>{project.kind === 'software' ? 'Software development' : 'General'}</dd>
-          </div>
-          {project.startDate && (
-            <div>
-              <dt>Starts</dt>
-              <dd>{formatDate(project.startDate, today)}</dd>
-            </div>
-          )}
-          {project.targetDate && (
-            <div>
-              <dt>Target</dt>
-              <dd>{formatDate(project.targetDate, today)}</dd>
-            </div>
-          )}
-          {tagNames && (
-            <div>
-              <dt>Tags</dt>
-              <dd>{tagNames}</dd>
-            </div>
-          )}
-        </dl>
-        <div>
-          <ProgressMeter progress={progress} label={`${project.name} progress`} />
-          <p className="stamp">Calculated from tasks; cancelled tasks are not counted.</p>
-        </div>
-      </div>
-
-      {suggestCompletion && (
-        <div className="notice">
-          <p>Every task in this project is done.</p>
-          <button
-            type="button"
-            className="btn btn--primary"
-            onClick={() =>
-              void run(
-                window.api.projects.setStatus({ id: project.id, status: 'completed' }),
-                'Project marked completed.',
-              )
-            }
-          >
-            Mark project completed
-          </button>
-        </div>
-      )}
-      {archived && (
-        <div className="notice">
-          <p>This project is archived. Unarchive it to add tasks.</p>
-          <button type="button" className="btn" onClick={unarchive}>
-            <ArchiveRestore aria-hidden /> Unarchive
-          </button>
-        </div>
-      )}
-
-      <ProjectMilestones project={project} onShowTasks={showMilestoneTasks} />
-
-      <section className="section" aria-labelledby="project-tasks" ref={tasksSection}>
-        <div className="section__header">
-          <h2 id="project-tasks">Tasks</h2>
-          <div className="segmented" role="group" aria-label="Task view">
-            <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
-              <List aria-hidden /> List
-            </button>
-            <button type="button" aria-pressed={view === 'board'} onClick={() => setView('board')}>
-              <Columns3 aria-hidden /> Board
-            </button>
-          </div>
-        </div>
-        {!archived && <InlineAdd projectId={project.id} />}
-        {view === 'board' && (
-          <TaskBoard project={project} statuses={statuses} milestones={milestones.data ?? []} />
-        )}
-        {view === 'list' && (
+      <Tabs
+        label="Project"
+        tabs={[
+          { id: 'work', label: 'Work' },
+          { id: 'activity', label: 'Activity' },
+        ]}
+        selected={pageTab}
+        onSelect={setPageTab}
+      >
+        {pageTab === 'activity' ? (
+          // The project's own changes and those of its tasks, notes, and milestones (ADR-0021).
+          <ActivityList
+            queryKey={`project:${project.id}`}
+            load={(limit) => window.api.activity.forProject({ projectId: project.id, limit })}
+            label={`Activity in ${project.name}`}
+            showItem
+          />
+        ) : (
           <>
-            <FilterBar
-              value={filters}
-              defaults={PROJECT_DEFAULTS}
-              onChange={(next) => {
-                setFilters(next);
-                setLimit(PAGE_SIZE);
-              }}
-              tags={lookups.tagList}
-              milestones={milestones.data ?? []}
-              allowManualSort
-            />
-            {tasks.error && <ErrorNotice error={tasks.error} onRetry={tasks.reload} />}
-            {tasks.data && tasks.data.length === 0 && (
-              <div className="panel">
-                <EmptyState
-                  icon={ClipboardList}
-                  title={
-                    JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS)
-                      ? 'No tasks in this project yet.'
-                      : 'No tasks match these filters.'
+            <div className="panel project-head__summary">
+              <dl className="facts">
+                <div>
+                  <dt>Type</dt>
+                  <dd>{project.kind === 'software' ? 'Software development' : 'General'}</dd>
+                </div>
+                {project.startDate && (
+                  <div>
+                    <dt>Starts</dt>
+                    <dd>{formatDate(project.startDate, today)}</dd>
+                  </div>
+                )}
+                {project.targetDate && (
+                  <div>
+                    <dt>Target</dt>
+                    <dd>{formatDate(project.targetDate, today)}</dd>
+                  </div>
+                )}
+                {tagNames && (
+                  <div>
+                    <dt>Tags</dt>
+                    <dd>{tagNames}</dd>
+                  </div>
+                )}
+              </dl>
+              <div>
+                <ProgressMeter progress={progress} label={`${project.name} progress`} />
+                <p className="stamp">Calculated from tasks; cancelled tasks are not counted.</p>
+              </div>
+            </div>
+
+            {suggestCompletion && (
+              <div className="notice">
+                <p>Every task in this project is done.</p>
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  onClick={() =>
+                    void run(
+                      window.api.projects.setStatus({ id: project.id, status: 'completed' }),
+                      'Project marked completed.',
+                    )
                   }
                 >
-                  {JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS) && !archived
-                    ? 'Type a title in “Add a task” above and press Enter.'
-                    : null}
-                </EmptyState>
+                  Mark project completed
+                </button>
               </div>
             )}
-            {tasks.data && tasks.data.length > 0 && (
-              <TaskList
-                label={`Tasks in ${project.name}`}
-                tasks={tasks.data}
-                grouping={{ kind: 'statuses', statuses }}
-                today={today}
-                separateUndated={deferred.sort === 'due'}
-                tags={lookups.tags}
-              />
+            {archived && (
+              <div className="notice">
+                <p>This project is archived. Unarchive it to add tasks.</p>
+                <button type="button" className="btn" onClick={unarchive}>
+                  <ArchiveRestore aria-hidden /> Unarchive
+                </button>
+              </div>
             )}
-            {tasks.data && (
-              <LoadMore
-                shown={tasks.data.length}
-                limit={limit}
-                onMore={() => setLimit((l) => l + PAGE_SIZE)}
-              />
-            )}
+
+            <ProjectMilestones project={project} onShowTasks={showMilestoneTasks} />
+
+            <section className="section" aria-labelledby="project-tasks" ref={tasksSection}>
+              <div className="section__header">
+                <h2 id="project-tasks">Tasks</h2>
+                <div className="segmented" role="group" aria-label="Task view">
+                  <button
+                    type="button"
+                    aria-pressed={view === 'list'}
+                    onClick={() => setView('list')}
+                  >
+                    <List aria-hidden /> List
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={view === 'board'}
+                    onClick={() => setView('board')}
+                  >
+                    <Columns3 aria-hidden /> Board
+                  </button>
+                </div>
+              </div>
+              {!archived && <InlineAdd projectId={project.id} />}
+              {view === 'board' && (
+                <TaskBoard
+                  project={project}
+                  statuses={statuses}
+                  milestones={milestones.data ?? []}
+                />
+              )}
+              {view === 'list' && (
+                <>
+                  <FilterBar
+                    value={filters}
+                    defaults={PROJECT_DEFAULTS}
+                    onChange={(next) => {
+                      setFilters(next);
+                      setLimit(PAGE_SIZE);
+                    }}
+                    tags={lookups.tagList}
+                    milestones={milestones.data ?? []}
+                    allowManualSort
+                  />
+                  {tasks.error && <ErrorNotice error={tasks.error} onRetry={tasks.reload} />}
+                  {tasks.data && tasks.data.length === 0 && (
+                    <div className="panel">
+                      <EmptyState
+                        icon={ClipboardList}
+                        title={
+                          JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS)
+                            ? 'No tasks in this project yet.'
+                            : 'No tasks match these filters.'
+                        }
+                      >
+                        {JSON.stringify(filters) === JSON.stringify(PROJECT_DEFAULTS) && !archived
+                          ? 'Type a title in “Add a task” above and press Enter.'
+                          : null}
+                      </EmptyState>
+                    </div>
+                  )}
+                  {tasks.data && tasks.data.length > 0 && (
+                    <TaskList
+                      label={`Tasks in ${project.name}`}
+                      tasks={tasks.data}
+                      grouping={{ kind: 'statuses', statuses }}
+                      today={today}
+                      separateUndated={deferred.sort === 'due'}
+                      tags={lookups.tags}
+                    />
+                  )}
+                  {tasks.data && (
+                    <LoadMore
+                      shown={tasks.data.length}
+                      limit={limit}
+                      onMore={() => setLimit((l) => l + PAGE_SIZE)}
+                    />
+                  )}
+                </>
+              )}
+            </section>
+
+            <ProjectNotes project={project} />
           </>
         )}
-      </section>
-
-      <ProjectNotes project={project} />
+      </Tabs>
 
       <ProjectDialog open={editing} project={project} onClose={() => setEditing(false)} />
       {looks.dialogs}

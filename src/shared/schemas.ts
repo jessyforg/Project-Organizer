@@ -10,6 +10,8 @@ import {
   STATUS_CATEGORIES,
   THEMES,
   ACCENTS,
+  ACTIVITY_KINDS,
+  ACTIVITY_RETENTION_DAYS,
   SURFACES,
 } from './domain';
 
@@ -159,6 +161,16 @@ export const taskListQuerySchema = z.strictObject({
   offset: z.number().int().min(0).optional(),
 });
 
+// Activity (ADR-0021)
+const activityLimit = z.number().int().min(1).max(500);
+export const activityForItemSchema = z.strictObject({
+  kind: z.enum(ACTIVITY_KINDS),
+  id,
+  limit: activityLimit,
+});
+export const activityForProjectSchema = z.strictObject({ projectId: id, limit: activityLimit });
+export const activityRecentSchema = z.strictObject({ limit: activityLimit });
+
 // Milestones (ADR-0020)
 export const createMilestoneSchema = z.strictObject({
   projectId: id,
@@ -280,6 +292,7 @@ export const updateSettingsSchema = z.strictObject({
   accent: z.enum(ACCENTS).optional(),
   surface: z.enum(SURFACES).optional(),
   noteOutline: z.boolean().optional(),
+  activityRetentionDays: z.union(ACTIVITY_RETENTION_DAYS.map((d) => z.literal(d))).optional(),
 });
 export const emptySchema = z.strictObject({});
 

@@ -166,6 +166,10 @@ test('notes: slash commands insert blocks from the keyboard and mouse, saved as 
   // "/" opens the menu just below the cursor, inside the window.
   await page.keyboard.type('/');
   await expect(menu).toBeVisible();
+  // Measure after the menu's short rise-in animation, which starts it a few pixels lower.
+  await page
+    .locator('.slash-menu')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const caret = await body.locator('.slash-query').boundingBox();
   const box = await page.locator('.slash-menu').boundingBox();
   expect(caret && box).toBeTruthy();

@@ -50,7 +50,6 @@ export class DashboardService {
         sort: 'due',
         limit: SECTION_LIMIT,
       }),
-      recentlyUpdated: this.tasks.list({ sort: 'updated', limit: SECTION_LIMIT }),
       recentlyCompleted: this.tasks.list({
         statusCategories: ['done'],
         sort: 'completed',

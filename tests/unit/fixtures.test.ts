@@ -69,6 +69,20 @@ function fillV7(db: ReturnType<typeof openDatabase>) {
   ).run(randomUUID(), V7_PROJECT);
 }
 
+// Released in 0.9.0 stage 1 (a test build): milestones. Its upgrade to v9 adds the activity log.
+const V8_PROJECT = '0b1c2d3e-4f5a-4b6c-8d7e-9f0a1b2c3d4e';
+const V8_MILESTONE = '1c2d3e4f-5a6b-4c7d-9e8f-0a1b2c3d4e5f';
+function fillV8(db: ReturnType<typeof openDatabase>) {
+  ensureInbox({ db, clock, newId: randomUUID });
+  db.prepare(
+    `INSERT INTO projects (id, name, created_at, updated_at) VALUES (?, 'Website', 'x', 'x')`,
+  ).run(V8_PROJECT);
+  db.prepare(
+    `INSERT INTO milestones (id, project_id, name, target_date, created_at, updated_at)
+     VALUES (?, ?, 'Beta', '2026-11-01', 'x', 'x')`,
+  ).run(V8_MILESTONE, V8_PROJECT);
+}
+
 async function build(
   file: string,
   migrations: typeof profileMigrations,
@@ -155,6 +169,7 @@ if (process.env['REGENERATE_FIXTURES']) {
     await build(path.join(DIR, 'profile-v5.db'), profileMigrations.slice(0, 5), fillV5);
     await build(path.join(DIR, 'profile-v6.db'), profileMigrations.slice(0, 6), fillV6);
     await build(path.join(DIR, 'profile-v7.db'), profileMigrations.slice(0, 7), fillV7);
+    await build(path.join(DIR, 'profile-v8.db'), profileMigrations.slice(0, 8), fillV8);
   });
 } else {
   describe('upgrades from committed fixtures', () => {
@@ -173,6 +188,7 @@ if (process.env['REGENERATE_FIXTURES']) {
       ['profile-v5.db', profileMigrations],
       ['profile-v6.db', profileMigrations],
       ['profile-v7.db', profileMigrations],
+      ['profile-v8.db', profileMigrations],
     ] as const)(
       '%s upgrades to the current schema with integrity intact',
       async (name, migrations) => {
@@ -332,6 +348,27 @@ if (process.env['REGENERATE_FIXTURES']) {
       s.favourites.set({ kind: 'milestone', id: milestone.id, starred: true });
       expect(s.favourites.list().map((f) => f.kind)).toEqual(['project', 'milestone']);
       expect(db.pragma('foreign_key_check')).toEqual([]);
+      db.close();
+    });
+
+    it('keeps profile v8 milestones, and starts the activity log (schema v9)', async () => {
+      const db = openDatabase(copy('profile-v8.db'));
+      await migrate({
+        db,
+        migrations: profileMigrations,
+        snapshotDir: tempDir(),
+        clock,
+        logger: nullLogger,
+      });
+      const ctx = { db, clock, newId: randomUUID };
+      runProfileMaintenance(ctx, nullLogger);
+      const s = createProfileServices(ctx);
+      expect(s.milestones.get(V8_MILESTONE)).toMatchObject({ name: 'Beta' });
+      expect(s.activity.forProject({ projectId: V8_PROJECT, limit: 10 })).toEqual([]);
+      s.milestones.setCompleted(V8_MILESTONE, true);
+      expect(s.activity.forProject({ projectId: V8_PROJECT, limit: 10 })).toEqual([
+        expect.objectContaining({ itemKind: 'milestone', action: 'completed', title: 'Beta' }),
+      ]);
       db.close();
     });
 

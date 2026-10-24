@@ -2,6 +2,28 @@
 
 Newest entries first.
 
+## 2026-10-24 — Release 0.9.0, stage 2 of 6: activity log (schema v9)
+
+**Scope change:** the product owner asked for all remaining features in one release ("Everything left"). The plan, `docs/plans/2026-10-21-next-features-plan.md` §8, is now six stages on `feature/milestones-0.9`. Milestones are stage 1, and decisions for this stage are in [ADR-0021](DECISIONS/0021-activity-log.md).
+
+**What was built:**
+- **Schema v9** adds `activity_events`, with a `profile-v8.db` fixture and an upgrade test.
+- **`recordActivity`** is called inside the transaction of every write in the task, project, note, milestone, attachment, and trash services. Note renames and edits within 10 minutes merge.
+- **Reading:** the activity service lists an item's events, a project's, and the profile's. It also applies retention and forgets permanently deleted items.
+- **Interface:**
+  - a reusable `Tabs` component (the WAI-ARIA tabs pattern);
+  - Details and Activity tabs in task details, and Work and Activity tabs on project pages;
+  - Recent activity on Today, replacing Recently updated;
+  - an Activity history setting.
+
+**Verification for this stage:**
+- 9 service tests, including the atomicity check (a rollback after an event was written leaves neither) and 100,000 events under 50 ms.
+- 4 component tests.
+- A new end-to-end workflow (26).
+- Axe scans of both Activity tabs, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 589 of 589 unit and component tests pass, with no unhandled errors. 28 of 28 end-to-end tests pass, in two consecutive full runs.
+- **Also fixed: the slash-menu workflow.** It failed twice in full runs, because it measured the menu during its rise-in animation (800.19 px against an 800 px window). It now waits for the animation to finish first.
+
 ## 2026-10-24 — Release 0.9.0, milestones (schema v8), awaiting the product owner's check before merging
 
 **Approval:** the product owner said "merge and push then continue 0.9.0". 0.8.0 was squash-merged and pushed as `2ad76b4`. The branch is `feature/milestones-0.9`, and decisions are recorded in [ADR-0020](DECISIONS/0020-milestones.md).

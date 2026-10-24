@@ -27,7 +27,13 @@ const DEFAULTS: Partial<Record<IpcChannel, unknown>> = {
   'tasks:list': [],
   'trash:list': [],
   'dependencies:list': { prerequisites: [], dependents: [] },
-  'settings:get': { theme: 'system', accent: 'blue', surface: 'cool', noteOutline: false },
+  'settings:get': {
+    theme: 'system',
+    accent: 'blue',
+    surface: 'cool',
+    noteOutline: false,
+    activityRetentionDays: 365,
+  },
 };
 
 /** Installs `window.api` built by the real bridge factory over a scripted fake backend. */

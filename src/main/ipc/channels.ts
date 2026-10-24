@@ -267,6 +267,9 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'trash:empty': () => ({ removed: s().trash.empty() }),
 
     'search:query': ({ text }) => s().search.search(text),
+    'activity:forItem': (input) => s().activity.forItem(input),
+    'activity:forProject': (input) => s().activity.forProject(input),
+    'activity:recent': (input) => s().activity.recent(input),
     'switcher:search': (query) => s().switcher.search(query),
     'switcher:recent': (query) => s().switcher.recent(query),
     'switcher:recordOpened': (target) => {

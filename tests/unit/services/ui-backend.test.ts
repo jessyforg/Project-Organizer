@@ -63,7 +63,6 @@ describe('DashboardService', () => {
     expect(d.dueToday.map((t) => t.title)).toEqual(['Now']);
     expect(d.upcoming.map((t) => t.title)).toEqual(['Soon']);
     expect(d.recentlyCompleted.map((t) => t.title)).toEqual(['Finished']);
-    expect(d.recentlyUpdated[0]?.title).toBe('Finished');
     expect(d.activeProjects.map((x) => x.name)).toEqual(['Active']);
     expect(d.activeProjects[0]?.progress).toEqual({ done: 1, total: 4, ratio: 0.25 });
     expect(d.openTaskCount).toBe(3);

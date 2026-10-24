@@ -290,6 +290,50 @@ export interface ProfileSettings {
   surface: Surface;
   /** Whether notes show their outline panel (ADR-0017). */
   noteOutline: boolean;
+  /** How long activity is kept (ADR-0021). */
+  activityRetentionDays: ActivityRetention;
+}
+
+export const ACTIVITY_RETENTION_DAYS = [90, 180, 365, 730, 1825] as const;
+export type ActivityRetention = (typeof ACTIVITY_RETENTION_DAYS)[number];
+
+export const ACTIVITY_KINDS = ['task', 'project', 'note', 'milestone'] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+export type ActivityAction =
+  | 'created'
+  | 'renamed'
+  | 'changed'
+  | 'moved'
+  | 'edited'
+  | 'completed'
+  | 'reopened'
+  | 'archived'
+  | 'unarchived'
+  | 'trashed'
+  | 'restored'
+  | 'attachment_added'
+  | 'attachment_removed';
+
+/** What `changed` events change (ADR-0021). */
+export type ActivityField =
+  'status' | 'priority' | 'due_date' | 'milestone' | 'folder' | 'target_date';
+
+/** One recorded change (ADR-0021). Values are stored as people saw them. */
+export interface ActivityEvent {
+  id: number;
+  at: string;
+  itemKind: ActivityKind;
+  itemId: string;
+  projectId: string | null;
+  /** The item's title when the change happened. */
+  title: string;
+  action: ActivityAction;
+  field: ActivityField | null;
+  oldValue: string | null;
+  newValue: string | null;
+  /** The item still exists outside the trash, so it can be opened. */
+  live: boolean;
 }
 
 export type AttachmentKind = 'image' | 'file';
@@ -363,7 +407,6 @@ export interface Dashboard {
   overdue: Task[];
   dueToday: Task[];
   upcoming: Task[];
-  recentlyUpdated: Task[];
   recentlyCompleted: Task[];
   activeProjects: ProjectListItem[];
   /** Open milestones: overdue first, then due within the upcoming days (ADR-0020). */

@@ -199,6 +199,24 @@ Since schema v7, a file can also be a cover image (`note_id` is null for a proje
 - **Moving:** moving a task to another project clears its milestone.
 - **Progress:** R13 rules over the milestone's live top-level tasks and their live subtasks.
 
+**activity_events** (schema v9, [ADR-0021](DECISIONS/0021-activity-log.md))
+| Column | Type | Notes |
+|---|---|---|
+| id | INTEGER PK | Orders events within the same millisecond |
+| at | TEXT NOT NULL | ISO timestamp |
+| item_kind | TEXT NOT NULL CHECK IN ('task', 'project', 'note', 'milestone') | |
+| item_id | TEXT NOT NULL | No foreign key: events outlive renames and moves |
+| project_id | TEXT NULL | The item's project, or the project itself |
+| title | TEXT NOT NULL | The item's title at the time |
+| action | TEXT NOT NULL | created, renamed, changed, moved, edited, completed, reopened, archived, unarchived, trashed, restored, attachment_added, attachment_removed |
+| field | TEXT NULL | For `changed`: status, priority, due_date, milestone, folder, target_date |
+| old_value, new_value | TEXT NULL | As people saw them: names, priority keys, and dates as YYYY-MM-DD |
+
+- **Recording:** each event is written in the same transaction as its change.
+- **Note merges:** a note's renames and edits within 10 minutes of its previous event of the same kind update that event.
+- **Removal:** events go after the retention period (the `activityRetentionDays` setting, 365 days by default), and with their item when it is deleted for good. A project's purge removes everything recorded under it.
+- **Indexes:** `(item_kind, item_id, at)`, `(project_id, at)`, and `(at)`.
+
 `ON DELETE CASCADE` only fires on **permanent** deletion (trash purge or "delete permanently"). Moving to trash is an `UPDATE` of `deleted_at`.
 
 ### Database guards

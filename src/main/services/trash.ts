@@ -7,6 +7,7 @@ import {
 import { daysAfter, daysBefore } from '../domain/dates';
 import { AppError } from '../errors';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
+import { ActivityService, recordActivity } from './activity';
 import { MilestoneService } from './milestones';
 import { requireLiveProject } from './projects';
 
@@ -55,10 +56,13 @@ export class TrashService {
     const ids = this.liveTaskAndSubtasks(taskId);
     const batchId = this.ctx.newId();
     const now = nowIso(this.ctx);
-    db.prepare(
-      `UPDATE tasks SET deleted_at = ?, deletion_batch_id = ?, updated_at = ?
-       WHERE id IN (${placeholders(ids.length)})`,
-    ).run(now, batchId, now, ...ids);
+    db.transaction(() => {
+      db.prepare(
+        `UPDATE tasks SET deleted_at = ?, deletion_batch_id = ?, updated_at = ?
+         WHERE id IN (${placeholders(ids.length)})`,
+      ).run(now, batchId, now, ...ids);
+      this.record('task', taskId, 'trashed');
+    })();
     return { batchId };
   }
 
@@ -66,13 +70,16 @@ export class TrashService {
   trashNote(noteId: string): { batchId: string } {
     const batchId = this.ctx.newId();
     const now = nowIso(this.ctx);
-    const result = this.ctx.db
-      .prepare(
-        `UPDATE notes SET deleted_at = ?, deletion_batch_id = ?, updated_at = ?
-         WHERE id = ? AND deleted_at IS NULL`,
-      )
-      .run(now, batchId, now, noteId);
-    if (result.changes === 0) throw notFound('Note');
+    this.ctx.db.transaction(() => {
+      const result = this.ctx.db
+        .prepare(
+          `UPDATE notes SET deleted_at = ?, deletion_batch_id = ?, updated_at = ?
+           WHERE id = ? AND deleted_at IS NULL`,
+        )
+        .run(now, batchId, now, noteId);
+      if (result.changes === 0) throw notFound('Note');
+      this.record('note', noteId, 'trashed');
+    })();
     return { batchId };
   }
 
@@ -84,11 +91,14 @@ export class TrashService {
     new MilestoneService(this.ctx).requireEditable(milestoneId);
     const batchId = this.ctx.newId();
     const now = nowIso(this.ctx);
-    this.ctx.db
-      .prepare(
-        'UPDATE milestones SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE id = ?',
-      )
-      .run(now, batchId, now, milestoneId);
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare(
+          'UPDATE milestones SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE id = ?',
+        )
+        .run(now, batchId, now, milestoneId);
+      this.record('milestone', milestoneId, 'trashed');
+    })();
     return { batchId };
   }
 
@@ -114,6 +124,7 @@ export class TrashService {
       db.prepare(
         'UPDATE projects SET deleted_at = ?, deletion_batch_id = ?, updated_at = ? WHERE id = ?',
       ).run(now, batchId, now, projectId);
+      this.record('project', projectId, 'trashed');
     })();
     return { batchId };
   }
@@ -231,6 +242,20 @@ export class TrashService {
         'UPDATE milestones SET deleted_at = NULL, deletion_batch_id = NULL, updated_at = ? WHERE deletion_batch_id = ?',
       ).run(now, batchId);
 
+      // One event per item the person restored: a project covers what was trashed with it.
+      if (projects.length > 0) {
+        for (const p of projects) this.record('project', p.id, 'restored');
+      } else {
+        const inBatch = new Set(tasks.map((t) => t.id));
+        for (const t of tasks) {
+          if (t.parent_task_id === null || !inBatch.has(t.parent_task_id)) {
+            this.record('task', t.id, 'restored');
+          }
+        }
+        for (const n of notes) this.record('note', n.id, 'restored');
+        for (const m of milestones) this.record('milestone', m.id, 'restored');
+      }
+
       const unresolved = tasks.length
         ? (db
             .prepare(
@@ -300,7 +325,25 @@ export class TrashService {
       const deleteTasks = db.prepare('DELETE FROM tasks WHERE deletion_batch_id = ?');
       const deleteNotes = db.prepare('DELETE FROM notes WHERE deletion_batch_id = ?');
       const deleteMilestones = db.prepare('DELETE FROM milestones WHERE deletion_batch_id = ?');
+      const ids = (table: string, batchId: string) =>
+        (
+          db.prepare(`SELECT id FROM ${table} WHERE deletion_batch_id = ?`).all(batchId) as {
+            id: string;
+          }[]
+        ).map((r) => r.id);
+      const activity = new ActivityService(this.ctx);
       for (const batchId of batchIds) {
+        // Deleted for good: its history goes too (ADR-0021).
+        const projectIds = ids('projects', batchId);
+        activity.forget({
+          ids: [
+            ...projectIds,
+            ...ids('tasks', batchId),
+            ...ids('notes', batchId),
+            ...ids('milestones', batchId),
+          ],
+          projectIds,
+        });
         // Milestones before their project, so the count includes them; deleting one clears
         // its tasks' links (ON DELETE SET NULL).
         const changes =
@@ -312,6 +355,22 @@ export class TrashService {
       }
       return purged;
     })();
+  }
+
+  /** Records a trash action on an item (ADR-0021), inside the caller's transaction. */
+  private record(
+    kind: 'task' | 'note' | 'milestone' | 'project',
+    id: string,
+    action: 'trashed' | 'restored',
+  ): void {
+    const sql = {
+      task: 'SELECT title, project_id FROM tasks WHERE id = ?',
+      note: 'SELECT title, project_id FROM notes WHERE id = ?',
+      milestone: 'SELECT name AS title, project_id FROM milestones WHERE id = ?',
+      project: 'SELECT name AS title, id AS project_id FROM projects WHERE id = ?',
+    }[kind];
+    const row = this.ctx.db.prepare(sql).get(id) as { title: string; project_id: string };
+    recordActivity(this.ctx, { kind, id, projectId: row.project_id, title: row.title, action });
   }
 
   private liveTaskAndSubtasks(taskId: string): string[] {

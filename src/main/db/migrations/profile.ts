@@ -374,4 +374,27 @@ export const profileMigrations: readonly Migration[] = [
         WHERE milestone_id IS NOT NULL;
     `,
   },
+  {
+    // The activity log (ADR-0021). No foreign keys: events describe the past and outlive
+    // renames and moves; permanent deletion removes an item's events explicitly.
+    version: 9,
+    name: 'activity_log',
+    sql: `
+      CREATE TABLE activity_events (
+        id INTEGER PRIMARY KEY,
+        at TEXT NOT NULL,
+        item_kind TEXT NOT NULL CHECK (item_kind IN ('task', 'project', 'note', 'milestone')),
+        item_id TEXT NOT NULL,
+        project_id TEXT,
+        title TEXT NOT NULL,
+        action TEXT NOT NULL,
+        field TEXT,
+        old_value TEXT,
+        new_value TEXT
+      ) STRICT;
+      CREATE INDEX activity_item ON activity_events (item_kind, item_id, at);
+      CREATE INDEX activity_project ON activity_events (project_id, at);
+      CREATE INDEX activity_at ON activity_events (at);
+    `,
+  },
 ];
