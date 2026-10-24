@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.9.0 — Milestones, activity log, task table, custom fields, and templates (in progress, not yet publicly released)
+## 0.9.0 — Milestones, activity log, task table, custom fields, and templates (2026-10-24, not yet publicly released)
 
-Built in stages on one branch; this list grows with each stage.
+Everything left in the feature plan, in one release. Profiles upgrade from schema v7 to v11 automatically, after a verified snapshot.
+
+**Before release:** the zod library is to be updated to 4.6.7 for a security advisory (GHSA-mrhx-c7xc-m3w5) once that version meets the two-week rule, on 2026-10-26. See STATUS.
 
 ### Milestones
 

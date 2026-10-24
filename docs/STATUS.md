@@ -2,6 +2,18 @@
 
 Newest entries first.
 
+## 2026-10-24 — Release 0.9.0: stages 1–5 done, installer built for the product owner's check; the zod update is due on 2026-10-26
+
+**Built:** milestones (v8), the activity log (v9), the task table, custom fields (v10), and project templates (v11), on `feature/milestones-0.9`. Details are in the stage entries below and in ADR-0020 to ADR-0024.
+
+**Installer:** `release/ProjectForge Setup 0.9.0.exe`, built from the stage 5 commit.
+
+**Open item (stage 6):**
+- `npm audit --omit=dev` still reports GHSA-mrhx-c7xc-m3w5 (zod below 4.6.6, high).
+- zod 4.6.7 was released on 2026-10-12, so it meets the two-week rule (SECURITY.md §6) on 2026-10-26.
+- **Plan:** update the exact pin to 4.6.7, run every check and both end-to-end runs again, and rebuild the installer, all before the merge.
+- **Exposure in the meantime:** zod checks input from the app's own sandboxed window and from files the user chooses (backups and, now, templates). The worst case is a crash on a crafted file.
+
 ## 2026-10-24 — Release 0.9.0, stage 5 of 6: project templates (schema v11)
 
 Decisions are in [ADR-0024](DECISIONS/0024-project-templates.md).
