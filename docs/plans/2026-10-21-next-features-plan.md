@@ -362,3 +362,21 @@ A table of contents for the open note.
 ## 7. Next step
 
 Approve or adjust the order and decisions D1–D7. I then write the detailed plan for **0.6.0, stage 1 (formatting bubble)**, covering the files touched, the tests written first, and the end-to-end check, and start once you approve it.
+
+## 8. Change on 2026-10-24: the rest in one release
+
+The product owner asked for everything left to ship as one release, built in stages on one branch like 0.6.0 ("Everything left", 2026-10-24). Milestones were already complete on `feature/milestones-0.9`, so they become stage 1. The acceptance criteria in §5 are unchanged.
+
+**Release 0.9.0 — Planning, history, and data views:**
+
+| Stage | Feature | Schema | Why here |
+|---|---|---|---|
+| 1 | #6 Milestones | v8 | Done (`f215e1b`) |
+| 2 | #13 Activity log | v9 | Later stages log their changes from day one |
+| 3 | #15 Tasks as a table | — | Custom fields then appear as columns |
+| 4 | #14 Custom fields | v10 | Needed by templates |
+| 5 | #7 Project templates | v11 | Templates include milestones and custom fields |
+| 6 | zod 4.6.7 and release checks | — | The zod fix meets the two-week rule on 2026-10-26 |
+
+- **Migrations:** each stage adds its own forward-only migration instead of extending v8. A test build of 0.9.0 (stage 1) may already be installed, and changing v8 would make that profile refuse to open.
+- **Pace:** report after each stage and continue (D6). The product owner checks the finished installer before the merge.
