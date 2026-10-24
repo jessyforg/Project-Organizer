@@ -164,6 +164,7 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'projects:unarchive': ({ id }) => s().projects.unarchive(id),
 
     'statuses:list': ({ projectId }) => s().statuses.listForProject(projectId),
+    'statuses:listAll': () => s().statuses.listAll(),
     'statuses:add': (input) => s().statuses.add(input),
     'statuses:rename': ({ id, name }) => s().statuses.rename(id, name),
     'statuses:reorder': ({ projectId, ids }) => s().statuses.reorder(projectId, ids),
@@ -179,6 +180,7 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'tasks:reorder': (input) => s().tasks.reorder(input),
     'tasks:moveOnBoard': (input) => s().tasks.moveOnBoard(input),
     'milestones:list': ({ projectId }) => s().milestones.list(projectId),
+    'milestones:listAll': () => s().milestones.listAll(),
     'milestones:inRange': (range) => s().milestones.inRange(range),
     'milestones:create': (input) => s().milestones.create(input),
     'milestones:update': (input) => s().milestones.update(input),

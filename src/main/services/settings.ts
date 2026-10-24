@@ -6,6 +6,7 @@ import {
   THEMES,
   type ProfileSettings,
 } from '@shared/domain';
+import { taskTablesSchema } from '@shared/schemas';
 import { nowIso, type ServiceContext } from './context';
 
 /** Each setting has a schema and a default; invalid or unknown stored values fall back to defaults. */
@@ -14,6 +15,7 @@ const SETTINGS = {
   accent: { schema: z.enum(ACCENTS), fallback: 'blue' },
   surface: { schema: z.enum(SURFACES), fallback: 'cool' },
   noteOutline: { schema: z.boolean(), fallback: false },
+  taskTables: { schema: taskTablesSchema, fallback: {} },
   activityRetentionDays: {
     schema: z.union(ACTIVITY_RETENTION_DAYS.map((d) => z.literal(d))),
     fallback: 365,
@@ -50,6 +52,7 @@ export class SettingsService {
       surface: read('surface'),
       noteOutline: read('noteOutline'),
       activityRetentionDays: read('activityRetentionDays'),
+      taskTables: read('taskTables'),
     };
   }
 

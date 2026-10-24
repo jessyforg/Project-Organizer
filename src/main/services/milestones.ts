@@ -54,6 +54,16 @@ export class MilestoneService {
     return this.withProgress(rows);
   }
 
+  /** Every live milestone in a live project, for tables across projects (ADR-0022). */
+  listAll(): Milestone[] {
+    const rows = this.ctx.db
+      .prepare(
+        `${SELECT} WHERE m.deleted_at IS NULL AND p.deleted_at IS NULL ORDER BY p.id, ${ORDER}`,
+      )
+      .all() as Row[];
+    return this.withProgress(rows);
+  }
+
   get(id: string): Milestone {
     const row = this.ctx.db
       .prepare(`${SELECT} WHERE m.id = ? AND m.deleted_at IS NULL AND p.deleted_at IS NULL`)

@@ -162,3 +162,4 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0019](DECISIONS/0019-favourites-icons-covers.md) | Favourites, icons, and covers (0.8.0, schema v7) |
 | [0020](DECISIONS/0020-milestones.md) | Milestones (0.9.0, schema v8) |
 | [0021](DECISIONS/0021-activity-log.md) | Activity log (0.9.0 stage 2, schema v9) |
+| [0022](DECISIONS/0022-task-table.md) | Tasks as a table (0.9.0 stage 3) |

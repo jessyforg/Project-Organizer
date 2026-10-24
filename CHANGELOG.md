@@ -32,6 +32,18 @@ Built in stages on one branch; this list grows with each stage.
 - **Permanent deletion:** deleting something permanently from the trash also removes its history.
 - Profile data schema version 9.
 
+### Tasks as a table
+
+- **Where:** a new **Table** view beside List and Board on project pages, and on My tasks.
+- **Columns:** title, status, priority, due date, start date, tags, milestone, project (on My tasks), and when it was created and updated.
+  - Show, hide, and reorder them from **Columns**.
+  - Resize them by dragging a header's edge, or with the arrow keys on it.
+  - Each view remembers its layout.
+- **Sorting and grouping:** sort by any column from its header, and group by status, priority, milestone, or project.
+- **Editing in place:** edit the title, status, priority, dates, and milestone in the table. Each change can be undone from its message.
+- **Keyboard:** the arrow keys move between cells; Enter or F2 edits; Enter on a title opens the task.
+- **Large lists:** large tables stay fast, because only the rows in view are drawn.
+
 ## 0.8.0 — Favourites, icons, and covers (2026-10-23, not yet publicly released)
 
 - **Favourites:** star a project or note from its ⋯ menu, its right-click menu, or the command palette.

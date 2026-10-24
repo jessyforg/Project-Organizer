@@ -2,6 +2,26 @@
 
 Newest entries first.
 
+## 2026-10-24 — Release 0.9.0, stage 3 of 6: tasks as a table
+
+Decisions are in [ADR-0022](DECISIONS/0022-task-table.md). There is no schema change: layouts are the profile setting `taskTables`.
+
+**What was built:**
+- **`TaskTable`:** a virtualised WAI-ARIA grid on project pages (Table view) and on My tasks (List and Table switch).
+  - Sorting, grouping, and inline editing through `tasks:update` and `applyUpdate`, with an Undo toast.
+  - The Columns dialog, and keyboard and mouse resizing.
+- **New read-only channels:** `statuses:listAll` and `milestones:listAll`, for names across projects.
+
+**Found during the work:**
+- **Columns lagged:** a change in the Columns dialog only showed after the save round trip, which the end-to-end workflow caught. Layout changes now show at once.
+- **Title scrolled out of view:** the default widths were slightly wider than the page, so focusing a cell scrolled Title sideways. Screenshot review caught it. The defaults now fit, and focus scrolls only as far as needed.
+
+**Verification for this stage:**
+- 7 component and model tests, including 5,000 tasks with fewer than 60 rows rendered.
+- A new end-to-end workflow (27).
+- Axe scans of the table, the table while a cell is being edited, and the Columns dialog, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 596 of 596 unit and component tests pass, with no unhandled errors. 29 of 29 end-to-end tests pass, in two consecutive full runs.
+
 ## 2026-10-24 — Release 0.9.0, stage 2 of 6: activity log (schema v9)
 
 **Scope change:** the product owner asked for all remaining features in one release ("Everything left"). The plan, `docs/plans/2026-10-21-next-features-plan.md` §8, is now six stages on `feature/milestones-0.9`. Milestones are stage 1, and decisions for this stage are in [ADR-0021](DECISIONS/0021-activity-log.md).

@@ -287,12 +287,27 @@ export const setCompletedSchema = z.strictObject({ id, completed: z.boolean() })
 export const taskIdSchema = z.strictObject({ taskId: id });
 export const projectIdSchema = z.strictObject({ projectId: id });
 export const listProjectsSchema = z.strictObject({ includeArchived: z.boolean().optional() });
+/** Table layouts (ADR-0022): at most 40 columns, each 60–800 px wide. */
+const tableColumns = z
+  .array(
+    z.strictObject({
+      id: z.string().min(1).max(60),
+      width: z.number().int().min(60).max(800),
+      hidden: z.boolean(),
+    }),
+  )
+  .max(40);
+export const taskTablesSchema = z.strictObject({
+  project: tableColumns.optional(),
+  myTasks: tableColumns.optional(),
+});
 export const updateSettingsSchema = z.strictObject({
   theme: z.enum(THEMES).optional(),
   accent: z.enum(ACCENTS).optional(),
   surface: z.enum(SURFACES).optional(),
   noteOutline: z.boolean().optional(),
   activityRetentionDays: z.union(ACTIVITY_RETENTION_DAYS.map((d) => z.literal(d))).optional(),
+  taskTables: taskTablesSchema.optional(),
 });
 export const emptySchema = z.strictObject({});
 

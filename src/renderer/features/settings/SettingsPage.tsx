@@ -57,6 +57,7 @@ const DEFAULTS: Appearance = {
   surface: 'cool',
   noteOutline: false,
   activityRetentionDays: 365,
+  taskTables: {},
 };
 
 export function SettingsPage({

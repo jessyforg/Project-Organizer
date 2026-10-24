@@ -11,6 +11,7 @@ import {
   Plus,
   RotateCcw,
   SquarePen,
+  Table2,
   Trash2,
   Workflow,
 } from 'lucide-react';
@@ -43,6 +44,7 @@ import { useCreateNote } from '../notes/useCreateNote';
 import { FilterBar, filtersToQuery, type TaskFilters } from '../tasks/FilterBar';
 import { LoadMore, PAGE_SIZE } from '../tasks/LoadMore';
 import { TaskList } from '../tasks/TaskList';
+import { TABLE_LIMIT, TaskTable } from '../tasks/TaskTable';
 import { useLookups } from '../tasks/useLookups';
 import { ProjectDialog } from './ProjectDialog';
 import { StatusManager } from './StatusManager';
@@ -111,7 +113,7 @@ function ProjectView({
   const [editing, setEditing] = useState(false);
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [confirmTrash, setConfirmTrash] = useState(false);
-  const [view, setView] = useState<'list' | 'board'>('list');
+  const [view, setView] = useState<'list' | 'board' | 'table'>('list');
   const [pageTab, setPageTab] = useState<'work' | 'activity'>('work');
   const [chosenFilters, setFilters] = useState({
     ...PROJECT_DEFAULTS,
@@ -141,7 +143,8 @@ function ProjectView({
     ...filtersToQuery(deferred),
     projectId: project.id,
     includeArchived: true,
-    limit,
+    // The table sorts and groups in the window, so it loads every task up to its limit.
+    limit: view === 'table' ? TABLE_LIMIT : limit,
   };
   const tasks = useQuery(`project-tasks:${JSON.stringify(query)}`, () =>
     window.api.tasks.list(query),
@@ -381,6 +384,13 @@ function ProjectView({
                   >
                     <Columns3 aria-hidden /> Board
                   </button>
+                  <button
+                    type="button"
+                    aria-pressed={view === 'table'}
+                    onClick={() => setView('table')}
+                  >
+                    <Table2 aria-hidden /> Table
+                  </button>
                 </div>
               </div>
               {!archived && <InlineAdd projectId={project.id} />}
@@ -391,7 +401,7 @@ function ProjectView({
                   milestones={milestones.data ?? []}
                 />
               )}
-              {view === 'list' && (
+              {view !== 'board' && (
                 <>
                   <FilterBar
                     value={filters}
@@ -421,7 +431,20 @@ function ProjectView({
                       </EmptyState>
                     </div>
                   )}
-                  {tasks.data && tasks.data.length > 0 && (
+                  {view === 'table' && tasks.data && tasks.data.length > 0 && (
+                    <TaskTable
+                      view="project"
+                      tasks={tasks.data}
+                      label={`Tasks in ${project.name}`}
+                    />
+                  )}
+                  {view === 'table' && tasks.data?.length === TABLE_LIMIT && (
+                    <p className="muted small">
+                      Showing the first {TABLE_LIMIT.toLocaleString()} tasks. Use filters to narrow
+                      the table.
+                    </p>
+                  )}
+                  {view === 'list' && tasks.data && tasks.data.length > 0 && (
                     <TaskList
                       label={`Tasks in ${project.name}`}
                       tasks={tasks.data}
@@ -431,7 +454,7 @@ function ProjectView({
                       tags={lookups.tags}
                     />
                   )}
-                  {tasks.data && (
+                  {view === 'list' && tasks.data && (
                     <LoadMore
                       shown={tasks.data.length}
                       limit={limit}

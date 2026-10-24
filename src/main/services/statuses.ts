@@ -55,6 +55,17 @@ export class StatusService {
     return rows.map(toStatus);
   }
 
+  /** Every live project's statuses, for tables across projects (ADR-0022). */
+  listAll(): WorkflowStatus[] {
+    const rows = this.ctx.db
+      .prepare(
+        `${STATUS_SELECT} WHERE project_id IN (SELECT id FROM projects WHERE deleted_at IS NULL)
+         ORDER BY project_id, sort_key`,
+      )
+      .all() as StatusRow[];
+    return rows.map(toStatus);
+  }
+
   get(id: string): WorkflowStatus {
     const row = this.ctx.db.prepare(`${STATUS_SELECT} WHERE id = ?`).get(id) as
       StatusRow | undefined;

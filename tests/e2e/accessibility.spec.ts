@@ -215,6 +215,24 @@ for (const theme of ['light', 'dark'] as const) {
     await expectNoViolations(page, 'Task activity');
     await page.keyboard.press('Escape');
 
+    // Tasks as a table (ADR-0022), also while a cell is being edited.
+    await page.getByRole('button', { name: 'Table' }).click();
+    const grid = page.getByRole('grid', { name: 'Tasks in Website' });
+    await expect(grid).toBeVisible();
+    await expectNoViolations(page, 'Task table');
+    await grid.locator('[role="gridcell"][data-row="0"][data-col="2"]').click();
+    await page.keyboard.press('Enter');
+    await expect(grid.getByRole('combobox')).toBeFocused();
+    await expectNoViolations(page, 'Task table (editing a cell)');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Columns' }).click();
+    await expectNoViolations(page, 'Table columns dialog');
+    await page
+      .getByRole('dialog', { name: 'Table columns' })
+      .getByRole('button', { name: 'Done' })
+      .click();
+    await page.getByRole('button', { name: 'List', exact: true }).click();
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');

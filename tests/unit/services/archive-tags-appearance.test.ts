@@ -97,6 +97,7 @@ describe('Appearance settings', () => {
       surface: 'cool',
       noteOutline: false,
       activityRetentionDays: 365,
+      taskTables: {},
     });
     expect(p.settings.update({ accent: 'teal', surface: 'warm' })).toEqual({
       theme: 'system',
@@ -104,6 +105,7 @@ describe('Appearance settings', () => {
       surface: 'warm',
       noteOutline: false,
       activityRetentionDays: 365,
+      taskTables: {},
     });
   });
 

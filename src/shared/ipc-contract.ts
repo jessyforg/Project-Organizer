@@ -123,6 +123,7 @@ export const ipcContract = {
   'projects:archive': s.idSchema,
   'projects:unarchive': s.idSchema,
   'statuses:list': s.projectIdSchema,
+  'statuses:listAll': s.emptySchema,
   'statuses:add': s.addStatusSchema,
   'statuses:rename': s.renameStatusSchema,
   'statuses:reorder': s.reorderStatusesSchema,
@@ -137,6 +138,7 @@ export const ipcContract = {
   'tasks:reorder': s.reorderTaskSchema,
   'tasks:moveOnBoard': s.moveOnBoardSchema,
   'milestones:list': s.projectIdSchema,
+  'milestones:listAll': s.emptySchema,
   'milestones:inRange': s.milestoneRangeSchema,
   'milestones:create': s.createMilestoneSchema,
   'milestones:update': s.updateMilestoneSchema,
@@ -243,6 +245,7 @@ export interface IpcResponses {
   'projects:archive': Project;
   'projects:unarchive': Project;
   'statuses:list': WorkflowStatus[];
+  'statuses:listAll': WorkflowStatus[];
   'statuses:add': WorkflowStatus;
   'statuses:rename': WorkflowStatus;
   'statuses:reorder': WorkflowStatus[];
@@ -257,6 +260,7 @@ export interface IpcResponses {
   'tasks:reorder': Task;
   'tasks:moveOnBoard': TaskUpdateResult;
   'milestones:list': Milestone[];
+  'milestones:listAll': Milestone[];
   'milestones:inRange': MilestoneEntry[];
   'milestones:create': Milestone;
   'milestones:update': Milestone;

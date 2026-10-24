@@ -292,6 +292,21 @@ export interface ProfileSettings {
   noteOutline: boolean;
   /** How long activity is kept (ADR-0021). */
   activityRetentionDays: ActivityRetention;
+  /** Column layouts of the task tables (ADR-0022). */
+  taskTables: TaskTableLayouts;
+}
+
+/** One table column: built-in IDs, and later custom fields (ADR-0022). */
+export interface TaskTableColumn {
+  id: string;
+  width: number;
+  hidden: boolean;
+}
+
+export interface TaskTableLayouts {
+  /** Shared by every project's table. */
+  project?: TaskTableColumn[] | undefined;
+  myTasks?: TaskTableColumn[] | undefined;
 }
 
 export const ACTIVITY_RETENTION_DAYS = [90, 180, 365, 730, 1825] as const;

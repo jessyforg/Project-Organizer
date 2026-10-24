@@ -33,6 +33,7 @@ const DEFAULTS: Partial<Record<IpcChannel, unknown>> = {
     surface: 'cool',
     noteOutline: false,
     activityRetentionDays: 365,
+    taskTables: {},
   },
 };
 
