@@ -32,8 +32,8 @@ The packaged app cannot be driven by Playwright, because its fuses disable the d
 
 ## 3. Test data rules
 
-- Every persistence and end-to-end test uses a fresh temporary directory; the real `%APPDATA%\ProjectForge` folder is never touched.
-- Development builds use `ProjectForge-dev` as their data folder.
+- Every persistence and end-to-end test uses a fresh temporary directory; the real `%APPDATA%\Katha` folder is never touched.
+- Development builds use `Katha-dev` as their data folder.
 - Time-dependent behaviour (trash purge, overdue, snapshots) uses an injected clock.
 - Fixture databases are generated for every released schema version and committed under `tests/fixtures/` for migration tests.
 

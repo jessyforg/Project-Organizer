@@ -4,7 +4,7 @@ Status: **Implemented through Phase 4 (core UI), 2026-10-17.** Update this docum
 
 ## 1. Overview
 
-ProjectForge is an Electron application. The user interface is React rendered in a sandboxed Chromium window. All data, filesystem, and operating-system work happens in the trusted main process.
+Katha is an Electron application. The user interface is React rendered in a sandboxed Chromium window. All data, filesystem, and operating-system work happens in the trusted main process.
 
 ```
 ┌──────────────────────────────── Renderer (untrusted) ───────────────────────────────┐
@@ -108,7 +108,7 @@ type Result<T> =
 ## 5. Data locations
 
 ```
-%APPDATA%\ProjectForge\
+%APPDATA%\Katha\
 ├─ app.db             profile registry
 ├─ snapshots\         pre-migration snapshots of app.db
 ├─ profiles\<profile-uuid>\
@@ -119,7 +119,7 @@ type Result<T> =
 └─ electron\          Chromium's own storage (Electron userData)
 ```
 
-`%APPDATA%` resolves to `C:\Users\<user>\AppData\Roaming`. The folder name comes from the application name and must be frozen before the first release ([ADR-0002](DECISIONS/0002-build-and-packaging.md)). Development builds use a separate folder (`ProjectForge-dev`) so development never touches real data. Unpackaged builds also honour `PROJECTFORGE_DATA_DIR`, which tests use for isolated temporary folders; packaged builds ignore it.
+`%APPDATA%` resolves to `C:\Users\<user>\AppData\Roaming`. The folder name comes from the application name, frozen as Katha ([ADR-0025](DECISIONS/0025-name-and-licence.md)). Development builds use a separate folder (`Katha-dev`) so development never touches real data. Unpackaged builds also honour `PROJECTFORGE_DATA_DIR`, which tests use for isolated temporary folders; packaged builds ignore it.
 
 ## 6. Renderer
 

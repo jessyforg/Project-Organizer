@@ -171,14 +171,14 @@ export class TemplateService {
     try {
       data = JSON.parse(text);
     } catch {
-      throw new AppError('VALIDATION_FAILED', 'This is not a ProjectForge template.');
+      throw new AppError('VALIDATION_FAILED', 'This is not a Katha template.');
     }
     if (
       typeof data !== 'object' ||
       data === null ||
       (data as { format?: unknown }).format !== TEMPLATE_FORMAT
     ) {
-      throw new AppError('VALIDATION_FAILED', 'This is not a ProjectForge template.');
+      throw new AppError('VALIDATION_FAILED', 'This is not a Katha template.');
     }
     const parsed = templateFileSchema.safeParse(data);
     if (!parsed.success) throw new AppError('VALIDATION_FAILED', firstIssue(parsed.error));

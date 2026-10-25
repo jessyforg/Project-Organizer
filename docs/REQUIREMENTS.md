@@ -1,6 +1,6 @@
 # Requirements Register
 
-Working product name: **ProjectForge** (temporary; see [ADR-0002](DECISIONS/0002-build-and-packaging.md) for name-freeze rules).
+Product name: **Katha** (frozen 2026-10-26; called ProjectForge during development; see [ADR-0025](DECISIONS/0025-name-and-licence.md)).
 
 Source: *Project Organizer — Free, Local-First Master Prompt* (revised edition). Section references (§) point to that document. Release classification approved by the product owner on **2026-10-17**.
 

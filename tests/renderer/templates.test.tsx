@@ -119,7 +119,7 @@ describe('managing templates (ADR-0024)', () => {
       'templates:list': () => ok([summary(SOFTWARE), summary(MINE)]),
       'templates:rename': () => ok(summary(MINE)),
       'templates:delete': () => ok(null),
-      'templates:import': () => fail('This is not a ProjectForge template.'),
+      'templates:import': () => fail('This is not a Katha template.'),
     });
     renderWithApp(<TemplatesDialog open onClose={() => undefined} />);
     const list = await screen.findByRole('list', { name: 'Templates' });
@@ -143,8 +143,6 @@ describe('managing templates (ADR-0024)', () => {
 
     const file = new File(['{"format":"other"}'], 'x.json', { type: 'application/json' });
     fireEvent.change(screen.getByTestId('template-import-input'), { target: { files: [file] } });
-    expect((await screen.findByRole('alert')).textContent).toBe(
-      'This is not a ProjectForge template.',
-    );
+    expect((await screen.findByRole('alert')).textContent).toBe('This is not a Katha template.');
   });
 });

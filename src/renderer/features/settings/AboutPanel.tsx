@@ -7,7 +7,7 @@ export function AboutPanel() {
     <section className="panel settings-card" aria-labelledby="about-heading">
       <div className="settings-card__intro">
         <h2 id="about-heading">About</h2>
-        <p>ProjectForge works offline and stores your data only on this computer.</p>
+        <p>Katha works offline and stores your data only on this computer.</p>
       </div>
       {info.error && <ErrorNotice error={info.error} onRetry={info.reload} />}
       {info.data && (

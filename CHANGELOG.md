@@ -4,6 +4,10 @@
 
 Everything left in the feature plan, in one release. Profiles upgrade from schema v7 to v11 automatically, after a verified snapshot.
 
+**New name and licence:** ProjectForge is now **Katha**, released under the MIT licence ([ADR-0025](docs/DECISIONS/0025-name-and-licence.md)). Katha installs as a separate app with its data in `%APPDATA%\Katha`. To keep profiles from a ProjectForge build, follow "Moving from a ProjectForge build" in the README. Backups made by ProjectForge restore unchanged.
+
+**Updated:** Electron 44.7.0.
+
 **Before release:** the zod library is to be updated to 4.6.7 for a security advisory (GHSA-mrhx-c7xc-m3w5) once that version meets the two-week rule, on 2026-10-26. See STATUS.
 
 ### Milestones

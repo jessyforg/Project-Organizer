@@ -78,10 +78,10 @@ export function ProfileSetup({
           <span className="brand__mark" aria-hidden="true">
             <Hammer />
           </span>
-          ProjectForge
+          Katha
         </div>
         <div className="page__heading">
-          <h1>{firstRun ? 'Welcome to ProjectForge' : 'Choose a profile'}</h1>
+          <h1>{firstRun ? 'Welcome to Katha' : 'Choose a profile'}</h1>
           <p className="muted">
             {firstRun
               ? 'Organise projects, tasks, notes, and deadlines. Start by creating a profile.'

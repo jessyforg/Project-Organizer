@@ -2,6 +2,24 @@
 
 Newest entries first.
 
+## 2026-10-26 — Release 0.9.0, stage 6 (part 2): the name Katha and the MIT licence
+
+Decisions are in [ADR-0025](DECISIONS/0025-name-and-licence.md). The product owner chose both.
+
+**Why:** the name ProjectForge is already used by Micromata's open-source project-management tool, and the public repository had no licence.
+
+**What changed:**
+- `productName` Katha, package `katha`, `appId` `com.katha.desktop`. The data folder is now `%APPDATA%\Katha` (`Katha-dev` in development).
+- Every name the user sees: the window title, sidebar, first-run screen, About, file dialogs, default file names, and error messages.
+- `LICENSE` (MIT) and `"license": "MIT"`. The README has a Licence section.
+- **Kept on purpose** (stored in user data and files): the `projectforge://` link address, the backup, export, and template format IDs, the `.pfbackup` extension, and the `PROJECTFORGE_*` test variables.
+- **Existing installs:** the README's new "Moving from a ProjectForge build" section moves the data by renaming the folder. A new end-to-end test (32) creates a profile and a project, moves the whole data folder, and opens both from the new place.
+- **Docs:** README, CHANGELOG, ARCHITECTURE, TESTING, REQUIREMENTS, and the release checklist (Electron and name-freeze items done).
+
+**Not changed:** the GitHub repository name (`Project-Organizer`), which is a GitHub setting.
+
+**Defect found:** the images-and-files end-to-end test failed about 1 run in 6, on Electron 44.5.1 as well as 44.7.0, so it was older than these changes. Cause: Playwright intercepts file choosers only while something listens for them, and it turned interception off and on again between the test's two waits. A chooser opened in that gap was a real system window that nothing answered. One listener now keeps interception on for the whole test: 30 of 30 repeated runs pass.
+
 ## 2026-10-26 — Release 0.9.0, stage 6 (part 1): Electron and Vite updates, a test race fixed
 
 **Updated (exact pins, each at least two weeks old):**

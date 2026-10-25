@@ -35,10 +35,10 @@ export interface ChannelDeps {
   clock: () => Date;
 }
 
-const BACKUP_FILTER = { name: 'ProjectForge backup', extension: 'pfbackup' };
+const BACKUP_FILTER = { name: 'Katha backup', extension: 'pfbackup' };
 const JSON_FILTER = { name: 'JSON export', extension: 'json' };
 const MARKDOWN_FILTER = { name: 'Markdown', extension: 'md' };
-const TEMPLATE_FILTER = { name: 'ProjectForge template', extension: 'json' };
+const TEMPLATE_FILTER = { name: 'Katha template', extension: 'json' };
 const ANY_FILE = { name: 'All files', extension: '*' };
 
 /** A default file name that is safe on Windows. */
@@ -49,7 +49,7 @@ function fileNameFor(profileName: string, date: string, extension: string): stri
       .map((ch) => (ch.charCodeAt(0) < 32 || forbidden.includes(ch) ? '-' : ch))
       .join('')
       .trim() || 'Profile';
-  return `ProjectForge ${safe} ${date}.${extension}`;
+  return `Katha ${safe} ${date}.${extension}`;
 }
 
 /** One implementation per channel; the mapped type makes a missing channel a compile error. */

@@ -229,8 +229,8 @@ describe('managing templates (ADR-0024)', () => {
       }
       expect((caught as Error).message).toMatch(message);
     };
-    refuse('not json', /not a ProjectForge template/);
-    refuse(JSON.stringify({ format: 'other' }), /not a ProjectForge template/);
+    refuse('not json', /not a Katha template/);
+    refuse(JSON.stringify({ format: 'other' }), /not a Katha template/);
     const many = structuredClone(document);
     many.content.tasks = Array.from({ length: 1001 }, (_, i) => ({
       ...document.content.tasks[0]!,

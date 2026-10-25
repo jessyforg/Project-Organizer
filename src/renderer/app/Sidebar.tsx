@@ -77,7 +77,7 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
         <span className="brand__mark" aria-hidden="true">
           <Hammer />
         </span>
-        ProjectForge
+        Katha
       </div>
       <div className="sidebar__search search-field">
         <label htmlFor="global-search" className="visually-hidden">

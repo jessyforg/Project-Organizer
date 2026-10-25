@@ -1,6 +1,6 @@
 # appId and productName (package.json) determine the user data folder.
 # They may change freely until the first release; see docs/DECISIONS/0002-build-and-packaging.md.
-appId: com.projectforge.desktop
+appId: com.katha.desktop
 directories:
   output: release
   buildResources: build

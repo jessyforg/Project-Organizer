@@ -238,7 +238,7 @@ export class BackupService {
       }
       const manifest = readManifest(db);
       if (!manifest) {
-        throw new AppError('BACKUP_INVALID', 'This file is not a ProjectForge backup.');
+        throw new AppError('BACKUP_INVALID', 'This file is not a Katha backup.');
       }
       if (manifest.formatVersion > BACKUP_FORMAT_VERSION) {
         throw new AppError(

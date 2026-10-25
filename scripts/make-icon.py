@@ -1,4 +1,4 @@
-"""Draws the ProjectForge icon: four rounded "heat" bars rising on a graphite tile.
+"""Draws the Katha icon: four rounded "heat" bars rising on a graphite tile.
 
 Pure Python (zlib + struct) so no image library is needed. Renders at 4x and box-downsamples
 for smooth edges. Usage: python make_icon.py <output.png> <size>

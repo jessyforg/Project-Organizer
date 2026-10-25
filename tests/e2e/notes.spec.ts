@@ -593,6 +593,10 @@ test('notes: images and files are added, shown, described, saved, and kept after
       if (/Content Security Policy/i.test(message.text())) cspErrors.push(message.text());
     });
   watch(page);
+  // Playwright intercepts file choosers only while something listens, and turns interception
+  // off and on again between waitForEvent calls. A chooser opened in that gap is a real system
+  // window that nothing answers, so one listener keeps interception on for the whole test.
+  page.on('filechooser', () => undefined);
   await page.getByLabel('Profile name').fill('Files');
   await page.getByRole('button', { name: 'Create profile' }).click();
   await nav(page).getByRole('button', { name: 'Notes' }).click();

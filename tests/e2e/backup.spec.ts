@@ -59,7 +59,7 @@ test('backup: export encrypted, test restore, restore into a new profile, JSON e
   await expect(page.getByText(/Backup saved and verified/)).toBeVisible({ timeout: 30_000 });
 
   const [backupName] = fs.readdirSync(dialogDir).filter((f) => f.endsWith('.pfbackup'));
-  expect(backupName).toMatch(/^ProjectForge Work \d{4}-\d{2}-\d{2}\.pfbackup$/);
+  expect(backupName).toMatch(/^Katha Work \d{4}-\d{2}-\d{2}\.pfbackup$/);
   const bytes = fs.readFileSync(path.join(dialogDir, backupName!));
   expect(bytes.includes(Buffer.from('Secret launch plan'))).toBe(false);
 
@@ -98,7 +98,7 @@ test('backup: export encrypted, test restore, restore into a new profile, JSON e
   await page.getByRole('button', { name: 'Export as JSON…' }).click();
   await expect(page.getByRole('dialog')).toContainText('is not encrypted');
   await page.getByRole('dialog').getByRole('button', { name: 'Export as JSON' }).click();
-  await expect(page.getByText(/Exported to ProjectForge Work \(restored\)/)).toBeVisible();
+  await expect(page.getByText(/Exported to Katha Work \(restored\)/)).toBeVisible();
   const jsonName = fs.readdirSync(dialogDir).find((f) => f.endsWith('.json'));
   const doc = JSON.parse(fs.readFileSync(path.join(dialogDir, jsonName!), 'utf8')) as {
     format: string;

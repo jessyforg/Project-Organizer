@@ -42,8 +42,8 @@ Each item is marked **pass**, **fail**, **blocked**, or **not tested**, with the
 
 ## Before a public release
 
-1. Upgrade Electron to the newest 44.x patch that is at least two weeks old (44.5.1 is pinned; later patches include Chromium security fixes), then rerun this checklist.
+1. ~~Upgrade Electron to the newest eligible 44.x patch.~~ Done 2026-10-26: 44.7.0 (STATUS). 44.9.1 fixes GHSA-jr5w-w6x2-84p9 and is eligible on 2026-11-03.
 2. Install and use the app on a clean Windows account or VM.
 3. Do a manual keyboard-only and screen-reader pass (NVDA or Narrator).
-4. Freeze the product name and `appId` (they determine the data folder; ADR-0002).
+4. ~~Freeze the product name and `appId`.~~ Done 2026-10-26: Katha, `com.katha.desktop`, MIT licence ([ADR-0025](DECISIONS/0025-name-and-licence.md)).
 5. Decide on code signing.
