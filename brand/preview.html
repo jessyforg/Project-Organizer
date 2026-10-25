@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Katha logo preview</title>
+    <style>
+      body {
+        margin: 0;
+        font:
+          13px 'Segoe UI',
+          sans-serif;
+        color: #171b21;
+        background: #f4f5f7;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0;
+        padding: 20px 24px 4px;
+      }
+      h2 {
+        font-size: 14px;
+        margin: 0 0 12px;
+      }
+      p.note {
+        margin: 0;
+        padding: 0 24px 16px;
+        color: #4a515c;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .panel {
+        padding: 18px 24px 22px;
+      }
+      .light {
+        background: #fff;
+      }
+      .dark {
+        background: #1b1f26;
+        color: #e6e9ee;
+      }
+      .row {
+        display: flex;
+        align-items: flex-end;
+        gap: 20px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+      }
+      .row span {
+        display: block;
+        font-size: 11px;
+        opacity: 0.7;
+        text-align: center;
+        margin-top: 4px;
+      }
+      .taskbar {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 6px;
+      }
+      .taskbar.win-light {
+        background: #eef0f3;
+      }
+      .taskbar.win-dark {
+        background: #202020;
+      }
+      .taskbar i {
+        display: block;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        background: #8a93a0;
+        opacity: 0.35;
+      }
+      .tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px 8px 0 0;
+        background: #dfe3e8;
+        font-size: 12px;
+      }
+      .dark .tab {
+        background: #2c323c;
+      }
+      .sidebar-brand {
+        flex-direction: row;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+        font-size: 16px;
+      }
+      .sidebar-brand b {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        background: #2a5aa6;
+        color: #fff;
+      }
+      .dark .sidebar-brand b {
+        background: #7ea4e6;
+        color: #0f1622;
+      }
+      .sidebar-brand svg {
+        width: 17px;
+        height: 17px;
+      }
+      section.concept + section.concept {
+        border-top: 1px solid #c6ccd5;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="concept">
+      <h1>Concept A: Banig weave (approved)</h1>
+      <p class="note">
+        Sizes are real pixels. The 16 px cells use the hand-tuned 16 px files; the rest use the
+        64-unit files.
+      </p>
+      <div class="grid">
+        <div class="panel light" id="b-light"></div>
+        <div class="panel dark" id="b-dark"></div>
+      </div>
+    </section>
+    <section class="concept">
+      <h1>Concept B: Bookmark K (exploration only)</h1>
+      <p class="note">Kept for comparison. Not for integration.</p>
+      <div class="grid">
+        <div class="panel light" id="a-light"></div>
+        <div class="panel dark" id="a-dark"></div>
+      </div>
+    </section>
+    <script>
+      // Fills each panel with the same set of checks for one concept and background.
+      const concepts = {
+        b: {
+          mark: { light: 'katha-mark.svg', dark: 'katha-mark-dark.svg' },
+          small: 'katha-mark-16.svg',
+          tile: 'katha-tile.svg',
+          tile16: 'katha-tile-16.svg',
+          tile24: 'katha-tile-24.svg',
+          tile32: 'katha-tile-32.svg',
+          word: { light: 'katha-wordmark.svg', dark: 'katha-wordmark-dark.svg' },
+          mono: 'katha-mark-mono.svg',
+        },
+        a: {
+          mark: {
+            light: 'explorations/bookmark-k-mark.svg',
+            dark: 'explorations/bookmark-k-mark-dark.svg',
+          },
+          small: 'explorations/bookmark-k-mark-16.svg',
+          tile: 'explorations/bookmark-k-tile.svg',
+          tile16: 'explorations/bookmark-k-tile-16.svg',
+        },
+      };
+      const img = (src, size, label) =>
+        `<div><img src="${src}" width="${size}" height="${size}" alt=""><span>${label ?? size + ' px'}</span></div>`;
+      for (const [key, c] of Object.entries(concepts)) {
+        for (const theme of ['light', 'dark']) {
+          const mark = c.mark[theme];
+          let html = `<h2>${theme === 'light' ? 'Light' : 'Dark'} background</h2>`;
+          html += `<div class="row">${img(theme === 'light' ? c.small : mark, 16)}${img(mark, 32)}${img(mark, 64)}${img(mark, 256)}</div>`;
+          html += `<h2>App icon tile</h2><div class="row">${img(c.tile16, 16)}${img(c.tile24 ?? c.tile, 24, '24 px')}${img(c.tile32 ?? c.tile, 32)}${img(c.tile, 48, '48 px')}${img(c.tile, 256)}</div>`;
+          html += `<h2>Taskbar and browser tab</h2><div class="row">`;
+          for (const bar of ['win-light', 'win-dark'])
+            html += `<div class="taskbar ${bar}"><i></i><img src="${c.tile24 ?? c.tile}" width="24" height="24" alt=""><i></i></div>`;
+          html += `<div class="tab"><img src="${c.tile16}" width="16" height="16" alt="">Katha</div></div>`;
+          if (c.word) {
+            html += `<h2>Wordmark</h2><div class="row"><img src="${c.word[theme]}" height="40" alt="Katha"><img src="${c.word[theme]}" height="24" alt="Katha"></div>`;
+            html += `<h2>In-app mark (one colour, on the accent)</h2><div class="row"><div class="sidebar-brand"><b data-mono></b>Katha</div></div>`;
+          }
+          document.getElementById(`${key}-${theme}`).innerHTML = html;
+        }
+      }
+      // The one-colour mark is inlined so it takes the text colour (currentColor).
+      fetch('katha-mark-mono.svg')
+        .then((r) => r.text())
+        .then((svg) =>
+          document.querySelectorAll('[data-mono]').forEach((el) => (el.innerHTML = svg)),
+        )
+        .catch(() => undefined);
+    </script>
+  </body>
+</html>

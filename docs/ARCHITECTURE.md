@@ -165,3 +165,5 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0022](DECISIONS/0022-task-table.md) | Tasks as a table (0.9.0 stage 3) |
 | [0023](DECISIONS/0023-custom-fields.md) | Custom fields (0.9.0 stage 4, schema v10) |
 | [0024](DECISIONS/0024-project-templates.md) | Project templates (0.9.0 stage 5, schema v11) |
+| [0025](DECISIONS/0025-name-and-licence.md) | Product name Katha and the MIT licence (0.9.0 stage 6) |
+| [0026](DECISIONS/0026-brand-banig-weave.md) | The Katha mark, the banig weave (0.9.0 stage 6) |

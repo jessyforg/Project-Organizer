@@ -41,4 +41,19 @@ export default tseslint.config(
     files: ['eslint.config.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
+  {
+    // Plain Node scripts run directly (such as the icon builder, run by Electron), outside any tsconfig.
+    files: ['scripts/**/*.cjs'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      ...tseslint.configs.disableTypeChecked.languageOptions,
+      globals: globals.node,
+      sourceType: 'commonjs',
+    },
+    rules: {
+      ...tseslint.configs.disableTypeChecked.rules,
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-console': 'off',
+    },
+  },
 );

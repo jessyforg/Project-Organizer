@@ -40,9 +40,10 @@
   color: var(--accent-ink);
 }
 
+/* The mark is drawn on a 16 px grid (BrandMark), so it is shown at exactly 16 px. */
 .brand__mark svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 /* The search box shows its shortcut until it has text or focus. */

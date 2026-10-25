@@ -2,6 +2,21 @@
 
 Newest entries first.
 
+## 2026-10-26 — Release 0.9.0, stage 6 (part 3): the Katha mark (banig weave)
+
+Decisions are in [ADR-0026](DECISIONS/0026-brand-banig-weave.md). The product owner chose concept A of three (a banig weave, a bookmark K, and simplified heat bars).
+
+**What was built:**
+- **`brand/`:** the mark for light and dark backgrounds, a one-colour version, app icon tiles at 16, 24, 32, and 48+ px (each on whole pixels), and wordmarks. One script, `brand/make-marks.py`, generates them. `preview.html` shows every file at real sizes. Concept B is kept in `brand/explorations/`.
+- **App icon:** `scripts/make-app-icon.cjs` (run in Electron, no new dependency) writes `build/icon.ico` (7 sizes) and a new `build/icon.png`. The old heat-bars icon is replaced; `scripts/make-icon.py` is kept with a "superseded" note.
+- **In the app:** a `BrandMark` component replaces the Lucide hammer in the sidebar and on the first-run screen.
+- **README:** the wordmark at the top, with a dark-mode version.
+- **Lint:** `scripts/*.cjs` is linted without type information, like `eslint.config.mjs`.
+
+**Checked:** all SVGs parse; each icon size was rendered and inspected at pixel level, on light and dark taskbar colours.
+
+**Not checked:** a trademark search of the mark. GitHub may show the README wordmark in a fallback font (ADR-0026).
+
 ## 2026-10-26 — Release 0.9.0, stage 6 (part 2): the name Katha and the MIT licence
 
 Decisions are in [ADR-0025](DECISIONS/0025-name-and-licence.md). The product owner chose both.

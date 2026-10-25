@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Katha</title>
+  <!-- App icon: the mark on the app's accent blue, which holds on light and dark taskbars alike. -->
+  <rect width="64" height="64" rx="14" fill="#2a5aa6"/>
+  <g transform="translate(8 8) scale(0.75)">
+    <path fill="#ffffff" d="M12 10a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v48l-7-6-7 6z"/>
+    <path stroke="#f3ab4a" stroke-width="11" stroke-linecap="round" d="M35 28 50 10"/>
+    <path stroke="#a9c3f0" stroke-width="11" stroke-linecap="round" d="M38 40 51 55"/>
+  </g>
+</svg>
