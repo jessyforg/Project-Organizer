@@ -2,6 +2,25 @@
 
 Newest entries first.
 
+## 2026-10-26 — Release 0.9.0, stage 6 (part 1): Electron and Vite updates, a test race fixed
+
+**Updated (exact pins, each at least two weeks old):**
+- **Electron 44.5.1 → 44.7.0:** the newest eligible 44.x, a release-checklist item. 44.7.1 (2026-10-13) was too new.
+- **Vite 7.3.6 → 7.3.7 (development only):** fixes five advisories in the dev server and its editor launcher (GHSA-587h-7wmj-h5pm and others). Vite is not in the installer.
+
+**Not yet updated:**
+- **zod 4.6.7** meets the two-week rule at 16:29 UTC on 2026-10-26, not earlier. It is the rest of stage 6.
+- **Electron advisory GHSA-jr5w-w6x2-84p9 (high):** a mitigation for compromised eMudhra certificates, fixed in 44.9.1, eligible on 2026-11-03. The app makes no network connections, so it is not exposed.
+- **fast-uri below 3.1.9 (moderate):** used by electron-builder at packaging time only; not in the installer. 3.1.9 is eligible on 2026-11-02.
+
+**Defect found:** the formatting bubble end-to-end test failed about 2 runs in 5, on both Electron 44.5.1 and 44.7.0. Cause: the test pressed Alt+F10 before the bubble had switched back from the link field to its tools, so the key was ignored. The test now waits for the tools first. The earlier comment's explanation (another window taking focus) was wrong and was replaced. 10 of 10 repeated runs pass.
+
+**README:** "Known limitations" no longer lists milestones and note attachments as planned.
+
+**Verification:** typecheck, lint, and formatting are clean. 626 of 626 unit and component tests pass. 31 of 31 end-to-end tests pass, in two consecutive full runs.
+
+**Before a public release (decisions for the product owner):** the name ProjectForge is already used by an established open-source project-management tool (Micromata, GPLv3); and the project has no licence (`UNLICENSED`).
+
 ## 2026-10-24 — Release 0.9.0: stages 1–5 done, installer built for the product owner's check; the zod update is due on 2026-10-26
 
 **Built:** milestones (v8), the activity log (v9), the task table, custom fields (v10), and project templates (v11), on `feature/milestones-0.9`. Details are in the stage entries below and in ADR-0020 to ADR-0024.

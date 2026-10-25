@@ -66,7 +66,7 @@ To build the installer from the source code, run `npm ci` once, then `npm run pa
 
 - The installer is not code-signed (SmartScreen warning).
 - Profiles cannot be password-protected yet, and live data is not encrypted (planned for a later release).
-- Milestones, reminders, recurring tasks, attachments, and time tracking are planned for later releases ([requirements](docs/REQUIREMENTS.md#4-later-free-local-release)).
+- Reminders, recurring tasks, task comments, and time tracking are planned for later releases ([requirements](docs/REQUIREMENTS.md#4-later-free-local-release)). Files can be attached to notes but not yet to tasks.
 - Tasks can be reordered on the Kanban board; the list view's "Manual order" sort shows that order but has no reorder control of its own.
 - Windows only; English only.
 
