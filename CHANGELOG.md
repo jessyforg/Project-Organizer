@@ -10,6 +10,8 @@ Everything left in the feature plan, in one release. Profiles upgrade from schem
 
 **Updated:** Electron 44.7.0.
 
+**Licence notices:** the installed app now includes `THIRD_PARTY_NOTICES.txt`, the licence texts of every library, the font, and the SQLite components it ships. The build writes it and stops if a library has no licence text.
+
 **Before release:** the zod library is to be updated to 4.6.7 for a security advisory (GHSA-mrhx-c7xc-m3w5) once that version meets the two-week rule, on 2026-10-26. See STATUS.
 
 ### Milestones

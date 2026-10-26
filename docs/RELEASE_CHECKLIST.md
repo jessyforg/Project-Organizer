@@ -47,3 +47,4 @@ Each item is marked **pass**, **fail**, **blocked**, or **not tested**, with the
 3. Do a manual keyboard-only and screen-reader pass (NVDA or Narrator).
 4. ~~Freeze the product name and `appId`.~~ Done 2026-10-26: Katha, `com.katha.desktop`, MIT licence ([ADR-0025](DECISIONS/0025-name-and-licence.md)).
 5. Decide on code signing.
+6. ~~Ship third-party licence notices.~~ Done 2026-10-26: `THIRD_PARTY_NOTICES.txt` beside `Katha.exe`, written by the build (`scripts/third-party-notices.ts`, STATUS). Update `build/native-notices.txt` with every SQLite driver update; a unit test fails until it matches.

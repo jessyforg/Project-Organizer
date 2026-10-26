@@ -2,6 +2,25 @@
 
 Newest entries first.
 
+## 2026-10-26 — Release 0.9.0, stage 6 (part 4): third-party licence notices
+
+**Why:** Vite bundles React, TipTap, the font, and about 120 other packages into the app, and the SQLite driver's binary contains SQLite3 Multiple Ciphers and its crypto code. Their MIT, ISC, BSD, and OFL licences require the licence text to ship with copies; until now only Electron's and Chromium's did. The product owner approved this while the zod update waits for the two-week rule.
+
+**What was built:**
+- **`scripts/third-party-notices.ts`:** a Vite plugin, added to the main, preload, and renderer builds, that writes `out/THIRD_PARTY_NOTICES.txt`. It lists the packages Rollup actually bundled (not every installed package) plus the runtime dependencies electron-builder copies (the SQLite driver, its `node-addon-api`, zod), each once per version with its licence files. The build stops if a package has no licence text. No new dependency.
+- **`build/native-notices.txt`:** hand-written notices for the code compiled into the driver's binary, copied from its source: SQLite (public domain), SQLite3 Multiple Ciphers 2.4.0 and AEGIS (MIT), Olivier Gay's SHA-2 (BSD-3, which requires the notice in binary copies), Solar Designer's MD5, and the public-domain and CC0 parts. miniz is in the source but not compiled in this build, so it is not listed.
+- **Installer:** `electron-builder.yml` puts the file beside `Katha.exe`, next to `LICENSE.electron.txt`, and keeps it out of `app.asar`.
+- **Docs:** README Licence section, CHANGELOG, release checklist item 6.
+
+**Result:** 128 packages (126 MIT, 2 ISC, 1 OFL-1.1, and the driver's notices). No Vite runtime code reaches the bundle, so Vite itself is not listed.
+
+**Verification:**
+- 6 new unit tests: package detection from module paths, licence files, the runtime dependency walk (nested copies, optional packages), refusal without licence text, ordering, and a check that `build/native-notices.txt` names the installed driver, SQLite, and SQLite3 Multiple Ciphers versions (shown to fail when a version is wrong).
+- Typecheck, lint, and formatting are clean. 632 of 632 unit and component tests pass.
+- `electron-builder --dir`: `THIRD_PARTY_NOTICES.txt` is in `release/win-unpacked`, identical to the build's copy, and not in `app.asar`.
+
+**Not yet run:** the end-to-end suite and the installer rebuild. Both run after the zod update, which is still due at 16:29 UTC on 2026-10-26.
+
 ## 2026-10-26 — Release 0.9.0, stage 6 (part 3): the Katha mark (banig weave)
 
 Decisions are in [ADR-0026](DECISIONS/0026-brand-banig-weave.md). The product owner chose concept A of three (a banig weave, a bookmark K, and simplified heat bars).

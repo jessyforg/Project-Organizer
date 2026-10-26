@@ -125,4 +125,4 @@ The logo and icon files are in [brand/](brand/) ([ADR-0026](docs/DECISIONS/0026-
 
 ## Licence
 
-[MIT](LICENSE). Third-party components keep their own licences; the installer includes Electron's and Chromium's licence files.
+[MIT](LICENSE). Third-party components keep their own licences. The installed app includes them next to `Katha.exe`: `THIRD_PARTY_NOTICES.txt` (the libraries, font, and SQLite components the app ships, written by every build) and Electron's and Chromium's licence files.

@@ -10,6 +10,11 @@ files:
   # Ship only the Windows x64 SQLite binary and no driver build sources.
   - '!node_modules/better-sqlite3-multiple-ciphers/prebuilds/{darwin,linux,linuxmusl,win32-arm64}*'
   - '!node_modules/better-sqlite3-multiple-ciphers/{deps,src,docs,benchmark,test}/**'
+  - '!out/THIRD_PARTY_NOTICES.txt'
+# Licence texts of bundled third-party code (written by the build), beside Electron's own licence files.
+extraFiles:
+  - from: out/THIRD_PARTY_NOTICES.txt
+    to: THIRD_PARTY_NOTICES.txt
 # The SQLite driver ships Node-API prebuilt binaries; no rebuild against Electron is needed.
 npmRebuild: false
 asarUnpack:
