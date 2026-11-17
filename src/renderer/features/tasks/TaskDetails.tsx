@@ -5,9 +5,12 @@ import type { UpdateTaskInput } from '@shared/schemas';
 import { useInvalidate, useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
 import { useToast } from '../../app/toasts';
+import { Tabs } from '../../components/Tabs';
 import { TagPicker } from '../../components/TagPicker';
 import { ConfirmDialog, ErrorNotice, Loading } from '../../components/ui';
 import { CATEGORY_LABEL, formatTimestamp, plural, PRIORITY_LABEL } from '../../lib/format';
+import { ActivityList } from '../activity/ActivityList';
+import { TaskFields } from '../fields/TaskFields';
 import { CompleteCheckbox } from './CompleteCheckbox';
 import { useLookups } from './useLookups';
 import { useTaskActions } from './useTaskActions';
@@ -50,9 +53,13 @@ function TaskEditor({ task }: { task: Task }) {
   const statuses = useQuery(`statuses:${task.projectId}`, () =>
     window.api.statuses.list({ projectId: task.projectId }),
   );
+  const milestones = useQuery(`milestones:${task.projectId}`, () =>
+    window.api.milestones.list({ projectId: task.projectId }),
+  );
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description ?? '');
   const [trashPreview, setTrashPreview] = useState<TaskTrashPreview | null>(null);
+  const [tab, setTab] = useState<'details' | 'activity'>('details');
 
   // When the saved task changes (after a save or reload), adopt the new text.
   const [savedText, setSavedText] = useState({ title: task.title, description: task.description });
@@ -86,11 +93,18 @@ function TaskEditor({ task }: { task: Task }) {
     invalidate();
     if (!result.ok) return toast({ message: result.error.message, tone: 'error' });
     const removed = result.data.removedDependencies;
+    const values = result.data.removedFieldValues;
     toast({
-      message:
+      message: [
+        'Task moved.',
         removed > 0
-          ? `Task moved. ${plural(removed, 'dependency', 'dependencies')} to tasks in the old project removed.`
-          : 'Task moved.',
+          ? `${plural(removed, 'dependency', 'dependencies')} to tasks in the old project removed.`
+          : '',
+        // Custom fields belong to the old project (ADR-0023).
+        values > 0 ? `${plural(values, 'custom field value')} from the old project removed.` : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
     });
   };
 
@@ -161,114 +175,161 @@ function TaskEditor({ task }: { task: Task }) {
         onKeyDown={titleKey}
       />
 
-      <div className="task-details__grid">
-        <div className="field">
-          <label htmlFor={`${id}-status`}>Status</label>
-          <select
-            id={`${id}-status`}
-            className="select"
-            value={task.statusId}
-            onChange={(e) => void update({ statusId: e.target.value })}
-          >
-            {(statuses.data ?? []).map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-                {s.name !== CATEGORY_LABEL[s.category] ? ` (${CATEGORY_LABEL[s.category]})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={`${id}-priority`}>Priority</label>
-          <select
-            id={`${id}-priority`}
-            className="select"
-            value={task.priority ?? ''}
-            onChange={(e) =>
-              void update({ priority: e.target.value ? (e.target.value as Priority) : null })
-            }
-          >
-            <option value="">No priority</option>
-            {PRIORITIES.map((p) => (
-              <option key={p} value={p}>
-                {PRIORITY_LABEL[p]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor={`${id}-start`}>Start date</label>
-          <input
-            id={`${id}-start`}
-            className="input"
-            type="date"
-            value={task.startDate ?? ''}
-            onChange={(e) => void update({ startDate: e.target.value || null })}
+      <Tabs
+        label="Task"
+        tabs={[
+          { id: 'details', label: 'Details' },
+          { id: 'activity', label: 'Activity' },
+        ]}
+        selected={tab}
+        onSelect={setTab}
+      >
+        {tab === 'activity' ? (
+          <ActivityList
+            queryKey={`task:${task.id}`}
+            load={(limit) => window.api.activity.forItem({ kind: 'task', id: task.id, limit })}
+            label={`Activity of ${task.title}`}
           />
-        </div>
-        <div className="field">
-          <label htmlFor={`${id}-due`}>Due date</label>
-          <input
-            id={`${id}-due`}
-            className="input"
-            type="date"
-            value={task.dueDate ?? ''}
-            onChange={(e) => void update({ dueDate: e.target.value || null })}
-          />
-        </div>
-      </div>
+        ) : (
+          <>
+            <div className="task-details__grid">
+              <div className="field">
+                <label htmlFor={`${id}-status`}>Status</label>
+                <select
+                  id={`${id}-status`}
+                  className="select"
+                  value={task.statusId}
+                  onChange={(e) => void update({ statusId: e.target.value })}
+                >
+                  {(statuses.data ?? []).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.name !== CATEGORY_LABEL[s.category]
+                        ? ` (${CATEGORY_LABEL[s.category]})`
+                        : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`${id}-priority`}>Priority</label>
+                <select
+                  id={`${id}-priority`}
+                  className="select"
+                  value={task.priority ?? ''}
+                  onChange={(e) =>
+                    void update({ priority: e.target.value ? (e.target.value as Priority) : null })
+                  }
+                >
+                  <option value="">No priority</option>
+                  {PRIORITIES.map((p) => (
+                    <option key={p} value={p}>
+                      {PRIORITY_LABEL[p]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor={`${id}-start`}>Start date</label>
+                <input
+                  id={`${id}-start`}
+                  className="input"
+                  type="date"
+                  value={task.startDate ?? ''}
+                  onChange={(e) => void update({ startDate: e.target.value || null })}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor={`${id}-due`}>Due date</label>
+                <input
+                  id={`${id}-due`}
+                  className="input"
+                  type="date"
+                  value={task.dueDate ?? ''}
+                  onChange={(e) => void update({ dueDate: e.target.value || null })}
+                />
+              </div>
+            </div>
 
-      <div className="field">
-        <label htmlFor={`${id}-project`}>Project</label>
-        <select
-          id={`${id}-project`}
-          className="select"
-          value={task.projectId}
-          disabled={task.parentTaskId !== null}
-          aria-describedby={task.parentTaskId ? `${id}-project-hint` : undefined}
-          onChange={(e) => void move(e.target.value)}
-        >
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-        {task.parentTaskId && (
-          <p id={`${id}-project-hint`} className="field__hint">
-            Subtasks move with their parent task.
-          </p>
+            <div className="field">
+              <label htmlFor={`${id}-project`}>Project</label>
+              <select
+                id={`${id}-project`}
+                className="select"
+                value={task.projectId}
+                disabled={task.parentTaskId !== null}
+                aria-describedby={task.parentTaskId ? `${id}-project-hint` : undefined}
+                onChange={(e) => void move(e.target.value)}
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {task.parentTaskId && (
+                <p id={`${id}-project-hint`} className="field__hint">
+                  Subtasks move with their parent task.
+                </p>
+              )}
+            </div>
+
+            {/* Only top-level tasks have a milestone; subtasks count through their parent (ADR-0020). */}
+            {task.parentTaskId === null && (milestones.data ?? []).length > 0 && (
+              <div className="field">
+                <label htmlFor={`${id}-milestone`}>Milestone</label>
+                <select
+                  id={`${id}-milestone`}
+                  className="select"
+                  value={task.milestoneId ?? ''}
+                  onChange={(e) => void update({ milestoneId: e.target.value || null })}
+                >
+                  <option value="">No milestone</option>
+                  {(milestones.data ?? []).map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                      {m.completedAt ? ' (done)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <TaskTags task={task} />
+            <TaskFields
+              task={task}
+              projectName={lookups.projects.get(task.projectId)?.name ?? 'this project'}
+            />
+
+            <div className="field">
+              <label htmlFor={`${id}-description`}>Description</label>
+              <textarea
+                id={`${id}-description`}
+                className="textarea"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => void saveDescription()}
+              />
+            </div>
+
+            {task.parentTaskId === null && <Subtasks task={task} />}
+            <Dependencies task={task} />
+            <MentionedIn taskId={task.id} />
+
+            <div className="section">
+              <p className="stamp">
+                Created {formatTimestamp(task.createdAt)}. Updated {formatTimestamp(task.updatedAt)}
+                .{task.completedAt && ` Completed ${formatTimestamp(task.completedAt)}.`}
+              </p>
+              <div>
+                <button type="button" className="btn btn--danger" onClick={() => void askTrash()}>
+                  <Trash2 aria-hidden /> Move to trash
+                </button>
+              </div>
+            </div>
+          </>
         )}
-      </div>
-
-      <TaskTags task={task} />
-
-      <div className="field">
-        <label htmlFor={`${id}-description`}>Description</label>
-        <textarea
-          id={`${id}-description`}
-          className="textarea"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          onBlur={() => void saveDescription()}
-        />
-      </div>
-
-      {task.parentTaskId === null && <Subtasks task={task} />}
-      <Dependencies task={task} />
-      <MentionedIn taskId={task.id} />
-
-      <div className="section">
-        <p className="stamp">
-          Created {formatTimestamp(task.createdAt)}. Updated {formatTimestamp(task.updatedAt)}.
-          {task.completedAt && ` Completed ${formatTimestamp(task.completedAt)}.`}
-        </p>
-        <div>
-          <button type="button" className="btn btn--danger" onClick={() => void askTrash()}>
-            <Trash2 aria-hidden /> Move to trash
-          </button>
-        </div>
-      </div>
+      </Tabs>
 
       <ConfirmDialog
         open={trashPreview !== null}

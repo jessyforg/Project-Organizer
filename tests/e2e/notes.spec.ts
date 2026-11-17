@@ -166,6 +166,10 @@ test('notes: slash commands insert blocks from the keyboard and mouse, saved as 
   // "/" opens the menu just below the cursor, inside the window.
   await page.keyboard.type('/');
   await expect(menu).toBeVisible();
+  // Measure after the menu's short rise-in animation, which starts it a few pixels lower.
+  await page
+    .locator('.slash-menu')
+    .evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   const caret = await body.locator('.slash-query').boundingBox();
   const box = await page.locator('.slash-menu').boundingBox();
   expect(caret && box).toBeTruthy();
@@ -249,9 +253,12 @@ test('notes: the formatting bubble formats a selection, turns blocks, and adds l
   await page.getByRole('textbox', { name: 'Link address' }).fill('example.com');
   await page.keyboard.press('Enter');
 
-  // Keyboard: Alt+F10 moves into the bubble; "Turn into" opens with Arrow Down.
+  // Keyboard: Alt+F10 moves into the bubble; "Turn into" opens with Arrow Down. After the link
+  // field closes, the bubble shows its tools again; Alt+F10 does nothing until they are back.
+  const turnInto = bubble.getByRole('button', { name: 'Turn into: Text' });
+  await expect(turnInto).toBeVisible();
   await page.keyboard.press('Alt+F10');
-  await expect(bubble.getByRole('button', { name: 'Turn into: Text' })).toBeFocused();
+  await expect(turnInto).toBeFocused();
   await page.keyboard.press('ArrowDown');
   await page
     .getByRole('menu', { name: 'Turn into' })
@@ -586,6 +593,10 @@ test('notes: images and files are added, shown, described, saved, and kept after
       if (/Content Security Policy/i.test(message.text())) cspErrors.push(message.text());
     });
   watch(page);
+  // Playwright intercepts file choosers only while something listens, and turns interception
+  // off and on again between waitForEvent calls. A chooser opened in that gap is a real system
+  // window that nothing answers, so one listener keeps interception on for the whole test.
+  page.on('filechooser', () => undefined);
   await page.getByLabel('Profile name').fill('Files');
   await page.getByRole('button', { name: 'Create profile' }).click();
   await nav(page).getByRole('button', { name: 'Notes' }).click();

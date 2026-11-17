@@ -1,10 +1,15 @@
-# Project-Organizer (working name: ProjectForge)
+# Katha
 
-A free, local-first Windows desktop application for organising projects, tasks, and deadlines. All data stays on your computer; no account, subscription, or internet connection is required.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/katha-wordmark-dark.svg">
+  <img src="brand/katha-wordmark.svg" alt="Katha" height="56">
+</picture>
+
+A free, local-first Windows desktop application for organising projects, tasks, notes, and deadlines. All data stays on your computer; no account, subscription, or internet connection is required. (Katha was called ProjectForge during development.)
 
 ## Status
 
-**Version 0.8.0 (MVP plus notes with visual editing, slash commands, links, mentions, images and files, folders, and archiving; a command palette and quick switcher; favourites, icons, and covers; Kanban board; calendar; colour themes), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
+**Version 0.9.0 (MVP plus notes with visual editing, slash commands, links, mentions, images and files, folders, and archiving; a command palette and quick switcher; favourites, icons, and covers; milestones; an activity log; a task table; custom fields; project templates; Kanban board; calendar; colour themes), not yet publicly released.** See the [changelog](CHANGELOG.md) for what it does, the [release checklist](docs/RELEASE_CHECKLIST.md) for what was verified and what remains before a public release, and the [roadmap](docs/ROADMAP.md).
 
 ## Features
 
@@ -22,7 +27,7 @@ A free, local-first Windows desktop application for organising projects, tasks, 
 
 ## Installing
 
-Run `ProjectForge Setup <version>.exe` from `release/` (or from wherever it was shared). It installs for the current user only and does not need administrator rights. The installer is not code-signed, so Windows SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**.
+Run `Katha Setup <version>.exe` from `release/` (or from wherever it was shared). It installs for the current user only and does not need administrator rights. The installer is not code-signed, so Windows SmartScreen may show "Windows protected your PC": choose **More info**, then **Run anyway**.
 
 Uninstalling (Settings → Apps in Windows) removes the program but keeps your data folder, so reinstalling brings your profiles back.
 
@@ -31,21 +36,32 @@ Uninstalling (Settings → Apps in Windows) removes the program but keeps your d
 There is no automatic updater (the app never goes online). To update:
 
 1. **Make a backup first** (recommended): in the app, Settings → Backup and restore → **Create backup…**. Keep the file somewhere outside the app's folder.
-2. **Close ProjectForge.**
-3. **Run the new `ProjectForge Setup <version>.exe`.** Keep the same installation folder. It replaces the program files; your data folder is not touched.
-4. **Start ProjectForge.** When a profile opens, the app upgrades its data to the new format by itself. Before upgrading, it saves a verified copy in the profile's `snapshots` folder.
+2. **Close Katha.**
+3. **Run the new `Katha Setup <version>.exe`.** Keep the same installation folder. It replaces the program files; your data folder is not touched.
+4. **Start Katha.** When a profile opens, the app upgrades its data to the new format by itself. Before upgrading, it saves a verified copy in the profile's `snapshots` folder.
 5. **Check the version** in Settings → About.
 
 You cannot go back to an older version after an upgrade: older versions refuse data in a newer format, to protect it. To undo an update, install the older version and restore the backup from step 1 as a new profile.
 
 To build the installer from the source code, run `npm ci` once, then `npm run package`. The installer appears in `release/`.
 
+### Moving from a ProjectForge build
+
+Builds up to 0.9.0 were called ProjectForge and kept their data in `%APPDATA%\ProjectForge`. Katha is installed as a separate app and starts with an empty `%APPDATA%\Katha` folder. To bring your profiles across:
+
+1. Make a backup in ProjectForge (Settings → Backup and restore → **Create backup…**), and close it.
+2. In File Explorer, open `%APPDATA%` and rename the `ProjectForge` folder to `Katha`. (If Katha has already been started once, rename its empty `Katha` folder out of the way first.)
+3. Install and start Katha. Your profiles open as before.
+4. Uninstall ProjectForge from Settings → Apps. Uninstalling never deletes a data folder.
+
+Backups made by ProjectForge (`.pfbackup`) restore in Katha unchanged.
+
 ## Where your data lives
 
-| Build                                    | Folder                                                                   |
-| ---------------------------------------- | ------------------------------------------------------------------------ |
-| Installed app                            | `%APPDATA%\ProjectForge` (`C:\Users\<you>\AppData\Roaming\ProjectForge`) |
-| Development (`npm run dev`, `npm start`) | `%APPDATA%\ProjectForge-dev`                                             |
+| Build                                    | Folder                                                     |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| Installed app                            | `%APPDATA%\Katha` (`C:\Users\<you>\AppData\Roaming\Katha`) |
+| Development (`npm run dev`, `npm start`) | `%APPDATA%\Katha-dev`                                      |
 
 - Each profile is a separate database: `profiles\<id>\profile.db`.
 - Each profile's `snapshots` folder holds verified automatic copies: one per day for the last 7 days, plus copies made before app updates and before restores.
@@ -66,7 +82,7 @@ To build the installer from the source code, run `npm ci` once, then `npm run pa
 
 - The installer is not code-signed (SmartScreen warning).
 - Profiles cannot be password-protected yet, and live data is not encrypted (planned for a later release).
-- Milestones, reminders, recurring tasks, attachments, and time tracking are planned for later releases ([requirements](docs/REQUIREMENTS.md#4-later-free-local-release)).
+- Reminders, recurring tasks, task comments, and time tracking are planned for later releases ([requirements](docs/REQUIREMENTS.md#4-later-free-local-release)). Files can be attached to notes but not yet to tasks.
 - Tasks can be reordered on the Kanban board; the list view's "Manual order" sort shows that order but has no reorder control of its own.
 - Windows only; English only.
 
@@ -92,7 +108,7 @@ npm ci
 
 If you run commands from inside an editor's extension or task runner and Electron starts as plain Node (errors such as `bad option: --remote-debugging-port`), unset `ELECTRON_RUN_AS_NODE`.
 
-The app icon is generated by `python scripts/make-icon.py build/icon.png 512`.
+The logo and icon files are in [brand/](brand/) ([ADR-0026](docs/DECISIONS/0026-brand-banig-weave.md)). After changing the weave in `brand/make-marks.py`, run `python brand/make-marks.py`, then `npx electron scripts/make-app-icon.cjs` to rebuild `build/icon.ico` and `build/icon.png`.
 
 ## Documentation
 
@@ -106,3 +122,7 @@ The app icon is generated by `python scripts/make-icon.py build/icon.png 512`.
 - [Roadmap](docs/ROADMAP.md)
 - [Status log](docs/STATUS.md)
 - [Architecture decision records](docs/DECISIONS/)
+
+## Licence
+
+[MIT](LICENSE). Third-party components keep their own licences. The installed app includes them next to `Katha.exe`: `THIRD_PARTY_NOTICES.txt` (the libraries, font, and SQLite components the app ships, written by every build) and Electron's and Chromium's licence files.

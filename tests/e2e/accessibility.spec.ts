@@ -184,6 +184,93 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(nav.getByRole('list', { name: 'Favourites' })).toBeVisible();
     await expectNoViolations(page, 'Project with an icon, a cover, and favourites');
 
+    // Milestones (ADR-0020): the dialog, an overdue one, and where they appear.
+    await page.getByRole('button', { name: 'New milestone' }).click();
+    await expectNoViolations(page, 'New milestone dialog');
+    const milestoneDialog = page.getByRole('dialog', { name: 'New milestone' });
+    await milestoneDialog.getByLabel('Name').fill('Beta');
+    await milestoneDialog.getByLabel('Target date').fill('2020-01-15');
+    await milestoneDialog.getByRole('button', { name: 'Create milestone' }).click();
+    await expect(page.getByRole('list', { name: 'Milestones in Website' })).toContainText(
+      'Overdue',
+    );
+    await expectNoViolations(page, 'Project with an overdue milestone');
+    await nav.getByRole('button', { name: 'Today' }).click();
+    await expect(page.getByRole('region', { name: 'Milestones' })).toBeVisible();
+    await expectNoViolations(page, 'Today with milestones');
+
+    // The activity log (ADR-0021): tabs on a project and in task details.
+    await nav.getByLabel('Projects list').getByRole('button', { name: 'Website' }).click();
+    await page.getByRole('tab', { name: 'Activity' }).click();
+    await expect(page.getByRole('tabpanel', { name: 'Activity' })).toBeVisible();
+    await expectNoViolations(page, 'Project activity');
+    await page.getByRole('tab', { name: 'Work' }).click();
+    await page
+      .getByRole('main')
+      .getByRole('button', { name: /^Fix layout bug/ })
+      .click();
+    const taskPanel = page.getByRole('complementary', { name: 'Task details' });
+    await taskPanel.getByRole('tab', { name: 'Activity' }).click();
+    await expect(taskPanel.getByRole('tabpanel', { name: 'Activity' })).toBeVisible();
+    await expectNoViolations(page, 'Task activity');
+    await page.keyboard.press('Escape');
+
+    // Tasks as a table (ADR-0022), also while a cell is being edited.
+    await page.getByRole('button', { name: 'Table' }).click();
+    const grid = page.getByRole('grid', { name: 'Tasks in Website' });
+    await expect(grid).toBeVisible();
+    await expectNoViolations(page, 'Task table');
+    await grid.locator('[role="gridcell"][data-row="0"][data-col="2"]').click();
+    await page.keyboard.press('Enter');
+    await expect(grid.getByRole('combobox')).toBeFocused();
+    await expectNoViolations(page, 'Task table (editing a cell)');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Columns' }).click();
+    await expectNoViolations(page, 'Table columns dialog');
+    await page
+      .getByRole('dialog', { name: 'Table columns' })
+      .getByRole('button', { name: 'Done' })
+      .click();
+    await page.getByRole('button', { name: 'List', exact: true }).click();
+
+    // Custom fields (ADR-0023): the dialog, and the task panel's Fields section.
+    await page.getByRole('button', { name: 'More project actions' }).click();
+    await page.getByRole('menuitem', { name: 'Custom fields…' }).click();
+    const fieldsDialog = page.getByRole('dialog', { name: 'Custom fields' });
+    await fieldsDialog.getByLabel('Name', { exact: true }).fill('Area');
+    await fieldsDialog.getByLabel('Type', { exact: true }).selectOption({ label: 'Single choice' });
+    await fieldsDialog.getByLabel('Choices, separated by commas').fill('Front end, Back end');
+    await fieldsDialog.getByRole('button', { name: 'Add field' }).click();
+    await expect(fieldsDialog.getByLabel('Name of field Area')).toBeVisible();
+    await expectNoViolations(page, 'Custom fields dialog');
+    await fieldsDialog.getByRole('button', { name: 'Done' }).click();
+    await page
+      .getByRole('main')
+      .getByRole('button', { name: /^Fix layout bug/ })
+      .click();
+    await expect(
+      page.getByRole('complementary', { name: 'Task details' }).getByLabel('Area'),
+    ).toBeVisible();
+    await expectNoViolations(page, 'Task details with custom fields');
+    await page.keyboard.press('Escape');
+
+    // Templates (ADR-0024): saving, the picker with its preview, and the manager.
+    await page.getByRole('button', { name: 'More project actions' }).click();
+    await page.getByRole('menuitem', { name: 'Save as template…' }).click();
+    await expectNoViolations(page, 'Save as template dialog');
+    await page
+      .getByRole('dialog', { name: 'Save as template' })
+      .getByRole('button', { name: 'Cancel' })
+      .click();
+    await nav.getByRole('button', { name: 'Projects', exact: true }).click();
+    await page.getByRole('button', { name: 'New from template' }).click();
+    await expect(page.getByRole('region', { name: 'Preview' })).toContainText('Backlog');
+    await expectNoViolations(page, 'New project from a template');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: 'Templates…' }).click();
+    await expectNoViolations(page, 'Templates dialog');
+    await page.keyboard.press('Escape');
+
     await nav.getByRole('button', { name: 'Notes' }).click();
     await expect(page.getByRole('list', { name: 'Notes' })).toBeVisible();
     await expectNoViolations(page, 'Notes (library)');

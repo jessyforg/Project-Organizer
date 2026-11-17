@@ -10,6 +10,9 @@ import {
   STATUS_CATEGORIES,
   THEMES,
   ACCENTS,
+  ACTIVITY_KINDS,
+  CUSTOM_FIELD_TYPES,
+  ACTIVITY_RETENTION_DAYS,
   SURFACES,
 } from './domain';
 
@@ -113,6 +116,8 @@ export const createTaskSchema = z.strictObject({
   startDate: isoDateSchema.nullable().optional(),
   dueDate: isoDateSchema.nullable().optional(),
   tagIds: idList.optional(),
+  /** Top-level tasks only (ADR-0020). */
+  milestoneId: id.nullable().optional(),
 });
 export const updateTaskSchema = z.strictObject({
   id,
@@ -122,6 +127,7 @@ export const updateTaskSchema = z.strictObject({
   priority: priority.nullable().optional(),
   startDate: isoDateSchema.nullable().optional(),
   dueDate: isoDateSchema.nullable().optional(),
+  milestoneId: id.nullable().optional(),
 });
 export const moveTaskSchema = z.strictObject({ id, projectId: id });
 /** Places the task before `beforeTaskId` among its siblings, or last when null. */
@@ -148,11 +154,95 @@ export const taskListQuerySchema = z.strictObject({
   dueFrom: isoDateSchema.optional(),
   dueTo: isoDateSchema.optional(),
   text: z.string().max(LIMITS.searchText).optional(),
+  /** A milestone's tasks, or null for tasks without a (live) milestone (ADR-0020). */
+  milestoneId: id.nullable().optional(),
   includeArchived: z.boolean().optional(),
   sort: z.enum(TASK_SORTS).optional(),
   limit: z.number().int().min(1).max(LIMITS.listPageSize).optional(),
   offset: z.number().int().min(0).optional(),
 });
+
+// Templates (ADR-0024). Built-in template IDs are not UUIDs (`builtin:software`).
+const templateId = z.string().min(1).max(60);
+const templateName = z
+  .string()
+  .trim()
+  .min(1, 'Enter a name for the template.')
+  .max(100, 'Template names can be up to 100 characters.');
+export const templateIdSchema = z.strictObject({ id: templateId });
+export const saveTemplateSchema = z.strictObject({
+  projectId: id,
+  name: templateName,
+  description: z.string().max(1000).nullable().optional(),
+  keepDates: z.boolean(),
+});
+export const renameTemplateSchema = z.strictObject({ id, name: templateName });
+/** An exported template file's text; the service parses and checks it. */
+export const importTemplateSchema = z.strictObject({ text: z.string().max(4 * 1024 * 1024) });
+export const createFromTemplateSchema = z.strictObject({
+  templateId,
+  name,
+  startDate: isoDateSchema.nullable().optional(),
+  folderId: id.nullable().optional(),
+});
+
+// Custom fields (ADR-0023)
+const fieldName = z
+  .string()
+  .trim()
+  .min(1, 'Enter a name for the field.')
+  .max(60, 'Field names can be up to 60 characters.');
+const optionLabel = z.string().trim().min(1).max(60);
+export const createCustomFieldSchema = z.strictObject({
+  projectId: id,
+  name: fieldName,
+  type: z.enum(CUSTOM_FIELD_TYPES),
+  options: z.array(optionLabel).max(50).optional(),
+});
+export const updateCustomFieldSchema = z.strictObject({
+  id,
+  name: fieldName.optional(),
+  options: z
+    .array(z.strictObject({ id: id.optional(), label: optionLabel }))
+    .max(50)
+    .optional(),
+});
+export const changeCustomFieldTypeSchema = z.strictObject({ id, type: z.enum(CUSTOM_FIELD_TYPES) });
+export const reorderCustomFieldsSchema = z.strictObject({ projectId: id, ids: idList });
+export const setCustomValueSchema = z.strictObject({
+  taskId: id,
+  fieldId: id,
+  value: z
+    .union([z.string().max(1000), z.number().finite(), z.boolean(), z.array(id).max(50)])
+    .nullable(),
+});
+
+// Activity (ADR-0021)
+const activityLimit = z.number().int().min(1).max(500);
+export const activityForItemSchema = z.strictObject({
+  kind: z.enum(ACTIVITY_KINDS),
+  id,
+  limit: activityLimit,
+});
+export const activityForProjectSchema = z.strictObject({ projectId: id, limit: activityLimit });
+export const activityRecentSchema = z.strictObject({ limit: activityLimit });
+
+// Milestones (ADR-0020)
+export const createMilestoneSchema = z.strictObject({
+  projectId: id,
+  name,
+  description: description.nullable().optional(),
+  targetDate: isoDateSchema.nullable().optional(),
+});
+export const updateMilestoneSchema = z.strictObject({
+  id,
+  name: name.optional(),
+  description: description.nullable().optional(),
+  targetDate: isoDateSchema.nullable().optional(),
+});
+export const milestoneRangeSchema = z
+  .strictObject({ from: isoDateSchema, to: isoDateSchema })
+  .refine((r) => r.from <= r.to, 'The range must end on or after its start.');
 
 // Notes
 /** Newest update first, newest created first, or title A–Z. */
@@ -226,8 +316,12 @@ export const switcherSearchSchema = z.strictObject({
 export const switcherRecentSchema = z.strictObject({ includeArchived: z.boolean().optional() });
 /** Favourites, icons, and covers belong to a project or a note (ADR-0019). */
 const looksTarget = { kind: z.enum(['project', 'note']), id };
-export const favouriteTargetSchema = z.strictObject(looksTarget);
-export const setFavouriteSchema = z.strictObject({ ...looksTarget, starred: z.boolean() });
+/** Milestones can be starred too (ADR-0020), but have no icon or cover. */
+export const favouriteTargetSchema = z.strictObject({
+  kind: z.enum(['project', 'note', 'milestone']),
+  id,
+});
+export const setFavouriteSchema = favouriteTargetSchema.extend({ starred: z.boolean() });
 export const setIconSchema = z.strictObject({
   ...looksTarget,
   value: z.enum(ICON_VALUES).nullable(),
@@ -249,17 +343,40 @@ export const setCompletedSchema = z.strictObject({ id, completed: z.boolean() })
 export const taskIdSchema = z.strictObject({ taskId: id });
 export const projectIdSchema = z.strictObject({ projectId: id });
 export const listProjectsSchema = z.strictObject({ includeArchived: z.boolean().optional() });
+/** Table layouts (ADR-0022): at most 40 columns, each 60–800 px wide. */
+const tableColumns = z
+  .array(
+    z.strictObject({
+      id: z.string().min(1).max(60),
+      width: z.number().int().min(60).max(800),
+      hidden: z.boolean(),
+    }),
+  )
+  .max(40);
+export const taskTablesSchema = z.strictObject({
+  project: tableColumns.optional(),
+  myTasks: tableColumns.optional(),
+});
 export const updateSettingsSchema = z.strictObject({
   theme: z.enum(THEMES).optional(),
   accent: z.enum(ACCENTS).optional(),
   surface: z.enum(SURFACES).optional(),
   noteOutline: z.boolean().optional(),
+  activityRetentionDays: z.union(ACTIVITY_RETENTION_DAYS.map((d) => z.literal(d))).optional(),
+  taskTables: taskTablesSchema.optional(),
 });
 export const emptySchema = z.strictObject({});
 
 export type SwitcherQuery = z.output<typeof switcherSearchSchema>;
 export type FavouriteTarget = z.output<typeof favouriteTargetSchema>;
+export type CreateMilestoneInput = z.output<typeof createMilestoneSchema>;
+export type CreateCustomFieldInput = z.output<typeof createCustomFieldSchema>;
+export type UpdateCustomFieldInput = z.output<typeof updateCustomFieldSchema>;
+export type SetCustomValueInput = z.output<typeof setCustomValueSchema>;
+export type UpdateMilestoneInput = z.output<typeof updateMilestoneSchema>;
 export type SetIconInput = z.output<typeof setIconSchema>;
+/** A project or note, whose icon and cover can change (ADR-0019). */
+export type LooksTarget = Pick<SetIconInput, 'kind' | 'id'>;
 export type SetCoverInput = z.output<typeof setCoverSchema>;
 export type AddCoverImageInput = z.output<typeof addCoverImageSchema>;
 export type CreateFolderInput = z.output<typeof createFolderSchema>;

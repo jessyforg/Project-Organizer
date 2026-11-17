@@ -3,7 +3,6 @@ import {
   CalendarDays,
   FlaskConical,
   FolderKanban,
-  Hammer,
   Inbox,
   ListChecks,
   NotebookPen,
@@ -14,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { ProfileSummary } from '@shared/types';
+import { BrandMark } from '../components/BrandMark';
 import { Swatch } from '../components/ui';
 import { ItemIcon } from '../features/looks/ItemIcon';
 import { useProjectMenu } from '../features/projects/useProjectMenu';
@@ -75,9 +75,9 @@ export const Sidebar = forwardRef<HTMLInputElement, { profile: ProfileSummary }>
     <nav className="sidebar" aria-label="Main">
       <div className="brand">
         <span className="brand__mark" aria-hidden="true">
-          <Hammer />
+          <BrandMark />
         </span>
-        ProjectForge
+        Katha
       </div>
       <div className="sidebar__search search-field">
         <label htmlFor="global-search" className="visually-hidden">

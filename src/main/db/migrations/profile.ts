@@ -310,4 +310,154 @@ export const profileMigrations: readonly Migration[] = [
       ALTER TABLE notes ADD COLUMN cover TEXT;
     `,
   },
+  {
+    // Milestones (ADR-0020). A task's milestone belongs to the task's project, and only
+    // top-level tasks have one (subtasks count through their parent). Trashing a milestone
+    // keeps the links, so restoring it brings them back; deleting it for good clears them.
+    version: 8,
+    name: 'milestones',
+    sql: `
+      CREATE TABLE milestones (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        description TEXT,
+        target_date TEXT CHECK (target_date IS NULL OR target_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+        completed_at TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        deletion_batch_id TEXT,
+        CHECK ((deleted_at IS NULL) = (deletion_batch_id IS NULL))
+      ) STRICT;
+      CREATE INDEX milestones_project ON milestones (project_id, deleted_at);
+      CREATE INDEX milestones_target ON milestones (target_date) WHERE deleted_at IS NULL;
+      CREATE INDEX milestones_batch ON milestones (deletion_batch_id)
+        WHERE deletion_batch_id IS NOT NULL;
+
+      ALTER TABLE tasks ADD COLUMN milestone_id TEXT REFERENCES milestones (id) ON DELETE SET NULL;
+      CREATE INDEX tasks_milestone ON tasks (milestone_id) WHERE milestone_id IS NOT NULL;
+
+      CREATE TRIGGER tasks_milestone_insert BEFORE INSERT ON tasks
+      WHEN NEW.milestone_id IS NOT NULL BEGIN
+        SELECT RAISE(ABORT, 'a milestone must belong to the task''s project, and only top-level tasks have one')
+        WHERE NEW.parent_task_id IS NOT NULL
+           OR (SELECT project_id FROM milestones WHERE id = NEW.milestone_id) IS NOT NEW.project_id;
+      END;
+      CREATE TRIGGER tasks_milestone_update
+      BEFORE UPDATE OF milestone_id, project_id, parent_task_id ON tasks
+      WHEN NEW.milestone_id IS NOT NULL BEGIN
+        SELECT RAISE(ABORT, 'a milestone must belong to the task''s project, and only top-level tasks have one')
+        WHERE NEW.parent_task_id IS NOT NULL
+           OR (SELECT project_id FROM milestones WHERE id = NEW.milestone_id) IS NOT NEW.project_id;
+      END;
+
+      -- Milestones can be starred (ADR-0019): the favourites table gains a third item column.
+      -- SQLite cannot change a CHECK in place, so the table is rebuilt and its rows copied.
+      CREATE TABLE favourites_v8 (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT REFERENCES projects (id) ON DELETE CASCADE,
+        note_id TEXT REFERENCES notes (id) ON DELETE CASCADE,
+        milestone_id TEXT REFERENCES milestones (id) ON DELETE CASCADE,
+        sort_key INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        CHECK ((project_id IS NOT NULL) + (note_id IS NOT NULL) + (milestone_id IS NOT NULL) = 1)
+      ) STRICT;
+      INSERT INTO favourites_v8 (id, project_id, note_id, sort_key, created_at)
+        SELECT id, project_id, note_id, sort_key, created_at FROM favourites;
+      DROP TABLE favourites;
+      ALTER TABLE favourites_v8 RENAME TO favourites;
+      CREATE UNIQUE INDEX favourites_project ON favourites (project_id)
+        WHERE project_id IS NOT NULL;
+      CREATE UNIQUE INDEX favourites_note ON favourites (note_id) WHERE note_id IS NOT NULL;
+      CREATE UNIQUE INDEX favourites_milestone ON favourites (milestone_id)
+        WHERE milestone_id IS NOT NULL;
+    `,
+  },
+  {
+    // The activity log (ADR-0021). No foreign keys: events describe the past and outlive
+    // renames and moves; permanent deletion removes an item's events explicitly.
+    version: 9,
+    name: 'activity_log',
+    sql: `
+      CREATE TABLE activity_events (
+        id INTEGER PRIMARY KEY,
+        at TEXT NOT NULL,
+        item_kind TEXT NOT NULL CHECK (item_kind IN ('task', 'project', 'note', 'milestone')),
+        item_id TEXT NOT NULL,
+        project_id TEXT,
+        title TEXT NOT NULL,
+        action TEXT NOT NULL,
+        field TEXT,
+        old_value TEXT,
+        new_value TEXT
+      ) STRICT;
+      CREATE INDEX activity_item ON activity_events (item_kind, item_id, at);
+      CREATE INDEX activity_project ON activity_events (project_id, at);
+      CREATE INDEX activity_at ON activity_events (at);
+    `,
+  },
+  {
+    // Custom fields (ADR-0023). No value row means no value. A value's field belongs to the
+    // task's project; trashing a field keeps its values, deleting it for good removes them.
+    version: 10,
+    name: 'custom_fields',
+    sql: `
+      CREATE TABLE custom_fields (
+        id TEXT PRIMARY KEY NOT NULL,
+        project_id TEXT NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        name_key TEXT NOT NULL,
+        type TEXT NOT NULL
+          CHECK (type IN ('text', 'number', 'date', 'checkbox', 'select', 'multi_select')),
+        options_json TEXT NOT NULL DEFAULT '[]',
+        sort_key INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT,
+        deletion_batch_id TEXT,
+        CHECK ((deleted_at IS NULL) = (deletion_batch_id IS NULL))
+      ) STRICT;
+      CREATE UNIQUE INDEX custom_fields_name ON custom_fields (project_id, name_key)
+        WHERE deleted_at IS NULL;
+      CREATE INDEX custom_fields_batch ON custom_fields (deletion_batch_id)
+        WHERE deletion_batch_id IS NOT NULL;
+
+      CREATE TABLE custom_values (
+        task_id TEXT NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+        field_id TEXT NOT NULL REFERENCES custom_fields (id) ON DELETE CASCADE,
+        value_json TEXT NOT NULL,
+        PRIMARY KEY (task_id, field_id)
+      ) STRICT;
+      CREATE INDEX custom_values_field ON custom_values (field_id);
+
+      CREATE TRIGGER custom_values_same_project BEFORE INSERT ON custom_values BEGIN
+        SELECT RAISE(ABORT, 'a custom field belongs to another project')
+        WHERE (SELECT project_id FROM custom_fields WHERE id = NEW.field_id)
+          IS NOT (SELECT project_id FROM tasks WHERE id = NEW.task_id);
+      END;
+      -- Fields belong to a project, so a task moving away leaves its values behind.
+      CREATE TRIGGER tasks_move_drops_custom_values AFTER UPDATE OF project_id ON tasks
+      WHEN NEW.project_id IS NOT OLD.project_id BEGIN
+        DELETE FROM custom_values WHERE task_id = NEW.id;
+      END;
+    `,
+  },
+  {
+    // Project templates saved or imported by the user (ADR-0024); built-in ones live in code.
+    // The content is versioned JSON, checked against a schema whenever it is read or written.
+    version: 11,
+    name: 'templates',
+    sql: `
+      CREATE TABLE templates (
+        id TEXT PRIMARY KEY NOT NULL,
+        name TEXT NOT NULL CHECK (length(trim(name)) > 0),
+        name_key TEXT NOT NULL UNIQUE,
+        description TEXT,
+        content_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      ) STRICT;
+    `,
+  },
 ];

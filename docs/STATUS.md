@@ -2,6 +2,250 @@
 
 Newest entries first.
 
+## 2026-11-17 — Release 0.9.0, stage 6 (part 5): zod 4.6.7, Electron 44.10.1, release checks; ready for the product owner's check
+
+**Updated (exact pins, each at least two weeks old, checked against npm publish times at 05:16 UTC):**
+- **zod 4.6.5 → 4.6.7** (published 2026-10-12). Fixes GHSA-mrhx-c7xc-m3w5 (high). `npm audit --omit=dev` now reports 0 vulnerabilities.
+- **Electron 44.7.0 → 44.10.1** (published 2026-10-31), the newest eligible 44.x. It includes 44.9.1's fix for GHSA-jr5w-w6x2-84p9. 44.10.2 (2026-11-03 19:00 UTC) and later were too new.
+- **fast-uri 3.1.8 → 3.1.9** (lock file only, used by electron-builder at packaging time). Fixes its four moderate advisories.
+
+**Not taken:** the working tree had Electron `46.0.0-alpha.11`, a pre-release published on 2026-11-17 and two major versions ahead. It fails the two-week rule and the plan to stay on 44.x, so it was replaced with 44.10.1.
+
+**Accepted (build tools only, not in the installer):** a new minimatch advisory, GHSA-g3hv-75wg-m249 (moderate, 7.0.0–11.0.0), reaches eslint, typescript-eslint, and electron-builder. The fix is minimatch 11.0.1 or later, a major version none of them accept, so it would need a forced override. Re-check when those tools update. The full audit lists 14 moderate findings, all from this advisory.
+
+**Verification:**
+- Typecheck, lint, and formatting are clean. 632 of 632 unit and component tests pass.
+- 32 of 32 end-to-end tests pass, in two consecutive full runs.
+- **Installer rebuilt:** `release/Katha Setup 0.9.0.exe`, packaged with Electron 44.10.1, unsigned as expected. The fuses read back as configured. `THIRD_PARTY_NOTICES.txt` in `release/win-unpacked` is identical to the build's copy. `@electron/fuses` 1.8.0 lists one more fuse with no name (index 8, WasmTrapHandlers in Electron, default on); the project does not set it.
+
+**Not done:** an install test of the rebuilt installer (it would touch this machine's Programs folder and `%APPDATA%\Katha`). Release checklist items 2, 3, and 5 remain.
+
+**Next step:** the product owner checks the 0.9.0 installer and approves the merge of `feature/milestones-0.9` into `main`.
+
+## 2026-10-26 — Release 0.9.0, stage 6 (part 4): third-party licence notices
+
+**Why:** Vite bundles React, TipTap, the font, and about 120 other packages into the app, and the SQLite driver's binary contains SQLite3 Multiple Ciphers and its crypto code. Their MIT, ISC, BSD, and OFL licences require the licence text to ship with copies; until now only Electron's and Chromium's did. The product owner approved this while the zod update waits for the two-week rule.
+
+**What was built:**
+- **`scripts/third-party-notices.ts`:** a Vite plugin, added to the main, preload, and renderer builds, that writes `out/THIRD_PARTY_NOTICES.txt`. It lists the packages Rollup actually bundled (not every installed package) plus the runtime dependencies electron-builder copies (the SQLite driver, its `node-addon-api`, zod), each once per version with its licence files. The build stops if a package has no licence text. No new dependency.
+- **`build/native-notices.txt`:** hand-written notices for the code compiled into the driver's binary, copied from its source: SQLite (public domain), SQLite3 Multiple Ciphers 2.4.0 and AEGIS (MIT), Olivier Gay's SHA-2 (BSD-3, which requires the notice in binary copies), Solar Designer's MD5, and the public-domain and CC0 parts. miniz is in the source but not compiled in this build, so it is not listed.
+- **Installer:** `electron-builder.yml` puts the file beside `Katha.exe`, next to `LICENSE.electron.txt`, and keeps it out of `app.asar`.
+- **Docs:** README Licence section, CHANGELOG, release checklist item 6.
+
+**Result:** 128 packages (126 MIT, 2 ISC, 1 OFL-1.1, and the driver's notices). No Vite runtime code reaches the bundle, so Vite itself is not listed.
+
+**Verification:**
+- 6 new unit tests: package detection from module paths, licence files, the runtime dependency walk (nested copies, optional packages), refusal without licence text, ordering, and a check that `build/native-notices.txt` names the installed driver, SQLite, and SQLite3 Multiple Ciphers versions (shown to fail when a version is wrong).
+- Typecheck, lint, and formatting are clean. 632 of 632 unit and component tests pass.
+- `electron-builder --dir`: `THIRD_PARTY_NOTICES.txt` is in `release/win-unpacked`, identical to the build's copy, and not in `app.asar`.
+
+**Not yet run:** the end-to-end suite and the installer rebuild. Both run after the zod update, which is still due at 16:29 UTC on 2026-10-26.
+
+## 2026-10-26 — Release 0.9.0, stage 6 (part 3): the Katha mark (banig weave)
+
+Decisions are in [ADR-0026](DECISIONS/0026-brand-banig-weave.md). The product owner chose concept A of three (a banig weave, a bookmark K, and simplified heat bars).
+
+**What was built:**
+- **`brand/`:** the mark for light and dark backgrounds, a one-colour version, app icon tiles at 16, 24, 32, and 48+ px (each on whole pixels), and wordmarks. One script, `brand/make-marks.py`, generates them. `preview.html` shows every file at real sizes. Concept B is kept in `brand/explorations/`.
+- **App icon:** `scripts/make-app-icon.cjs` (run in Electron, no new dependency) writes `build/icon.ico` (7 sizes) and a new `build/icon.png`. The old heat-bars icon is replaced; `scripts/make-icon.py` is kept with a "superseded" note.
+- **In the app:** a `BrandMark` component replaces the Lucide hammer in the sidebar and on the first-run screen.
+- **README:** the wordmark at the top, with a dark-mode version.
+- **Lint:** `scripts/*.cjs` is linted without type information, like `eslint.config.mjs`.
+
+**Checked:** all SVGs parse; each icon size was rendered and inspected at pixel level, on light and dark taskbar colours.
+
+**Not checked:** a trademark search of the mark. GitHub may show the README wordmark in a fallback font (ADR-0026).
+
+## 2026-10-26 — Release 0.9.0, stage 6 (part 2): the name Katha and the MIT licence
+
+Decisions are in [ADR-0025](DECISIONS/0025-name-and-licence.md). The product owner chose both.
+
+**Why:** the name ProjectForge is already used by Micromata's open-source project-management tool, and the public repository had no licence.
+
+**What changed:**
+- `productName` Katha, package `katha`, `appId` `com.katha.desktop`. The data folder is now `%APPDATA%\Katha` (`Katha-dev` in development).
+- Every name the user sees: the window title, sidebar, first-run screen, About, file dialogs, default file names, and error messages.
+- `LICENSE` (MIT) and `"license": "MIT"`. The README has a Licence section.
+- **Kept on purpose** (stored in user data and files): the `projectforge://` link address, the backup, export, and template format IDs, the `.pfbackup` extension, and the `PROJECTFORGE_*` test variables.
+- **Existing installs:** the README's new "Moving from a ProjectForge build" section moves the data by renaming the folder. A new end-to-end test (32) creates a profile and a project, moves the whole data folder, and opens both from the new place.
+- **Docs:** README, CHANGELOG, ARCHITECTURE, TESTING, REQUIREMENTS, and the release checklist (Electron and name-freeze items done).
+
+**Not changed:** the GitHub repository name (`Project-Organizer`), which is a GitHub setting.
+
+**Defect found:** the images-and-files end-to-end test failed about 1 run in 6, on Electron 44.5.1 as well as 44.7.0, so it was older than these changes. Cause: Playwright intercepts file choosers only while something listens for them, and it turned interception off and on again between the test's two waits. A chooser opened in that gap was a real system window that nothing answered. One listener now keeps interception on for the whole test: 30 of 30 repeated runs pass.
+
+## 2026-10-26 — Release 0.9.0, stage 6 (part 1): Electron and Vite updates, a test race fixed
+
+**Updated (exact pins, each at least two weeks old):**
+- **Electron 44.5.1 → 44.7.0:** the newest eligible 44.x, a release-checklist item. 44.7.1 (2026-10-13) was too new.
+- **Vite 7.3.6 → 7.3.7 (development only):** fixes five advisories in the dev server and its editor launcher (GHSA-587h-7wmj-h5pm and others). Vite is not in the installer.
+
+**Not yet updated:**
+- **zod 4.6.7** meets the two-week rule at 16:29 UTC on 2026-10-26, not earlier. It is the rest of stage 6.
+- **Electron advisory GHSA-jr5w-w6x2-84p9 (high):** a mitigation for compromised eMudhra certificates, fixed in 44.9.1, eligible on 2026-11-03. The app makes no network connections, so it is not exposed.
+- **fast-uri below 3.1.9 (moderate):** used by electron-builder at packaging time only; not in the installer. 3.1.9 is eligible on 2026-11-02.
+
+**Defect found:** the formatting bubble end-to-end test failed about 2 runs in 5, on both Electron 44.5.1 and 44.7.0. Cause: the test pressed Alt+F10 before the bubble had switched back from the link field to its tools, so the key was ignored. The test now waits for the tools first. The earlier comment's explanation (another window taking focus) was wrong and was replaced. 10 of 10 repeated runs pass.
+
+**README:** "Known limitations" no longer lists milestones and note attachments as planned.
+
+**Verification:** typecheck, lint, and formatting are clean. 626 of 626 unit and component tests pass. 31 of 31 end-to-end tests pass, in two consecutive full runs.
+
+**Before a public release (decisions for the product owner):** the name ProjectForge is already used by an established open-source project-management tool (Micromata, GPLv3); and the project has no licence (`UNLICENSED`).
+
+## 2026-10-24 — Release 0.9.0: stages 1–5 done, installer built for the product owner's check; the zod update is due on 2026-10-26
+
+**Built:** milestones (v8), the activity log (v9), the task table, custom fields (v10), and project templates (v11), on `feature/milestones-0.9`. Details are in the stage entries below and in ADR-0020 to ADR-0024.
+
+**Installer:** `release/ProjectForge Setup 0.9.0.exe`, built from the stage 5 commit.
+
+**Open item (stage 6):**
+- `npm audit --omit=dev` still reports GHSA-mrhx-c7xc-m3w5 (zod below 4.6.6, high).
+- zod 4.6.7 was released on 2026-10-12, so it meets the two-week rule (SECURITY.md §6) on 2026-10-26.
+- **Plan:** update the exact pin to 4.6.7, run every check and both end-to-end runs again, and rebuild the installer, all before the merge.
+- **Exposure in the meantime:** zod checks input from the app's own sandboxed window and from files the user chooses (backups and, now, templates). The worst case is a crash on a crafted file.
+
+## 2026-10-24 — Release 0.9.0, stage 5 of 6: project templates (schema v11)
+
+Decisions are in [ADR-0024](DECISIONS/0024-project-templates.md).
+
+**What was built:**
+- **The template format:** `templateContentSchema`, a versioned and bounded format for template content.
+- **Built-in templates:** Software development, Personal productivity, and Study and learning.
+- **`TemplateService`:**
+  - lists and previews templates;
+  - saves a project as a template (without completion, with optional day offsets);
+  - renames, deletes, exports, and imports templates (checked, with " (2)" for a taken name);
+  - creates a project from a template in one transaction, through the usual services.
+- **Schema v11:** the `templates` table, with a `profile-v10.db` fixture and an upgrade test.
+- **Interface:**
+  - the New from template picker, with its preview, start date, and name;
+  - the Templates dialog;
+  - "Save as template…" in the project ⋯ menu;
+  - "New project from a template" in the palette.
+
+**Found during the work:** the preview scrolls but could not be reached from the keyboard. Axe caught it (scrollable-region-focusable), and the preview is now a Tab stop.
+
+**Verification for this stage:**
+- 8 service tests, including all-or-nothing creation: a template whose last task is invalid leaves no project, task, tag, or activity behind.
+- 3 component tests.
+- A new end-to-end workflow (29).
+- Axe scans of the three template dialogs, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 626 of 626 unit and component tests pass, with no unhandled errors. 31 of 31 end-to-end tests pass, in two consecutive full runs.
+
+## 2026-10-24 — Release 0.9.0, stage 4 of 6: custom fields (schema v10)
+
+Decisions are in [ADR-0023](DECISIONS/0023-custom-fields.md).
+
+**What was built:**
+- **Schema v10:** `custom_fields` and `custom_values`, with triggers for "same project" and "values leave with a moved task". A `profile-v9.db` fixture has an upgrade test.
+- **`CustomFieldService`:**
+  - values checked by type and options;
+  - type changes that convert every value, or change nothing and name the blocking values;
+  - option edits that clean up values.
+- **Activity:** value changes are recorded as `custom:<name>`.
+- **Trash:** fields go to the trash alone or with their project.
+- **Interface:**
+  - the Custom fields dialog (⋯ menu, palette, and "Manage fields" in task details);
+  - the task panel's Fields section;
+  - field columns on project tables, with sorting, grouping by choice or checkbox fields, a field filter, and editing in place with Undo.
+
+**Defects found and fixed during the work:**
+- **Nested dialogs closed together:** a confirmation inside a dialog closed the dialog around it, because React passes a `<dialog>`'s close event up the component tree. The shared `Dialog` now reacts only to its own close. The end-to-end workflow caught it, and a regression test fails without the fix.
+- **Undo out of reach:** the trashed field's Undo was in a toast, which cannot be clicked while a modal dialog is open. It is now shown inside the dialog.
+- **Choices lagged:** checkboxes and multiple choices in the panel changed only after the save round trip. They now change at once, as text fields already did. Screenshot capture caught it.
+
+**Verification for this stage:**
+- 9 service tests.
+- 6 component tests, including the dialog regression test.
+- A new end-to-end workflow (28).
+- Axe scans of the Custom fields dialog and of task details with fields, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 613 of 613 unit and component tests pass, with no unhandled errors. 30 of 30 end-to-end tests pass, in two consecutive full runs.
+
+## 2026-10-24 — Release 0.9.0, stage 3 of 6: tasks as a table
+
+Decisions are in [ADR-0022](DECISIONS/0022-task-table.md). There is no schema change: layouts are the profile setting `taskTables`.
+
+**What was built:**
+- **`TaskTable`:** a virtualised WAI-ARIA grid on project pages (Table view) and on My tasks (List and Table switch).
+  - Sorting, grouping, and inline editing through `tasks:update` and `applyUpdate`, with an Undo toast.
+  - The Columns dialog, and keyboard and mouse resizing.
+- **New read-only channels:** `statuses:listAll` and `milestones:listAll`, for names across projects.
+
+**Found during the work:**
+- **Columns lagged:** a change in the Columns dialog only showed after the save round trip, which the end-to-end workflow caught. Layout changes now show at once.
+- **Title scrolled out of view:** the default widths were slightly wider than the page, so focusing a cell scrolled Title sideways. Screenshot review caught it. The defaults now fit, and focus scrolls only as far as needed.
+
+**Verification for this stage:**
+- 7 component and model tests, including 5,000 tasks with fewer than 60 rows rendered.
+- A new end-to-end workflow (27).
+- Axe scans of the table, the table while a cell is being edited, and the Columns dialog, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 596 of 596 unit and component tests pass, with no unhandled errors. 29 of 29 end-to-end tests pass, in two consecutive full runs.
+
+## 2026-10-24 — Release 0.9.0, stage 2 of 6: activity log (schema v9)
+
+**Scope change:** the product owner asked for all remaining features in one release ("Everything left"). The plan, `docs/plans/2026-10-21-next-features-plan.md` §8, is now six stages on `feature/milestones-0.9`. Milestones are stage 1, and decisions for this stage are in [ADR-0021](DECISIONS/0021-activity-log.md).
+
+**What was built:**
+- **Schema v9** adds `activity_events`, with a `profile-v8.db` fixture and an upgrade test.
+- **`recordActivity`** is called inside the transaction of every write in the task, project, note, milestone, attachment, and trash services. Note renames and edits within 10 minutes merge.
+- **Reading:** the activity service lists an item's events, a project's, and the profile's. It also applies retention and forgets permanently deleted items.
+- **Interface:**
+  - a reusable `Tabs` component (the WAI-ARIA tabs pattern);
+  - Details and Activity tabs in task details, and Work and Activity tabs on project pages;
+  - Recent activity on Today, replacing Recently updated;
+  - an Activity history setting.
+
+**Verification for this stage:**
+- 9 service tests, including the atomicity check (a rollback after an event was written leaves neither) and 100,000 events under 50 ms.
+- 4 component tests.
+- A new end-to-end workflow (26).
+- Axe scans of both Activity tabs, in light and dark.
+- **Full checks:** typecheck, lint, and formatting are clean. 589 of 589 unit and component tests pass, with no unhandled errors. 28 of 28 end-to-end tests pass, in two consecutive full runs.
+- **Also fixed: the slash-menu workflow.** It failed twice in full runs, because it measured the menu during its rise-in animation (800.19 px against an 800 px window). It now waits for the animation to finish first.
+
+## 2026-10-24 — Release 0.9.0, milestones (schema v8), awaiting the product owner's check before merging
+
+**Approval:** the product owner said "merge and push then continue 0.9.0". 0.8.0 was squash-merged and pushed as `2ad76b4`. The branch is `feature/milestones-0.9`, and decisions are recorded in [ADR-0020](DECISIONS/0020-milestones.md).
+
+**What was built:**
+- **Schema v8:**
+  - a `milestones` table;
+  - `tasks.milestone_id`, with database guards for "same project" and "top-level tasks only";
+  - the `favourites` table rebuilt so milestones can be starred.
+  - A committed `profile-v7.db` fixture has an upgrade test.
+- **`MilestoneService`:** R13 progress over the milestone's tasks and their subtasks; the dashboard and calendar queries.
+- **Trash:** milestones in the trash, alone or with their project.
+- **Task service:** assigning, filtering, and clearing on move.
+- **Interface:**
+  - the project page's Milestones section and dialog;
+  - the Milestone filter and the task details field;
+  - board cards, the Today section, and calendar entries;
+  - starred milestones, which open their filtered project.
+
+**Defects found and fixed during the work:**
+- **A stale milestone filter:** trashing a milestone while the list was filtered to it left an empty list. The end-to-end workflow caught it, and a milestone that is no longer shown now stops filtering.
+- **The backup workflow's one-off hang (first noted in 0.6.0), explained:**
+  - The test pressed Ctrl+, in the frame between the "Task added." toast and the New task dialog closing, while shortcuts are ignored because a dialog is open.
+  - The test now waits for the dialog to close. For a person the window is one frame, so the app is unchanged.
+- **The formatting-bubble workflow:** it failed twice in full runs with "inactive", because the window lost focus to another window. It now brings the window to the front before checking focus.
+
+**Open item: a zod advisory.**
+- `npm audit --omit=dev` now reports GHSA-mrhx-c7xc-m3w5 (high): zod below 4.6.6 can exhaust memory validating oversized constrained collections. It was published after the 0.8.0 check.
+- The fix, zod 4.6.6 or 4.6.7, was released on 2026-10-11 and 12, so it does not yet meet the two-week rule (SECURITY.md §6).
+- **Exposure:** zod checks input from the app's own sandboxed window and from backup files the user chooses, so the worst case is the app crashing on a crafted file.
+- **Recommendation:** upgrade to 4.6.7 on or after 2026-10-26, before 0.9.0 is merged.
+
+**Verification:**
+- **Checks:** typecheck, lint, and formatting are clean. 574 of 574 unit and component tests pass (25 new), with no unhandled errors, in the final runs.
+- **One unhandled error, not reproduced:** one earlier full run reported an unhandled error. It did not come back in 4 more runs, and its source was not captured.
+- **End to end:** 27 of 27 pass, in two consecutive clean full runs. That includes one new workflow (25), and axe scans of the milestone dialog, a project with an overdue milestone, and Today with milestones, in light and dark.
+- **Audit:** 1 high finding, the open item above.
+- **Screenshots:** reviewed in light and dark. One change came out of it: the flags in Today's Milestones list were resized.
+- **Test environment:** the laptop was very slow today, so the switcher's speed test now seeds its 5,000 tasks with SQL, and the My tasks paging test allows 30 s.
+  - Both measured the same on 0.8.0's code, so the app has not slowed down.
+  - The 100 ms search limit is unchanged.
+
 ## 2026-10-23 — Release 0.8.0, favourites, icons, and covers (schema v7), awaiting the product owner's check before merging
 
 **Approval:** the product owner said "merge and push then continue to 0.8.0". 0.7.0 was squash-merged and pushed as `51bd8ec`. The branch is `feature/personal-0.8`, and decisions are recorded in [ADR-0019](DECISIONS/0019-favourites-icons-covers.md).

@@ -21,6 +21,11 @@ export const COUNTED_TABLES = [
   'note_links',
   'attachments',
   'favourites',
+  'milestones',
+  'activity_events',
+  'custom_fields',
+  'custom_values',
+  'templates',
   'settings',
 ] as const;
 
@@ -47,6 +52,10 @@ export const INCLUDES = [
   'Notes and note folders, including notes in the trash',
   'Images and files in notes, and cover images',
   'Favourites, icons, and covers',
+  'Milestones, including those in the trash',
+  'The activity log',
+  'Custom fields and their values',
+  'Saved project templates',
   'Profile settings',
 ];
 export const OMITS = ['The profile’s automatic snapshots', 'App-wide settings outside the profile'];

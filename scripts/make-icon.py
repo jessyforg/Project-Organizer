@@ -1,4 +1,7 @@
-"""Draws the ProjectForge icon: four rounded "heat" bars rising on a graphite tile.
+"""Draws the old app icon (up to 0.9.0's rename): four rounded "heat" bars on a graphite tile.
+
+Superseded by the banig weave (ADR-0026): the icon is now built by scripts/make-app-icon.cjs from
+brand/. Kept for reference; running it would overwrite build/icon.png with the old design.
 
 Pure Python (zlib + struct) so no image library is needed. Renders at 4x and box-downsamples
 for smooth edges. Usage: python make_icon.py <output.png> <size>

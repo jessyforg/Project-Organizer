@@ -35,9 +35,10 @@ export interface ChannelDeps {
   clock: () => Date;
 }
 
-const BACKUP_FILTER = { name: 'ProjectForge backup', extension: 'pfbackup' };
+const BACKUP_FILTER = { name: 'Katha backup', extension: 'pfbackup' };
 const JSON_FILTER = { name: 'JSON export', extension: 'json' };
 const MARKDOWN_FILTER = { name: 'Markdown', extension: 'md' };
+const TEMPLATE_FILTER = { name: 'Katha template', extension: 'json' };
 const ANY_FILE = { name: 'All files', extension: '*' };
 
 /** A default file name that is safe on Windows. */
@@ -48,7 +49,7 @@ function fileNameFor(profileName: string, date: string, extension: string): stri
       .map((ch) => (ch.charCodeAt(0) < 32 || forbidden.includes(ch) ? '-' : ch))
       .join('')
       .trim() || 'Profile';
-  return `ProjectForge ${safe} ${date}.${extension}`;
+  return `Katha ${safe} ${date}.${extension}`;
 }
 
 /** One implementation per channel; the mapped type makes a missing channel a compile error. */
@@ -164,6 +165,7 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'projects:unarchive': ({ id }) => s().projects.unarchive(id),
 
     'statuses:list': ({ projectId }) => s().statuses.listForProject(projectId),
+    'statuses:listAll': () => s().statuses.listAll(),
     'statuses:add': (input) => s().statuses.add(input),
     'statuses:rename': ({ id, name }) => s().statuses.rename(id, name),
     'statuses:reorder': ({ projectId, ids }) => s().statuses.reorder(projectId, ids),
@@ -178,6 +180,39 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'tasks:move': (input) => s().tasks.move(input),
     'tasks:reorder': (input) => s().tasks.reorder(input),
     'tasks:moveOnBoard': (input) => s().tasks.moveOnBoard(input),
+    'milestones:list': ({ projectId }) => s().milestones.list(projectId),
+    'milestones:listAll': () => s().milestones.listAll(),
+    'milestones:inRange': (range) => s().milestones.inRange(range),
+    'milestones:create': (input) => s().milestones.create(input),
+    'milestones:update': (input) => s().milestones.update(input),
+    'milestones:setCompleted': ({ id, completed }) => s().milestones.setCompleted(id, completed),
+    'customFields:list': ({ projectId }) => s().customFields.list(projectId),
+    'customFields:create': (input) => s().customFields.create(input),
+    'customFields:update': (input) => s().customFields.update(input),
+    'customFields:changeType': (input) => s().customFields.changeType(input),
+    'customFields:reorder': (input) => s().customFields.reorder(input),
+    'customFields:setValue': (input) => {
+      s().customFields.setValue(input);
+      return null;
+    },
+    'templates:list': () => s().templates.list(),
+    'templates:get': ({ id }) => s().templates.get(id),
+    'templates:saveFromProject': (input) => s().templates.saveFromProject(input),
+    'templates:rename': (input) => s().templates.rename(input),
+    'templates:delete': ({ id }) => {
+      s().templates.delete(id);
+      return null;
+    },
+    'templates:export': async ({ id }) => {
+      const document = s().templates.exportDocument(id);
+      const name = markdownFileName(document.name).replace(/\.md$/, '.pftemplate.json');
+      const destination = await dialogs.saveFile(name, TEMPLATE_FILTER);
+      if (!destination) return { saved: false };
+      writeFileAtomic(destination, new TextEncoder().encode(JSON.stringify(document, null, 2)));
+      return { saved: true, fileName: path.basename(destination) };
+    },
+    'templates:import': ({ text }) => s().templates.import(text),
+    'templates:createProject': (input) => s().templates.createProject(input),
 
     'notes:list': (query) => s().notes.list(query),
     'notes:get': ({ id }) => s().notes.get(id),
@@ -256,11 +291,16 @@ export function createChannelImpls(deps: ChannelDeps): ChannelImpls {
     'trash:trashTask': ({ id }) => s().trash.trashTask(id),
     'trash:trashProject': ({ id }) => s().trash.trashProject(id),
     'trash:trashNote': ({ id }) => s().trash.trashNote(id),
+    'trash:trashMilestone': ({ id }) => s().trash.trashMilestone(id),
+    'trash:trashCustomField': ({ id }) => s().trash.trashCustomField(id),
     'trash:restore': ({ batchId }) => s().trash.restore(batchId),
     'trash:deletePermanently': ({ batchId }) => (s().trash.deletePermanently(batchId), null),
     'trash:empty': () => ({ removed: s().trash.empty() }),
 
     'search:query': ({ text }) => s().search.search(text),
+    'activity:forItem': (input) => s().activity.forItem(input),
+    'activity:forProject': (input) => s().activity.forProject(input),
+    'activity:recent': (input) => s().activity.recent(input),
     'switcher:search': (query) => s().switcher.search(query),
     'switcher:recent': (query) => s().switcher.recent(query),
     'switcher:recordOpened': (target) => {

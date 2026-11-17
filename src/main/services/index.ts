@@ -1,6 +1,8 @@
 import { pruneSnapshots, takeDailySnapshot } from '../backup/snapshots';
 import type { Logger } from '../platform/logger';
 import type { ServiceContext } from './context';
+import { ActivityService } from './activity';
+import { CustomFieldService } from './custom-fields';
 import { DashboardService } from './dashboard';
 import { DependencyService } from './dependencies';
 import { FavouriteService } from './favourites';
@@ -8,6 +10,7 @@ import { FolderService } from './folders';
 import { AttachmentService } from './attachments';
 import { LinkService } from './links';
 import { LooksService } from './looks';
+import { MilestoneService } from './milestones';
 import { NoteFolderService } from './note-folders';
 import { NoteService } from './notes';
 import { ensureInbox, ProjectService } from './projects';
@@ -17,11 +20,15 @@ import { StatusService } from './statuses';
 import { SwitcherService } from './switcher';
 import { TagService } from './tags';
 import { TaskService } from './tasks';
+import { TemplateService } from './templates';
 import { TrashService } from './trash';
 
 export type { ServiceContext } from './context';
 
 export interface ProfileServices {
+  activity: ActivityService;
+  customFields: CustomFieldService;
+  templates: TemplateService;
   folders: FolderService;
   tags: TagService;
   projects: ProjectService;
@@ -33,6 +40,7 @@ export interface ProfileServices {
   attachments: AttachmentService;
   favourites: FavouriteService;
   looks: LooksService;
+  milestones: MilestoneService;
   dependencies: DependencyService;
   trash: TrashService;
   search: SearchService;
@@ -43,6 +51,9 @@ export interface ProfileServices {
 
 export function createProfileServices(ctx: ServiceContext): ProfileServices {
   return {
+    activity: new ActivityService(ctx),
+    customFields: new CustomFieldService(ctx),
+    templates: new TemplateService(ctx),
     folders: new FolderService(ctx),
     tags: new TagService(ctx),
     projects: new ProjectService(ctx),
@@ -54,6 +65,7 @@ export function createProfileServices(ctx: ServiceContext): ProfileServices {
     attachments: new AttachmentService(ctx),
     favourites: new FavouriteService(ctx),
     looks: new LooksService(ctx),
+    milestones: new MilestoneService(ctx),
     dependencies: new DependencyService(ctx),
     trash: new TrashService(ctx),
     search: new SearchService(ctx),
@@ -76,6 +88,9 @@ export function runProfileMaintenance(
   const indexed = new NoteService(ctx).rebuildLinkIndexIfNeeded();
   if (indexed > 0) logger.info('note_links.rebuilt', { notes: indexed });
   const purged = new TrashService(ctx).purgeExpired();
+  const days = new SettingsService(ctx).get().activityRetentionDays;
+  const expired = new ActivityService(ctx).purgeOlderThan(days);
+  if (expired > 0) logger.info('activity.purged', { events: expired });
   const removedFiles = new AttachmentService(ctx).cleanUp();
   if (removedFiles > 0) logger.info('attachments.removed_unused', { files: removedFiles });
   if (purged > 0) logger.info('trash.purged', { batches: purged });

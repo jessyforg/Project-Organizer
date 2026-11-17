@@ -110,6 +110,61 @@ export interface Task {
   prerequisiteIds: string[];
   subtaskCount: number;
   completedSubtaskCount: number;
+  /** The task's milestone (ADR-0020); null when it has none or its milestone is in the trash. */
+  milestoneId: string | null;
+  /** Values of the project's live custom fields, by field ID (ADR-0023). */
+  customValues: Record<string, CustomValue>;
+}
+
+export const CUSTOM_FIELD_TYPES = [
+  'text',
+  'number',
+  'date',
+  'checkbox',
+  'select',
+  'multi_select',
+] as const;
+export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
+
+/** Text, a number, a YYYY-MM-DD date, true (a ticked checkbox), an option ID, or option IDs. */
+export type CustomValue = string | number | boolean | string[];
+
+export interface CustomFieldOption {
+  id: string;
+  label: string;
+}
+
+/** A task field a project defines (ADR-0023). */
+export interface CustomField {
+  id: string;
+  projectId: string;
+  name: string;
+  type: CustomFieldType;
+  options: CustomFieldOption[];
+  sortKey: number;
+  /** How many tasks have a value. */
+  valueCount: number;
+}
+
+/** A checkpoint in a project (ADR-0020). Tasks belong to at most one milestone. */
+export interface Milestone {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  targetDate: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  /** R13 rules over the milestone's top-level tasks and their subtasks. */
+  progress: Progress;
+  favourite: boolean;
+}
+
+/** A milestone with its project, for the calendar and the dashboard. */
+export interface MilestoneEntry extends Milestone {
+  projectName: string;
+  projectColor: ColorToken | null;
 }
 
 /** Calculated progress. `ratio` is null when nothing is countable (shown as "—"). */
@@ -146,9 +201,9 @@ export interface TaskTrashPreview {
 
 export interface TrashEntry {
   batchId: string;
-  kind: 'project' | 'task' | 'note';
+  kind: 'project' | 'task' | 'note' | 'milestone' | 'custom_field';
   title: string;
-  /** For task and note entries: the project the item belongs to. */
+  /** For task, note, milestone, and field entries: the project the item belongs to. */
   projectName: string | null;
   itemCount: number;
   deletedAt: string;
@@ -159,6 +214,8 @@ export interface RestoreResult {
   restoredProjects: number;
   restoredTasks: number;
   restoredNotes: number;
+  restoredMilestones: number;
+  restoredFields: number;
   /** Dependencies of restored tasks whose prerequisite is still in the trash. */
   unresolvedDependencies: { taskId: string; prerequisiteId: string }[];
 }
@@ -207,8 +264,10 @@ export interface Note {
 export interface FavouriteItem {
   /** The favourite's own ID, used to reorder. */
   id: string;
-  kind: 'project' | 'note';
+  kind: 'project' | 'note' | 'milestone';
   itemId: string;
+  /** A milestone's project, which opens filtered to it (ADR-0020); null otherwise. */
+  projectId: string | null;
   title: string;
   icon: string | null;
   /** A project's colour, shown when it has no icon. */
@@ -264,6 +323,72 @@ export interface ProfileSettings {
   surface: Surface;
   /** Whether notes show their outline panel (ADR-0017). */
   noteOutline: boolean;
+  /** How long activity is kept (ADR-0021). */
+  activityRetentionDays: ActivityRetention;
+  /** Column layouts of the task tables (ADR-0022). */
+  taskTables: TaskTableLayouts;
+}
+
+/** One table column: built-in IDs, and later custom fields (ADR-0022). */
+export interface TaskTableColumn {
+  id: string;
+  width: number;
+  hidden: boolean;
+}
+
+export interface TaskTableLayouts {
+  /** Shared by every project's table. */
+  project?: TaskTableColumn[] | undefined;
+  myTasks?: TaskTableColumn[] | undefined;
+}
+
+export const ACTIVITY_RETENTION_DAYS = [90, 180, 365, 730, 1825] as const;
+export type ActivityRetention = (typeof ACTIVITY_RETENTION_DAYS)[number];
+
+export const ACTIVITY_KINDS = ['task', 'project', 'note', 'milestone'] as const;
+export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
+
+export type ActivityAction =
+  | 'created'
+  | 'renamed'
+  | 'changed'
+  | 'moved'
+  | 'edited'
+  | 'completed'
+  | 'reopened'
+  | 'archived'
+  | 'unarchived'
+  | 'trashed'
+  | 'restored'
+  | 'attachment_added'
+  | 'attachment_removed';
+
+/** What `changed` events change (ADR-0021). */
+export type ActivityField =
+  | 'status'
+  | 'priority'
+  | 'due_date'
+  | 'milestone'
+  | 'folder'
+  | 'target_date'
+  /** A custom field's value, with the field's name (ADR-0023). */
+  | `custom:${string}`;
+
+/** One recorded change (ADR-0021). Values are stored as people saw them. */
+export interface ActivityEvent {
+  id: number;
+  at: string;
+  itemKind: ActivityKind;
+  itemId: string;
+  projectId: string | null;
+  /** The item's title when the change happened. */
+  title: string;
+  action: ActivityAction;
+  field: ActivityField | null;
+  oldValue: string | null;
+  newValue: string | null;
+  /** The item still exists outside the trash, so it can be opened. */
+  live: boolean;
 }
 
 export type AttachmentKind = 'image' | 'file';
@@ -337,9 +462,10 @@ export interface Dashboard {
   overdue: Task[];
   dueToday: Task[];
   upcoming: Task[];
-  recentlyUpdated: Task[];
   recentlyCompleted: Task[];
   activeProjects: ProjectListItem[];
+  /** Open milestones: overdue first, then due within the upcoming days (ADR-0020). */
+  milestones: MilestoneEntry[];
   openTaskCount: number;
   completedThisWeek: number;
 }

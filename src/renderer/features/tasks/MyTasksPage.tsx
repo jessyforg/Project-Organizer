@@ -1,5 +1,5 @@
 import { useDeferredValue, useState } from 'react';
-import { ListFilter, Plus } from 'lucide-react';
+import { List, ListFilter, Plus, Table2 } from 'lucide-react';
 import { useQuery } from '../../app/data';
 import { useQuickAdd } from '../../app/quick-add';
 import { EmptyState, ErrorNotice, Loading, PageHeader } from '../../components/ui';
@@ -7,6 +7,7 @@ import { localToday } from '../../lib/format';
 import { FilterBar, filtersToQuery, type TaskFilters } from './FilterBar';
 import { LoadMore, PAGE_SIZE } from './LoadMore';
 import { TaskList } from './TaskList';
+import { TABLE_LIMIT, TaskTable } from './TaskTable';
 import { useLookups } from './useLookups';
 
 export const MY_TASKS_DEFAULTS: TaskFilters = {
@@ -16,6 +17,7 @@ export const MY_TASKS_DEFAULTS: TaskFilters = {
   due: '',
   tagId: '',
   projectId: '',
+  milestone: '',
   sort: 'priority',
 };
 
@@ -23,8 +25,9 @@ export const MY_TASKS_DEFAULTS: TaskFilters = {
 export function MyTasksPage() {
   const [filters, setFilters] = useState(MY_TASKS_DEFAULTS);
   const [limit, setLimit] = useState(PAGE_SIZE);
+  const [view, setView] = useState<'list' | 'table'>('list');
   const deferred = useDeferredValue(filters);
-  const query = { ...filtersToQuery(deferred), limit };
+  const query = { ...filtersToQuery(deferred), limit: view === 'table' ? TABLE_LIMIT : limit };
   const tasks = useQuery(`tasks:${JSON.stringify(query)}`, () => window.api.tasks.list(query));
   const lookups = useLookups();
   const quickAdd = useQuickAdd();
@@ -35,9 +38,23 @@ export function MyTasksPage() {
         title="My tasks"
         description="Every task across your projects, grouped by status."
         actions={
-          <button type="button" className="btn btn--primary" onClick={() => quickAdd()}>
-            <Plus aria-hidden /> New task
-          </button>
+          <>
+            <div className="segmented" role="group" aria-label="Task view">
+              <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}>
+                <List aria-hidden /> List
+              </button>
+              <button
+                type="button"
+                aria-pressed={view === 'table'}
+                onClick={() => setView('table')}
+              >
+                <Table2 aria-hidden /> Table
+              </button>
+            </div>
+            <button type="button" className="btn btn--primary" onClick={() => quickAdd()}>
+              <Plus aria-hidden /> New task
+            </button>
+          </>
         }
       />
       <FilterBar
@@ -72,7 +89,15 @@ export function MyTasksPage() {
           />
         </div>
       )}
-      {tasks.data && tasks.data.length > 0 && (
+      {view === 'table' && tasks.data && tasks.data.length > 0 && (
+        <TaskTable view="myTasks" tasks={tasks.data} label="Tasks" />
+      )}
+      {view === 'table' && tasks.data?.length === TABLE_LIMIT && (
+        <p className="muted small">
+          Showing the first {TABLE_LIMIT.toLocaleString()} tasks. Use filters to narrow the table.
+        </p>
+      )}
+      {view === 'list' && tasks.data && tasks.data.length > 0 && (
         <TaskList
           label="Tasks"
           tasks={tasks.data}
@@ -83,7 +108,7 @@ export function MyTasksPage() {
           tags={lookups.tags}
         />
       )}
-      {tasks.data && (
+      {view === 'list' && tasks.data && (
         <LoadMore
           shown={tasks.data.length}
           limit={limit}

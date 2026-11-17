@@ -14,6 +14,7 @@ import type {
   UpdateTaskInput,
 } from '@shared/schemas';
 import { addDays } from '../domain/dates';
+import { recordActivity } from './activity';
 import { toFtsQuery } from '../domain/fts';
 import { evenlySpacedKeys, keyAfter, keyBetween } from '../domain/sort-keys';
 import { AppError } from '../errors';
@@ -113,6 +114,11 @@ export class TaskService {
       case undefined:
         break;
     }
+    // A subtask belongs to its parent's milestone (ADR-0020); a trashed milestone counts as none.
+    const milestone = `(SELECT m.id FROM milestones m WHERE m.deleted_at IS NULL AND m.id =
+      coalesce(t.milestone_id, (SELECT pt.milestone_id FROM tasks pt WHERE pt.id = t.parent_task_id)))`;
+    if (query.milestoneId === null) add(`${milestone} IS NULL`);
+    else if (query.milestoneId) add(`${milestone} = ?`, query.milestoneId);
     if (query.dueFrom) add('t.due_date >= ?', query.dueFrom);
     if (query.dueTo) add('t.due_date <= ?', query.dueTo);
     const fts = query.text === undefined ? null : toFtsQuery(query.text);
@@ -151,6 +157,8 @@ export class TaskService {
         throw new AppError('CONFLICT', 'Unarchive the project before adding tasks to it.');
       }
       const status = this.resolveStatus(projectId, input.statusId);
+      const milestoneId = input.milestoneId ?? null;
+      if (milestoneId !== null) this.requireMilestone(milestoneId, projectId, parentId);
       const startDate = input.startDate ?? null;
       const dueDate = input.dueDate ?? null;
       assertDateOrder(startDate, dueDate);
@@ -162,8 +170,8 @@ export class TaskService {
       const now = nowIso(this.ctx);
       db.prepare(
         `INSERT INTO tasks (id, project_id, parent_task_id, status_id, title, description, priority,
-           start_date, due_date, sort_key, completed_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           start_date, due_date, sort_key, completed_at, created_at, updated_at, milestone_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         id,
         projectId,
@@ -178,8 +186,16 @@ export class TaskService {
         status.category === 'done' ? now : null,
         now,
         now,
+        milestoneId,
       );
       this.insertTags(id, input.tagIds ?? []);
+      recordActivity(this.ctx, {
+        kind: 'task',
+        id,
+        projectId,
+        title: input.title,
+        action: 'created',
+      });
     })();
     return this.get(id);
   }
@@ -201,28 +217,46 @@ export class TaskService {
       dueDate: pick('dueDate'),
     };
     assertDateOrder(next.startDate, next.dueDate);
+    if (input.milestoneId) {
+      this.requireMilestone(input.milestoneId, current.projectId, current.parentTaskId);
+    }
 
     const now = nowIso(this.ctx);
     const wasDone = current.statusCategory === 'done';
     const isDone = status.category === 'done';
     const completedAt = isDone ? (wasDone ? current.completedAt : now) : null;
-    this.ctx.db
-      .prepare(
-        `UPDATE tasks SET title = ?, description = ?, priority = ?, start_date = ?, due_date = ?,
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare(
+          `UPDATE tasks SET title = ?, description = ?, priority = ?, start_date = ?, due_date = ?,
            status_id = ?, completed_at = ?, updated_at = ?
          WHERE id = ?`,
-      )
-      .run(
-        next.title,
-        next.description,
-        next.priority,
-        next.startDate,
-        next.dueDate,
-        status.id,
-        completedAt,
-        now,
-        input.id,
-      );
+        )
+        .run(
+          next.title,
+          next.description,
+          next.priority,
+          next.startDate,
+          next.dueDate,
+          status.id,
+          completedAt,
+          now,
+          input.id,
+        );
+      // Only when asked: a link to a milestone in the trash is kept until it is changed.
+      if (input.milestoneId !== undefined) {
+        this.ctx.db
+          .prepare('UPDATE tasks SET milestone_id = ? WHERE id = ?')
+          .run(input.milestoneId, input.id);
+      }
+      this.recordChanges(current, {
+        title: next.title,
+        statusId: status.id,
+        priority: next.priority,
+        dueDate: next.dueDate,
+        ...(input.milestoneId !== undefined ? { milestoneId: input.milestoneId } : {}),
+      });
+    })();
 
     const task = this.get(input.id);
     return { task, notices: this.noticesAfterStatusChange(current, task) };
@@ -250,18 +284,25 @@ export class TaskService {
    * Moves a top-level task (and all its subtasks, including trashed ones) to another project.
    * Statuses are mapped by category; dependencies that would cross projects are removed.
    */
-  move(input: MoveTaskInput): { task: Task; removedDependencies: number } {
+  move(input: MoveTaskInput): {
+    task: Task;
+    removedDependencies: number;
+    removedFieldValues: number;
+  } {
     const task = this.get(input.id);
     if (task.parentTaskId !== null) {
       throw new AppError('VALIDATION_FAILED', 'Move the parent task; its subtasks move with it.');
     }
-    if (task.projectId === input.projectId) return { task, removedDependencies: 0 };
+    if (task.projectId === input.projectId) {
+      return { task, removedDependencies: 0, removedFieldValues: 0 };
+    }
     const { db } = this.ctx;
     const target = requireLiveProject(db, input.projectId);
     if (target.archived_at !== null) {
       throw new AppError('CONFLICT', 'Unarchive the project before moving tasks to it.');
     }
 
+    let removedFieldValues = 0;
     const removed = db.transaction(() => {
       const children = db
         .prepare(
@@ -271,6 +312,12 @@ export class TaskService {
         .all(task.id) as { id: string; completed_at: string | null; category: StatusCategory }[];
       const movedIds = [task.id, ...children.map((c) => c.id)];
       const inList = placeholders(movedIds.length);
+      // Custom fields belong to the old project; a trigger removes the values (ADR-0023).
+      removedFieldValues = (
+        db
+          .prepare(`SELECT count(*) AS n FROM custom_values WHERE task_id IN (${inList})`)
+          .get(...movedIds) as { n: number }
+      ).n;
       const removedDeps = db
         .prepare(
           `DELETE FROM task_dependencies
@@ -297,7 +344,7 @@ export class TaskService {
         .get(input.projectId) as { k: number | null };
       const update = db.prepare(
         `UPDATE tasks SET project_id = ?, status_id = ?, completed_at = ?, sort_key = ?,
-           updated_at = ? WHERE id = ?`,
+           updated_at = ?, milestone_id = NULL WHERE id = ?`,
       );
       const moveOne = (
         id: string,
@@ -316,10 +363,112 @@ export class TaskService {
         const { sort_key } = childKeys.get(child.id) as { sort_key: number };
         moveOne(child.id, child.category, child.completed_at, sort_key);
       }
+      recordActivity(this.ctx, {
+        kind: 'task',
+        id: task.id,
+        projectId: input.projectId,
+        title: task.title,
+        action: 'moved',
+        oldValue: this.projectName(task.projectId),
+        newValue: this.projectName(input.projectId),
+      });
       return removedDeps;
     })();
 
-    return { task: this.get(task.id), removedDependencies: removed };
+    return { task: this.get(task.id), removedDependencies: removed, removedFieldValues };
+  }
+
+  /** Records each listed field that changed (ADR-0021), inside the caller's transaction. */
+  private recordChanges(
+    current: Task,
+    next: {
+      title: string;
+      statusId: string;
+      priority: Task['priority'];
+      dueDate: string | null;
+      milestoneId?: string | null;
+    },
+  ): void {
+    const base = {
+      kind: 'task' as const,
+      id: current.id,
+      projectId: current.projectId,
+      title: next.title,
+    };
+    const name = (table: 'project_statuses' | 'milestones', id: string | null) =>
+      id === null
+        ? null
+        : ((
+            this.ctx.db.prepare(`SELECT name FROM ${table} WHERE id = ?`).get(id) as
+              { name: string } | undefined
+          )?.name ?? null);
+    if (next.title !== current.title) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'renamed',
+        oldValue: current.title,
+        newValue: next.title,
+      });
+    }
+    if (next.statusId !== current.statusId) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'status',
+        oldValue: name('project_statuses', current.statusId),
+        newValue: name('project_statuses', next.statusId),
+      });
+    }
+    if (next.priority !== current.priority) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'priority',
+        oldValue: current.priority,
+        newValue: next.priority,
+      });
+    }
+    if (next.dueDate !== current.dueDate) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'due_date',
+        oldValue: current.dueDate,
+        newValue: next.dueDate,
+      });
+    }
+    if (next.milestoneId !== undefined && next.milestoneId !== current.milestoneId) {
+      recordActivity(this.ctx, {
+        ...base,
+        action: 'changed',
+        field: 'milestone',
+        oldValue: name('milestones', current.milestoneId),
+        newValue: name('milestones', next.milestoneId),
+      });
+    }
+  }
+
+  private projectName(id: string): string {
+    return (
+      this.ctx.db.prepare('SELECT name FROM projects WHERE id = ?').get(id) as { name: string }
+    ).name;
+  }
+
+  /** A live milestone of the task's project, for a top-level task (ADR-0020). */
+  private requireMilestone(milestoneId: string, projectId: string, parentId: string | null): void {
+    if (parentId !== null) {
+      throw new AppError(
+        'VALIDATION_FAILED',
+        'Subtasks follow their parent task’s milestone; set it on the parent.',
+      );
+    }
+    const milestone = this.ctx.db
+      .prepare('SELECT project_id FROM milestones WHERE id = ? AND deleted_at IS NULL')
+      .get(milestoneId) as { project_id: string } | undefined;
+    if (!milestone) throw notFound('Milestone');
+    if (milestone.project_id !== projectId) {
+      throw new AppError('VALIDATION_FAILED', 'Choose a milestone of the task’s project.');
+    }
   }
 
   /** Manual ordering among siblings: before `beforeTaskId`, or last when null. */

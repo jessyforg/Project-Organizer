@@ -38,7 +38,7 @@ test.afterEach(async () => {
 
 test('first run: create a profile, and it persists across restart', async () => {
   let { app, page } = await launch(dataDir);
-  await expect(page.getByRole('heading', { name: 'Welcome to ProjectForge' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome to Katha' })).toBeVisible();
 
   await page.getByLabel('Profile name').fill('Work');
   await page.getByRole('button', { name: 'Create profile' }).click();
@@ -51,6 +51,31 @@ test('first run: create a profile, and it persists across restart', async () => 
   expect(profileDirs).toHaveLength(1);
   expect(fs.existsSync(path.join(dataDir, 'profiles', profileDirs[0]!, 'profile.db'))).toBe(true);
   await app.close();
+});
+
+test('the data folder can be moved: profiles and their data open from the new place (ADR-0025)', async () => {
+  let { app, page } = await launch(dataDir);
+  await page.getByLabel('Profile name').fill('Work');
+  await page.getByRole('button', { name: 'Create profile' }).click();
+  await expect(page.getByTestId('active-profile')).toHaveText('Profile: Work');
+  await page.evaluate(() => window.api.projects.create({ name: 'Moved along', color: 'blue' }));
+  await app.close();
+
+  // As in the README's move from ProjectForge: the whole folder is renamed.
+  const moved = `${dataDir}-moved`;
+  fs.renameSync(dataDir, moved);
+  try {
+    ({ app, page } = await launch(moved));
+    await expect(page.getByTestId('active-profile')).toHaveText('Profile: Work');
+    const names = await page.evaluate(async () => {
+      const list = await window.api.projects.list({});
+      return list.ok ? list.data.map((project) => project.name) : null;
+    });
+    expect(names).toContain('Moved along');
+    await app.close();
+  } finally {
+    fs.rmSync(moved, { recursive: true, force: true });
+  }
 });
 
 test('profiles: duplicate names are rejected; rename and switch work', async () => {

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <title>Katha</title>
+  <!-- Favicon and 16 px app icon: the tile with the tuned 16 px shapes, using almost the whole tile. -->
+  <rect width="16" height="16" rx="3.5" fill="#2a5aa6"/>
+  <path fill="#ffffff" d="M3 2h3.5v12l-1.75-1.3L3 14z"/>
+  <path stroke="#f3ab4a" stroke-width="2.6" stroke-linecap="round" d="M9.3 7.2 12.6 3.4"/>
+  <path stroke="#a9c3f0" stroke-width="2.6" stroke-linecap="round" d="M10 10.2 12.6 13"/>
+</svg>

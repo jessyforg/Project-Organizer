@@ -1,4 +1,4 @@
-import { CalendarCheck, FolderKanban, Plus } from 'lucide-react';
+import { CalendarCheck, Flag, FolderKanban, Plus } from 'lucide-react';
 import type { Task } from '@shared/domain';
 import { useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
@@ -11,7 +11,9 @@ import {
   ProgressMeter,
   Swatch,
 } from '../../components/ui';
-import { formatLongDate, plural } from '../../lib/format';
+import { formatDate, formatLongDate, plural } from '../../lib/format';
+import { isOverdue } from '../milestones/ProjectMilestones';
+import { ActivityList } from '../activity/ActivityList';
 import { TaskRow } from '../tasks/TaskList';
 import { useLookups } from '../tasks/useLookups';
 
@@ -104,10 +106,62 @@ export function DashboardPage() {
               </EmptyState>
             </div>
           )}
-          {list('Recently updated', d.recentlyUpdated)}
+          {/* The profile-wide activity feed (ADR-0021). */}
+          <section className="dash-section" aria-label="Recent activity">
+            <div className="dash-section__header">
+              <h2>Recent activity</h2>
+            </div>
+            <div className="panel activity-panel">
+              <ActivityList
+                queryKey="recent"
+                load={(limit) => window.api.activity.recent({ limit })}
+                label="Recent activity"
+                showItem
+                pageSize={10}
+                more={false}
+              />
+            </div>
+          </section>
         </div>
 
         <div className="section" style={{ gap: 'var(--space-5)' }}>
+          {d.milestones.length > 0 && (
+            // Overdue milestones first, then those due in the next 7 days (ADR-0020).
+            <section className="dash-section" aria-label="Milestones">
+              <div className="dash-section__header">
+                <h2>Milestones</h2>
+                <span className="count">{d.milestones.length}</span>
+              </div>
+              <div className="panel">
+                <ul className="project-progress">
+                  {d.milestones.map((m) => {
+                    const overdue = isOverdue(m, d.today);
+                    return (
+                      <li key={m.id}>
+                        <button
+                          type="button"
+                          className="link"
+                          title={`${m.name} in ${m.projectName}`}
+                          onClick={() =>
+                            navigate({ name: 'project', id: m.projectId, milestoneId: m.id })
+                          }
+                        >
+                          <Flag aria-hidden />
+                          <span>{m.name}</span>
+                          <span className="muted"> · {m.projectName}</span>
+                        </button>
+                        <span className={overdue ? 'due due--overdue' : 'due'}>
+                          {overdue ? 'Overdue, ' : ''}
+                          {formatDate(m.targetDate!, d.today)}
+                        </span>
+                        <ProgressMeter progress={m.progress} label={`${m.name} progress`} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </section>
+          )}
           <section className="dash-section" aria-label="Active projects">
             <div className="dash-section__header">
               <h2>Active projects</h2>

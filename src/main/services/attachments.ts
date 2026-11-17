@@ -6,6 +6,7 @@ import { extractFileIds } from '@shared/app-links';
 import { parseCover } from '@shared/covers';
 import { TRASH_RETENTION_DAYS } from '@shared/domain';
 import { AppError } from '../errors';
+import { recordActivity } from './activity';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
 
 /** Largest single file (ADR-0017 stage 6). */
@@ -111,13 +112,27 @@ export class AttachmentService {
 
   add(input: { noteId: string; name: string; data: Uint8Array }): AttachmentInfo {
     const note = this.ctx.db
-      .prepare('SELECT archived_at FROM notes WHERE id = ? AND deleted_at IS NULL')
-      .get(input.noteId) as { archived_at: string | null } | undefined;
+      .prepare(
+        'SELECT archived_at, project_id, title FROM notes WHERE id = ? AND deleted_at IS NULL',
+      )
+      .get(input.noteId) as
+      { archived_at: string | null; project_id: string; title: string } | undefined;
     if (!note) throw notFound('Note');
     if (note.archived_at !== null) {
       throw new AppError('CONFLICT', 'Unarchive the note before adding files to it.');
     }
-    return this.store(input.noteId, input.name, input.data);
+    return this.ctx.db.transaction(() => {
+      const file = this.store(input.noteId, input.name, input.data);
+      recordActivity(this.ctx, {
+        kind: 'note',
+        id: input.noteId,
+        projectId: note.project_id,
+        title: note.title,
+        action: 'attachment_added',
+        newValue: file.name,
+      });
+      return file;
+    })();
   }
 
   /**

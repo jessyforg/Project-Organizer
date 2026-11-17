@@ -1,5 +1,78 @@
 # Changelog
 
+## 0.9.0 — Milestones, activity log, task table, custom fields, and templates (2026-10-24, not yet publicly released)
+
+Everything left in the feature plan, in one release. Profiles upgrade from schema v7 to v11 automatically, after a verified snapshot.
+
+**New name and licence:** ProjectForge is now **Katha**, released under the MIT licence ([ADR-0025](docs/DECISIONS/0025-name-and-licence.md)). Katha installs as a separate app with its data in `%APPDATA%\Katha`. To keep profiles from a ProjectForge build, follow "Moving from a ProjectForge build" in the README. Backups made by ProjectForge restore unchanged.
+
+**New look:** a new app icon and logo, the banig weave ([ADR-0026](docs/DECISIONS/0026-brand-banig-weave.md)). It appears on the installer, the taskbar, and in the app's sidebar and first-run screen.
+
+**Updated:** Electron 44.10.1, which includes the fix for advisory GHSA-jr5w-w6x2-84p9. The zod library is now 4.6.7, which fixes advisory GHSA-mrhx-c7xc-m3w5, where a crafted backup or template file could exhaust memory.
+
+**Licence notices:** the installed app now includes `THIRD_PARTY_NOTICES.txt`, the licence texts of every library, the font, and the SQLite components it ships. The build writes it and stops if a library has no licence text.
+
+### Milestones
+
+- **Milestones:** a project can have milestones, such as "Beta" or "Launch", each with a name, description, and target date.
+  - Create them in the new Milestones section of a project page.
+  - Each shows its progress over its tasks, counted like project progress, and is marked "Overdue" when its date has passed.
+  - "Mark completed" and "Reopen" do not change the milestone's tasks.
+- **Tasks in a milestone:** choose a task's milestone in its details. Subtasks count through their parent task.
+- **Filter:** the project's task list has a Milestone filter. Choosing a milestone's name shows its tasks.
+- **Where milestones appear:**
+  - on the Today screen (overdue, and due within 7 days);
+  - on the calendar, on their target dates;
+  - on board cards.
+- **Favourites:** milestones can be starred. Opening one shows its project, filtered to its tasks.
+- **Trash:** trashing a milestone keeps its tasks. Restoring it brings their links back. Trashing a project takes its milestones with it.
+- **Moving a task to another project** removes its milestone.
+- Profile data schema version 8. Existing profiles upgrade automatically after a verified snapshot.
+
+### Activity log
+
+- **Every change is recorded.** That covers creating, renaming, changes of status, priority, due date, milestone, and folder, archiving, moving, the trash, and files added to or removed from notes.
+- **Where to see it:**
+  - Tasks and projects have an **Activity** tab, in plain sentences, newest first. A project's tab includes its tasks, notes, and milestones.
+  - **Recent activity** on Today replaces "Recently updated". Each entry opens its item.
+- **Note editing:** autosaves are not listed one by one. Edits to a note within 10 minutes count as one.
+- **Retention:** choose how long activity is kept in Settings → Activity history (1 year by default). It is included in backups.
+- **Permanent deletion:** deleting something permanently from the trash also removes its history.
+- Profile data schema version 9.
+
+### Tasks as a table
+
+- **Where:** a new **Table** view beside List and Board on project pages, and on My tasks.
+- **Columns:** title, status, priority, due date, start date, tags, milestone, project (on My tasks), and when it was created and updated.
+  - Show, hide, and reorder them from **Columns**.
+  - Resize them by dragging a header's edge, or with the arrow keys on it.
+  - Each view remembers its layout.
+- **Sorting and grouping:** sort by any column from its header, and group by status, priority, milestone, or project.
+- **Editing in place:** edit the title, status, priority, dates, and milestone in the table. Each change can be undone from its message.
+- **Keyboard:** the arrow keys move between cells; Enter or F2 edits; Enter on a title opens the task.
+- **Large lists:** large tables stay fast, because only the rows in view are drawn.
+
+### Custom fields
+
+- **Adding fields:** give a project its own task fields from ⋯ → **Custom fields…**. A field can be text, a number, a date, a checkbox, a single choice, or a multiple choice.
+- **Setting values:** set them in a task's details, under **Fields**.
+- **In the table:** each field is a column on the project's table. You can sort and group by it, filter with **Field filter**, and edit it in place.
+- **Changing a field's type** keeps every value. If a value does not fit the new type, nothing changes, and the message says which tasks to fix first.
+- **Trash:** a field moved to the trash keeps its values until it is deleted for good, and Undo or Restore brings everything back.
+- **Activity:** changes to field values appear in a task's Activity.
+- **Moving a task** to another project removes its field values, and the move message says so.
+- **Fixed:** confirming inside a dialog no longer closes the dialog around it.
+- Profile data schema version 10.
+
+### Project templates
+
+- **Starting from a template:** **New from template** on the Projects page starts a project from a template. You see a preview of its workflow, milestones, fields, tags, tasks, and notes first, and dates are counted from the start date you choose.
+- **Three built-in templates:** Software development, Personal productivity, and Study and learning.
+- **Your own templates:** save any project as a template from its ⋯ menu (**Save as template…**). You can keep its dates, counted from the start. Tasks always start as not done.
+- **Managing templates:** **Templates…** on the Projects page renames, deletes, exports, and imports templates. Exported templates are `.pftemplate.json` files, and an imported file is checked before it is used.
+- Creating a project from a template is all or nothing, and the template itself never changes.
+- Profile data schema version 11.
+
 ## 0.8.0 — Favourites, icons, and covers (2026-10-23, not yet publicly released)
 
 - **Favourites:** star a project or note from its ⋯ menu, its right-click menu, or the command palette.

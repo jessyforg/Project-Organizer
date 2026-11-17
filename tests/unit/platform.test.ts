@@ -6,20 +6,20 @@ import { createAppPaths, resolveDataRoot } from '../../src/main/platform/paths';
 import { tempDir } from './helpers';
 
 describe('resolveDataRoot', () => {
-  const base = { appDataDir: 'C:\\Users\\u\\AppData\\Roaming', productName: 'ProjectForge' };
+  const base = { appDataDir: 'C:\\Users\\u\\AppData\\Roaming', productName: 'Katha' };
 
   it('uses a separate folder for development builds', () => {
     expect(resolveDataRoot({ ...base, isPackaged: true })).toBe(
-      path.join(base.appDataDir, 'ProjectForge'),
+      path.join(base.appDataDir, 'Katha'),
     );
     expect(resolveDataRoot({ ...base, isPackaged: false })).toBe(
-      path.join(base.appDataDir, 'ProjectForge-dev'),
+      path.join(base.appDataDir, 'Katha-dev'),
     );
   });
 
   it('ignores the override in packaged builds', () => {
     expect(resolveDataRoot({ ...base, isPackaged: true, overrideDir: 'D:\\elsewhere' })).toBe(
-      path.join(base.appDataDir, 'ProjectForge'),
+      path.join(base.appDataDir, 'Katha'),
     );
   });
 });

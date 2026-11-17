@@ -173,7 +173,7 @@ describe('BackupService: export and inspect', () => {
     expect(tmpEntries(t.paths)).toEqual([]);
   });
 
-  it('rejects an encrypted file that is not a ProjectForge backup', async () => {
+  it('rejects an encrypted file that is not a Katha backup', async () => {
     const t = await setup();
     const file = path.join(tempDir(), 'other.db');
     const db = openDatabase(file);

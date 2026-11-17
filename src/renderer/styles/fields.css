@@ -1,0 +1,93 @@
+/* Custom fields (ADR-0023): the fields dialog and the task panel's Fields section. */
+
+.fields-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fields-list__item {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+}
+
+.fields-list__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, 180px) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fields-list__actions {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.fields-list__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.fields-list__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 2px;
+}
+
+.fields-list__add-option {
+  display: inline-flex;
+}
+
+.input--small {
+  height: 28px;
+  font-size: var(--text-sm);
+}
+
+.fields-new {
+  display: grid;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.fields-new h3 {
+  font-size: var(--text-md);
+}
+
+.fields-new__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+}
+
+.task-fields {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.task-fields__check,
+.task-fields__choices .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.task-fields__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.task-table__filter {
+  gap: var(--space-2);
+}

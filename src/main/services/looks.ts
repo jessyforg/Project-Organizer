@@ -1,11 +1,6 @@
 import { coverValue, parseCover } from '@shared/covers';
 import { parseIcon } from '@shared/icons';
-import type {
-  AddCoverImageInput,
-  FavouriteTarget,
-  SetCoverInput,
-  SetIconInput,
-} from '@shared/schemas';
+import type { AddCoverImageInput, LooksTarget, SetCoverInput, SetIconInput } from '@shared/schemas';
 import { AppError } from '../errors';
 import { AttachmentService } from './attachments';
 import { notFound, nowIso, type ServiceContext } from './context';
@@ -55,14 +50,14 @@ export class LooksService {
     return value;
   }
 
-  private write(target: FavouriteTarget, column: 'icon' | 'cover', value: string | null): void {
+  private write(target: LooksTarget, column: 'icon' | 'cover', value: string | null): void {
     this.requireEditable(target);
     this.ctx.db
       .prepare(`UPDATE ${TABLE[target.kind]} SET ${column} = ?, updated_at = ? WHERE id = ?`)
       .run(value, nowIso(this.ctx), target.id);
   }
 
-  private requireEditable({ kind, id }: FavouriteTarget): void {
+  private requireEditable({ kind, id }: LooksTarget): void {
     const row = this.ctx.db
       .prepare(`SELECT archived_at FROM ${TABLE[kind]} WHERE id = ? AND deleted_at IS NULL`)
       .get(id) as { archived_at: string | null } | undefined;

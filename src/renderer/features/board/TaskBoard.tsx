@@ -1,6 +1,6 @@
 import { useId, useState, type DragEvent } from 'react';
-import { ListTree, MoveRight } from 'lucide-react';
-import type { Project, Task, WorkflowStatus } from '@shared/domain';
+import { Flag, ListTree, MoveRight } from 'lucide-react';
+import type { Milestone, Project, Task, WorkflowStatus } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
 import { useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
@@ -18,7 +18,17 @@ export interface BoardTarget {
  * Kanban board (L1.1): one column per workflow status, top-level tasks as cards in manual
  * order. Cards move by drag and drop or, without a mouse, with each card's Move button.
  */
-export function TaskBoard({ project, statuses }: { project: Project; statuses: WorkflowStatus[] }) {
+export function TaskBoard({
+  project,
+  statuses,
+  milestones = [],
+}: {
+  project: Project;
+  statuses: WorkflowStatus[];
+  /** Shown on the cards of their tasks (ADR-0020). */
+  milestones?: Milestone[];
+}) {
+  const milestoneName = new Map(milestones.map((m) => [m.id, m.name]));
   const query = {
     projectId: project.id,
     parentTaskId: null,
@@ -94,6 +104,7 @@ export function TaskBoard({ project, statuses }: { project: Project; statuses: W
                 <BoardCard
                   key={task.id}
                   task={task}
+                  milestone={task.milestoneId ? milestoneName.get(task.milestoneId) : undefined}
                   dragging={dragging === task.id}
                   dropBefore={drop?.beforeTaskId === task.id}
                   onDragStart={() => setDragging(task.id)}
@@ -134,6 +145,7 @@ export function TaskBoard({ project, statuses }: { project: Project; statuses: W
 
 function BoardCard({
   task,
+  milestone,
   dragging,
   dropBefore,
   onDragStart,
@@ -142,6 +154,7 @@ function BoardCard({
   onMove,
 }: {
   task: Task;
+  milestone: string | undefined;
   dragging: boolean;
   dropBefore: boolean;
   onDragStart: () => void;
@@ -183,6 +196,13 @@ function BoardCard({
             <span className="card__subtasks">
               <ListTree aria-hidden /> {task.completedSubtaskCount}/{task.subtaskCount}
               <span className="visually-hidden"> subtasks done</span>
+            </span>
+          )}
+          {milestone && (
+            <span className="milestone-chip">
+              <Flag aria-hidden />
+              <span className="visually-hidden">Milestone: </span>
+              {milestone}
             </span>
           )}
           <button

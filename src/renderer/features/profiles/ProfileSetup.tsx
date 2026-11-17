@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Hammer, Lock, Upload } from 'lucide-react';
+import { Lock, Upload } from 'lucide-react';
 import type { AppErrorInfo } from '@shared/result';
 import type { ChosenFile, ProfileSummary, SnapshotInfo, TrashedProfile } from '@shared/types';
+import { BrandMark } from '../../components/BrandMark';
 import { formatTimestamp } from '../../lib/format';
 import { RestoreDialog } from '../backup/RestoreFlow';
 import { ProfileNameForm } from './ProfileNameForm';
@@ -76,12 +77,12 @@ export function ProfileSetup({
       <div className="setup__card">
         <div className="brand">
           <span className="brand__mark" aria-hidden="true">
-            <Hammer />
+            <BrandMark />
           </span>
-          ProjectForge
+          Katha
         </div>
         <div className="page__heading">
-          <h1>{firstRun ? 'Welcome to ProjectForge' : 'Choose a profile'}</h1>
+          <h1>{firstRun ? 'Welcome to Katha' : 'Choose a profile'}</h1>
           <p className="muted">
             {firstRun
               ? 'Organise projects, tasks, notes, and deadlines. Start by creating a profile.'

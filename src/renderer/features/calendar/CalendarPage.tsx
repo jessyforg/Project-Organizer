@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { Task } from '@shared/domain';
+import { AlertCircle, ChevronLeft, ChevronRight, Flag } from 'lucide-react';
+import type { MilestoneEntry, Task } from '@shared/domain';
 import { LIMITS } from '@shared/schemas';
 import { useQuery } from '../../app/data';
 import { useNavigation } from '../../app/navigation';
@@ -66,6 +66,21 @@ export function CalendarPage() {
     return map;
   }, [tasks.data]);
 
+  // Milestones on their target dates (ADR-0020), with the same project and "done" filters.
+  const range = { from: days[0]!, to: days.at(-1)! };
+  const milestones = useQuery(`calendar-milestones:${JSON.stringify(range)}`, () =>
+    window.api.milestones.inRange(range),
+  );
+  const milestonesByDay = useMemo(() => {
+    const map = new Map<string, MilestoneEntry[]>();
+    for (const m of milestones.data ?? []) {
+      if (projectId && m.projectId !== projectId) continue;
+      if (!showClosed && m.completedAt !== null) continue;
+      map.set(m.targetDate!, [...(map.get(m.targetDate!) ?? []), m]);
+    }
+    return map;
+  }, [milestones.data, projectId, showClosed]);
+
   const openDay = (day: string) => {
     setAnchor(day);
     setView('day');
@@ -77,7 +92,7 @@ export function CalendarPage() {
     <div className="page calendar-page">
       <PageHeader
         title="Calendar"
-        description="Tasks on their due dates. Select one to open it."
+        description="Tasks on their due dates and milestones on their target dates. Select one to open it."
         actions={
           <div className="segmented" role="group" aria-label="Calendar view">
             {VIEWS.map((v) => (
@@ -162,6 +177,7 @@ export function CalendarPage() {
           anchor={anchor}
           today={today}
           byDay={byDay}
+          milestonesByDay={milestonesByDay}
           title={viewTitle(view, anchor, firstDay)}
           onOpenDay={openDay}
         />
@@ -185,6 +201,11 @@ export function CalendarPage() {
                 <strong>{dayOfMonth(day)}</strong>
               </button>
               <ul className="cal-items">
+                {(milestonesByDay.get(day) ?? []).map((m) => (
+                  <li key={m.id}>
+                    <MilestoneItem milestone={m} today={today} />
+                  </li>
+                ))}
                 {(byDay.get(day) ?? []).map((task) => (
                   <li key={task.id}>
                     <CalendarItem task={task} today={today} />
@@ -208,6 +229,18 @@ export function CalendarPage() {
                 projects={lookups.projects}
                 tags={lookups.tags}
               />
+            </section>
+          )}
+          {(milestonesByDay.get(anchor) ?? []).length > 0 && (
+            <section className="section" aria-labelledby="calendar-day-milestones">
+              <h3 id="calendar-day-milestones">Milestones</h3>
+              <ul className="cal-items cal-items--day" aria-label="Milestones on this day">
+                {(milestonesByDay.get(anchor) ?? []).map((m) => (
+                  <li key={m.id}>
+                    <MilestoneItem milestone={m} today={today} />
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
           <section className="section" aria-labelledby="calendar-day">
@@ -236,6 +269,7 @@ function MonthGrid({
   anchor,
   today,
   byDay,
+  milestonesByDay,
   title,
   onOpenDay,
 }: {
@@ -243,6 +277,7 @@ function MonthGrid({
   anchor: string;
   today: string;
   byDay: Map<string, Task[]>;
+  milestonesByDay: Map<string, MilestoneEntry[]>;
   title: string;
   onOpenDay: (day: string) => void;
 }) {
@@ -264,8 +299,21 @@ function MonthGrid({
         {weeks.map((week) => (
           <tr key={week[0]}>
             {week.map((day) => {
-              const items = byDay.get(day) ?? [];
+              const marks = milestonesByDay.get(day) ?? [];
+              const tasks = byDay.get(day) ?? [];
+              // Milestones first; together they share the cell's room.
+              const items = [
+                ...marks.map((m) => ({
+                  key: m.id,
+                  node: <MilestoneItem milestone={m} today={today} />,
+                })),
+                ...tasks.map((t) => ({ key: t.id, node: <CalendarItem task={t} today={today} /> })),
+              ];
               const hidden = items.length - CELL_LIMIT;
+              const counts = [
+                tasks.length ? plural(tasks.length, 'task') : '',
+                marks.length ? plural(marks.length, 'milestone') : '',
+              ].filter(Boolean);
               return (
                 <td
                   key={day}
@@ -277,16 +325,14 @@ function MonthGrid({
                     type="button"
                     className="month__date"
                     aria-current={day === today ? 'date' : undefined}
-                    aria-label={`${formatFullDate(day)}${items.length ? `, ${plural(items.length, 'task')}` : ''}`}
+                    aria-label={`${formatFullDate(day)}${counts.length ? `, ${counts.join(', ')}` : ''}`}
                     onClick={() => onOpenDay(day)}
                   >
                     {dayOfMonth(day)}
                   </button>
                   <ul className="cal-items">
-                    {items.slice(0, hidden > 0 ? CELL_LIMIT - 1 : CELL_LIMIT).map((task) => (
-                      <li key={task.id}>
-                        <CalendarItem task={task} today={today} />
-                      </li>
+                    {items.slice(0, hidden > 0 ? CELL_LIMIT - 1 : CELL_LIMIT).map((item) => (
+                      <li key={item.key}>{item.node}</li>
                     ))}
                   </ul>
                   {hidden > 0 && (
@@ -301,6 +347,31 @@ function MonthGrid({
         ))}
       </tbody>
     </table>
+  );
+}
+
+/** A milestone on its target date; opens its project, filtered to it (ADR-0020). */
+function MilestoneItem({ milestone, today }: { milestone: MilestoneEntry; today: string }) {
+  const { navigate } = useNavigation();
+  const done = milestone.completedAt !== null;
+  const overdue = !done && milestone.targetDate! < today;
+  const state = overdue ? 'overdue' : done ? 'closed' : 'open';
+  return (
+    <button
+      type="button"
+      className={`cal-item cal-item--milestone cal-item--${state}`}
+      title={`Milestone: ${milestone.name} (${milestone.projectName})`}
+      onClick={() =>
+        navigate({ name: 'project', id: milestone.projectId, milestoneId: milestone.id })
+      }
+    >
+      <Flag className="cal-item__flag" aria-hidden />
+      <span className="visually-hidden">Milestone: </span>
+      <span className="cal-item__title">{milestone.name}</span>
+      {state !== 'open' && (
+        <span className="visually-hidden">{overdue ? ' (overdue)' : ' (done)'}</span>
+      )}
+    </button>
   );
 }
 

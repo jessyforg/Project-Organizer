@@ -9,6 +9,7 @@ import type {
 import type { CreateProjectInput, UpdateProjectInput } from '@shared/schemas';
 import type { Db } from '../db/connection';
 import { computeProgress } from '../domain/progress';
+import { recordActivity } from './activity';
 import { AppError } from '../errors';
 import { notFound, nowIso, placeholders, type ServiceContext } from './context';
 import { PROJECT_SELECT, toProject, type ProjectRow } from './rows';
@@ -113,6 +114,13 @@ export class ProjectService {
       );
       insertDefaultStatuses(db, id, this.ctx.newId, now);
       this.insertTags(id, input.tagIds ?? []);
+      recordActivity(this.ctx, {
+        kind: 'project',
+        id,
+        projectId: id,
+        title: input.name,
+        action: 'created',
+      });
     })();
     return this.get(id);
   }
@@ -135,21 +143,51 @@ export class ProjectService {
     if (next.folderId && !db.prepare('SELECT 1 FROM folders WHERE id = ?').get(next.folderId)) {
       throw notFound('Folder');
     }
-    db.prepare(
-      `UPDATE projects SET name = ?, description = ?, kind = ?, color = ?, folder_id = ?,
-         start_date = ?, target_date = ?, updated_at = ?
-       WHERE id = ?`,
-    ).run(
-      next.name,
-      next.description,
-      next.kind,
-      next.color,
-      next.folderId,
-      next.startDate,
-      next.targetDate,
-      nowIso(this.ctx),
-      input.id,
-    );
+    db.transaction(() => {
+      db.prepare(
+        `UPDATE projects SET name = ?, description = ?, kind = ?, color = ?, folder_id = ?,
+           start_date = ?, target_date = ?, updated_at = ?
+         WHERE id = ?`,
+      ).run(
+        next.name,
+        next.description,
+        next.kind,
+        next.color,
+        next.folderId,
+        next.startDate,
+        next.targetDate,
+        nowIso(this.ctx),
+        input.id,
+      );
+      const base = {
+        kind: 'project' as const,
+        id: input.id,
+        projectId: input.id,
+        title: next.name,
+      };
+      if (next.name !== current.name) {
+        recordActivity(this.ctx, {
+          ...base,
+          action: 'renamed',
+          oldValue: current.name,
+          newValue: next.name,
+        });
+      }
+      if (next.folderId !== current.folderId) {
+        const folder = (id: string | null) =>
+          id === null
+            ? null
+            : (db.prepare('SELECT name FROM folders WHERE id = ?').get(id) as { name: string })
+                .name;
+        recordActivity(this.ctx, {
+          ...base,
+          action: 'changed',
+          field: 'folder',
+          oldValue: folder(current.folderId),
+          newValue: folder(next.folderId),
+        });
+      }
+    })();
     return this.get(input.id);
   }
 
@@ -159,9 +197,13 @@ export class ProjectService {
     if (project.is_inbox === 1 && status !== 'active') {
       throw new AppError('VALIDATION_FAILED', 'The Inbox is always active.');
     }
-    this.ctx.db
-      .prepare('UPDATE projects SET status = ?, updated_at = ? WHERE id = ?')
-      .run(status, nowIso(this.ctx), id);
+    if (project.status === status) return this.get(id);
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare('UPDATE projects SET status = ?, updated_at = ? WHERE id = ?')
+        .run(status, nowIso(this.ctx), id);
+      this.record(id, status === 'completed' ? 'completed' : 'reopened');
+    })();
     return this.get(id);
   }
 
@@ -173,19 +215,34 @@ export class ProjectService {
     }
     if (project.archived_at === null) {
       const now = nowIso(this.ctx);
-      this.ctx.db
-        .prepare('UPDATE projects SET archived_at = ?, updated_at = ? WHERE id = ?')
-        .run(now, now, id);
+      this.ctx.db.transaction(() => {
+        this.ctx.db
+          .prepare('UPDATE projects SET archived_at = ?, updated_at = ? WHERE id = ?')
+          .run(now, now, id);
+        this.record(id, 'archived');
+      })();
     }
     return this.get(id);
   }
 
   unarchive(id: string): Project {
-    requireLiveProject(this.ctx.db, id);
-    this.ctx.db
-      .prepare('UPDATE projects SET archived_at = NULL, updated_at = ? WHERE id = ?')
-      .run(nowIso(this.ctx), id);
+    const project = requireLiveProject(this.ctx.db, id);
+    if (project.archived_at === null) return this.get(id);
+    this.ctx.db.transaction(() => {
+      this.ctx.db
+        .prepare('UPDATE projects SET archived_at = NULL, updated_at = ? WHERE id = ?')
+        .run(nowIso(this.ctx), id);
+      this.record(id, 'unarchived');
+    })();
     return this.get(id);
+  }
+
+  /** Records an action on the project itself (ADR-0021), inside the caller's transaction. */
+  private record(id: string, action: 'completed' | 'reopened' | 'archived' | 'unarchived'): void {
+    const { name } = this.ctx.db.prepare('SELECT name FROM projects WHERE id = ?').get(id) as {
+      name: string;
+    };
+    recordActivity(this.ctx, { kind: 'project', id, projectId: id, title: name, action });
   }
 
   listWithProgress(options: { includeArchived?: boolean | undefined } = {}): ProjectListItem[] {

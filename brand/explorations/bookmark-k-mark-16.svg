@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+  <title>Katha</title>
+  <!-- Hand-tuned for 16 px: whole-pixel upright, a shallower notch, wider gaps between the parts. -->
+  <path fill="#3566c8" d="M2 1h4v14l-2-1.5L2 15z"/>
+  <path stroke="#e39a2d" stroke-width="3" stroke-linecap="round" d="M9.2 7 13 2.5"/>
+  <path stroke="#1f4594" stroke-width="3" stroke-linecap="round" d="M10 10.2 13 13.6"/>
+</svg>

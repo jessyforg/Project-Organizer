@@ -4,7 +4,7 @@ Status: **Implemented through Phase 4 (core UI), 2026-10-17.** Update this docum
 
 ## 1. Overview
 
-ProjectForge is an Electron application. The user interface is React rendered in a sandboxed Chromium window. All data, filesystem, and operating-system work happens in the trusted main process.
+Katha is an Electron application. The user interface is React rendered in a sandboxed Chromium window. All data, filesystem, and operating-system work happens in the trusted main process.
 
 ```
 ┌──────────────────────────────── Renderer (untrusted) ───────────────────────────────┐
@@ -108,7 +108,7 @@ type Result<T> =
 ## 5. Data locations
 
 ```
-%APPDATA%\ProjectForge\
+%APPDATA%\Katha\
 ├─ app.db             profile registry
 ├─ snapshots\         pre-migration snapshots of app.db
 ├─ profiles\<profile-uuid>\
@@ -119,7 +119,7 @@ type Result<T> =
 └─ electron\          Chromium's own storage (Electron userData)
 ```
 
-`%APPDATA%` resolves to `C:\Users\<user>\AppData\Roaming`. The folder name comes from the application name and must be frozen before the first release ([ADR-0002](DECISIONS/0002-build-and-packaging.md)). Development builds use a separate folder (`ProjectForge-dev`) so development never touches real data. Unpackaged builds also honour `PROJECTFORGE_DATA_DIR`, which tests use for isolated temporary folders; packaged builds ignore it.
+`%APPDATA%` resolves to `C:\Users\<user>\AppData\Roaming`. The folder name comes from the application name, frozen as Katha ([ADR-0025](DECISIONS/0025-name-and-licence.md)). Development builds use a separate folder (`Katha-dev`) so development never touches real data. Unpackaged builds also honour `PROJECTFORGE_DATA_DIR`, which tests use for isolated temporary folders; packaged builds ignore it.
 
 ## 6. Renderer
 
@@ -160,3 +160,10 @@ See [SECURITY.md](SECURITY.md) for the hardening checklist and threat model.
 | [0017](DECISIONS/0017-notes-release-0.6.md) | Notes release 0.6.0: formatting bubble, outline, blocks, links, mentions, attachments |
 | [0018](DECISIONS/0018-command-palette-and-switcher.md) | Command palette and quick switcher (0.7.0) |
 | [0019](DECISIONS/0019-favourites-icons-covers.md) | Favourites, icons, and covers (0.8.0, schema v7) |
+| [0020](DECISIONS/0020-milestones.md) | Milestones (0.9.0, schema v8) |
+| [0021](DECISIONS/0021-activity-log.md) | Activity log (0.9.0 stage 2, schema v9) |
+| [0022](DECISIONS/0022-task-table.md) | Tasks as a table (0.9.0 stage 3) |
+| [0023](DECISIONS/0023-custom-fields.md) | Custom fields (0.9.0 stage 4, schema v10) |
+| [0024](DECISIONS/0024-project-templates.md) | Project templates (0.9.0 stage 5, schema v11) |
+| [0025](DECISIONS/0025-name-and-licence.md) | Product name Katha and the MIT licence (0.9.0 stage 6) |
+| [0026](DECISIONS/0026-brand-banig-weave.md) | The Katha mark, the banig weave (0.9.0 stage 6) |

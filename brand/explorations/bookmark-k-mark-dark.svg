@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Katha</title>
+  <!-- For dark backgrounds: the same shapes in lighter tones. -->
+  <path fill="#6f98e8" d="M12 10a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v48l-7-6-7 6z"/>
+  <path stroke="#f0a948" stroke-width="11" stroke-linecap="round" d="M35 28 50 10"/>
+  <path stroke="#b8cdf3" stroke-width="11" stroke-linecap="round" d="M38 40 51 55"/>
+</svg>

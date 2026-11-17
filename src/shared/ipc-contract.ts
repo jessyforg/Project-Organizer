@@ -1,10 +1,14 @@
 import { z } from 'zod';
 import type {
+  ActivityEvent,
   AppLinkInfo,
   AttachmentInfo,
+  CustomField,
   Backlink,
   Dashboard,
   FavouriteItem,
+  Milestone,
+  MilestoneEntry,
   Folder,
   Note,
   NoteBacklinks,
@@ -27,6 +31,7 @@ import type {
   WorkflowStatus,
 } from './domain';
 import type { IpcChannel } from './ipc-channels';
+import type { TemplateDetails, TemplateSummary } from './templates';
 import * as s from './schemas';
 import type {
   AppInfo,
@@ -120,6 +125,7 @@ export const ipcContract = {
   'projects:archive': s.idSchema,
   'projects:unarchive': s.idSchema,
   'statuses:list': s.projectIdSchema,
+  'statuses:listAll': s.emptySchema,
   'statuses:add': s.addStatusSchema,
   'statuses:rename': s.renameStatusSchema,
   'statuses:reorder': s.reorderStatusesSchema,
@@ -133,6 +139,26 @@ export const ipcContract = {
   'tasks:move': s.moveTaskSchema,
   'tasks:reorder': s.reorderTaskSchema,
   'tasks:moveOnBoard': s.moveOnBoardSchema,
+  'milestones:list': s.projectIdSchema,
+  'milestones:listAll': s.emptySchema,
+  'milestones:inRange': s.milestoneRangeSchema,
+  'milestones:create': s.createMilestoneSchema,
+  'milestones:update': s.updateMilestoneSchema,
+  'milestones:setCompleted': s.setCompletedSchema,
+  'customFields:list': s.projectIdSchema,
+  'customFields:create': s.createCustomFieldSchema,
+  'customFields:update': s.updateCustomFieldSchema,
+  'customFields:changeType': s.changeCustomFieldTypeSchema,
+  'customFields:reorder': s.reorderCustomFieldsSchema,
+  'customFields:setValue': s.setCustomValueSchema,
+  'templates:list': s.emptySchema,
+  'templates:get': s.templateIdSchema,
+  'templates:saveFromProject': s.saveTemplateSchema,
+  'templates:rename': s.renameTemplateSchema,
+  'templates:delete': s.idSchema,
+  'templates:export': s.templateIdSchema,
+  'templates:import': s.importTemplateSchema,
+  'templates:createProject': s.createFromTemplateSchema,
   'notes:list': s.noteListQuerySchema,
   'notes:get': s.idSchema,
   'notes:create': s.createNoteSchema,
@@ -166,10 +192,15 @@ export const ipcContract = {
   'trash:trashTask': s.idSchema,
   'trash:trashProject': s.idSchema,
   'trash:trashNote': s.idSchema,
+  'trash:trashMilestone': s.idSchema,
+  'trash:trashCustomField': s.idSchema,
   'trash:restore': s.batchSchema,
   'trash:deletePermanently': s.batchSchema,
   'trash:empty': s.emptySchema,
   'search:query': s.searchSchema,
+  'activity:forItem': s.activityForItemSchema,
+  'activity:forProject': s.activityForProjectSchema,
+  'activity:recent': s.activityRecentSchema,
   'switcher:search': s.switcherSearchSchema,
   'switcher:recent': s.switcherRecentSchema,
   'switcher:recordOpened': s.linkTargetSchema,
@@ -231,6 +262,7 @@ export interface IpcResponses {
   'projects:archive': Project;
   'projects:unarchive': Project;
   'statuses:list': WorkflowStatus[];
+  'statuses:listAll': WorkflowStatus[];
   'statuses:add': WorkflowStatus;
   'statuses:rename': WorkflowStatus;
   'statuses:reorder': WorkflowStatus[];
@@ -241,9 +273,29 @@ export interface IpcResponses {
   'tasks:create': Task;
   'tasks:update': TaskUpdateResult;
   'tasks:setCompleted': TaskUpdateResult;
-  'tasks:move': { task: Task; removedDependencies: number };
+  'tasks:move': { task: Task; removedDependencies: number; removedFieldValues: number };
   'tasks:reorder': Task;
   'tasks:moveOnBoard': TaskUpdateResult;
+  'milestones:list': Milestone[];
+  'milestones:listAll': Milestone[];
+  'milestones:inRange': MilestoneEntry[];
+  'milestones:create': Milestone;
+  'milestones:update': Milestone;
+  'milestones:setCompleted': Milestone;
+  'customFields:list': CustomField[];
+  'customFields:create': CustomField;
+  'customFields:update': CustomField;
+  'customFields:changeType': CustomField;
+  'customFields:reorder': CustomField[];
+  'customFields:setValue': null;
+  'templates:list': TemplateSummary[];
+  'templates:get': TemplateDetails;
+  'templates:saveFromProject': TemplateSummary;
+  'templates:rename': TemplateSummary;
+  'templates:delete': null;
+  'templates:export': SaveResult;
+  'templates:import': TemplateSummary;
+  'templates:createProject': Project;
   'notes:list': NoteSummary[];
   'notes:get': Note;
   'notes:create': Note;
@@ -277,10 +329,15 @@ export interface IpcResponses {
   'trash:trashTask': { batchId: string };
   'trash:trashProject': { batchId: string };
   'trash:trashNote': { batchId: string };
+  'trash:trashMilestone': { batchId: string };
+  'trash:trashCustomField': { batchId: string };
   'trash:restore': RestoreResult;
   'trash:deletePermanently': null;
   'trash:empty': { removed: number };
   'search:query': SearchResults;
+  'activity:forItem': ActivityEvent[];
+  'activity:forProject': ActivityEvent[];
+  'activity:recent': ActivityEvent[];
   'switcher:search': SwitcherItem[];
   'switcher:recent': SwitcherItem[];
   'switcher:recordOpened': null;
