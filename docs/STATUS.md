@@ -2,6 +2,26 @@
 
 Newest entries first.
 
+## 2026-11-17 — Release 0.9.0, stage 6 (part 5): zod 4.6.7, Electron 44.10.1, release checks; ready for the product owner's check
+
+**Updated (exact pins, each at least two weeks old, checked against npm publish times at 05:16 UTC):**
+- **zod 4.6.5 → 4.6.7** (published 2026-10-12). Fixes GHSA-mrhx-c7xc-m3w5 (high). `npm audit --omit=dev` now reports 0 vulnerabilities.
+- **Electron 44.7.0 → 44.10.1** (published 2026-10-31), the newest eligible 44.x. It includes 44.9.1's fix for GHSA-jr5w-w6x2-84p9. 44.10.2 (2026-11-03 19:00 UTC) and later were too new.
+- **fast-uri 3.1.8 → 3.1.9** (lock file only, used by electron-builder at packaging time). Fixes its four moderate advisories.
+
+**Not taken:** the working tree had Electron `46.0.0-alpha.11`, a pre-release published on 2026-11-17 and two major versions ahead. It fails the two-week rule and the plan to stay on 44.x, so it was replaced with 44.10.1.
+
+**Accepted (build tools only, not in the installer):** a new minimatch advisory, GHSA-g3hv-75wg-m249 (moderate, 7.0.0–11.0.0), reaches eslint, typescript-eslint, and electron-builder. The fix is minimatch 11.0.1 or later, a major version none of them accept, so it would need a forced override. Re-check when those tools update. The full audit lists 14 moderate findings, all from this advisory.
+
+**Verification:**
+- Typecheck, lint, and formatting are clean. 632 of 632 unit and component tests pass.
+- 32 of 32 end-to-end tests pass, in two consecutive full runs.
+- **Installer rebuilt:** `release/Katha Setup 0.9.0.exe`, packaged with Electron 44.10.1, unsigned as expected. The fuses read back as configured. `THIRD_PARTY_NOTICES.txt` in `release/win-unpacked` is identical to the build's copy. `@electron/fuses` 1.8.0 lists one more fuse with no name (index 8, WasmTrapHandlers in Electron, default on); the project does not set it.
+
+**Not done:** an install test of the rebuilt installer (it would touch this machine's Programs folder and `%APPDATA%\Katha`). Release checklist items 2, 3, and 5 remain.
+
+**Next step:** the product owner checks the 0.9.0 installer and approves the merge of `feature/milestones-0.9` into `main`.
+
 ## 2026-10-26 — Release 0.9.0, stage 6 (part 4): third-party licence notices
 
 **Why:** Vite bundles React, TipTap, the font, and about 120 other packages into the app, and the SQLite driver's binary contains SQLite3 Multiple Ciphers and its crypto code. Their MIT, ISC, BSD, and OFL licences require the licence text to ship with copies; until now only Electron's and Chromium's did. The product owner approved this while the zod update waits for the two-week rule.
